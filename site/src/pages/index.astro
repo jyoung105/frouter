@@ -1,0 +1,249 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="frouter — free model router">
+  <main>
+    <div class="terminal">
+      <div class="title-bar">
+        <div class="controls">
+          <span class="dot red"></span>
+          <span class="dot yellow"></span>
+          <span class="dot green"></span>
+        </div>
+        <span class="title">frouter</span>
+        <div class="controls-spacer"></div>
+      </div>
+      <div class="body">
+        <div class="line prompt">
+          <span class="ps1">$</span> frouter
+        </div>
+
+        <div class="line tagline" id="tagline"></div>
+        <div class="line subtitle" id="subtitle"></div>
+
+        <div class="spacer"></div>
+
+        <div class="line prompt">
+          <span class="ps1">$</span> frouter --install
+        </div>
+        <div class="line output indent">npx frouter-cli</div>
+
+        <div class="spacer"></div>
+
+        <div class="line prompt">
+          <span class="ps1">$</span> frouter --providers
+        </div>
+        <div class="line output indent">
+          <span class="provider">NVIDIA NIM</span>
+          <span class="dim">build.nvidia.com</span>
+        </div>
+        <div class="line output indent">
+          <span class="provider">OpenRouter</span>
+          <span class="dim">openrouter.ai</span>
+        </div>
+
+        <div class="spacer"></div>
+
+        <div class="line prompt">
+          <span class="ps1">$</span> frouter --features
+        </div>
+        <div class="line output indent"><span class="star">✦</span> Live latency pings (every 2s)</div>
+        <div class="line output indent"><span class="star">✦</span> SWE-bench tier rankings (S+ → C)</div>
+        <div class="line output indent"><span class="star">✦</span> One-key config for OpenCode / OpenClaw</div>
+        <div class="line output indent"><span class="star">✦</span> --best flag for scripted usage</div>
+
+        <div class="spacer"></div>
+
+        <div class="line links">
+          <a href="https://github.com/jyoung105/frouter" target="_blank" rel="noopener">[GitHub]</a>
+        </div>
+
+        <div class="spacer"></div>
+
+        <div class="line prompt cursor-line">
+          <span class="ps1">$</span> <span class="cursor">▌</span>
+        </div>
+      </div>
+    </div>
+  </main>
+</Layout>
+
+<style>
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  body {
+    background: #0a0a0a;
+    color: #00ff41;
+    font-family: 'JetBrains Mono', monospace;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+  }
+
+  main {
+    width: 100%;
+    max-width: 680px;
+  }
+
+  .terminal {
+    border: 1px solid #1a1a1a;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #0d0d0d;
+    box-shadow: 0 0 40px rgba(0, 255, 65, 0.05);
+  }
+
+  .title-bar {
+    display: flex;
+    align-items: center;
+    padding: 0.7rem 1rem;
+    background: #151515;
+    border-bottom: 1px solid #1a1a1a;
+  }
+
+  .controls {
+    display: flex;
+    gap: 6px;
+    width: 60px;
+  }
+
+  .controls-spacer {
+    width: 60px;
+  }
+
+  .dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+  }
+
+  .dot.red { background: #ff5f57; }
+  .dot.yellow { background: #febc2e; }
+  .dot.green { background: #28c840; }
+
+  .title {
+    flex: 1;
+    text-align: center;
+    font-size: 0.8rem;
+    color: #555;
+  }
+
+  .body {
+    padding: 1.5rem;
+    font-size: 0.9rem;
+    line-height: 1.7;
+  }
+
+  .line {
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  .ps1 {
+    color: #888;
+    margin-right: 0.5em;
+  }
+
+  .prompt {
+    color: #e0e0e0;
+    font-weight: 700;
+  }
+
+  .tagline, .subtitle {
+    color: #00ff41;
+    min-height: 1.7em;
+  }
+
+  .output {
+    color: #00ff41;
+  }
+
+  .indent {
+    padding-left: 1.5em;
+  }
+
+  .provider {
+    display: inline-block;
+    min-width: 140px;
+    color: #e0e0e0;
+  }
+
+  .dim {
+    color: #555;
+  }
+
+  .star {
+    color: #febc2e;
+  }
+
+  .spacer {
+    height: 1em;
+  }
+
+  .links a {
+    color: #00ff41;
+    text-decoration: none;
+    border-bottom: 1px dashed #00ff4180;
+    transition: border-color 0.2s;
+  }
+
+  .links a:hover {
+    border-color: #00ff41;
+  }
+
+  .cursor {
+    animation: blink 1s step-end infinite;
+    color: #00ff41;
+  }
+
+  @keyframes blink {
+    50% { opacity: 0; }
+  }
+
+  @media (max-width: 500px) {
+    .body {
+      padding: 1rem;
+      font-size: 0.8rem;
+    }
+
+    .provider {
+      min-width: 110px;
+    }
+  }
+</style>
+
+<script>
+  function typeText(el: HTMLElement, text: string, speed: number): Promise<void> {
+    return new Promise((resolve) => {
+      let i = 0;
+      el.textContent = '';
+      const prefix = '> ';
+      el.textContent = prefix;
+      const interval = setInterval(() => {
+        el.textContent = prefix + text.slice(0, i + 1);
+        i++;
+        if (i >= text.length) {
+          clearInterval(interval);
+          resolve();
+        }
+      }, speed);
+    });
+  }
+
+  async function run() {
+    const tagline = document.getElementById('tagline')!;
+    const subtitle = document.getElementById('subtitle')!;
+    await typeText(tagline, 'Free model router for AI coding tools', 35);
+    await new Promise(r => setTimeout(r, 300));
+    await typeText(subtitle, 'Discover, ping & pick the fastest free LLM — live.', 25);
+  }
+
+  run();
+</script>

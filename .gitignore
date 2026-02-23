@@ -1,0 +1,20 @@
+# Cache artifacts
+cache/
+.cache/
+.astro/
+dist/
+*.tsbuildinfo
+
+# Local reference notes
+REFERENCE.md
+
+# OMX local state
+.omx/
+.omc/
+
+# Dependencies
+node_modules/
+
+# OS/editor noise
+.DS_Store
+*.log

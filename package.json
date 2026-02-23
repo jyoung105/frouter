@@ -1,0 +1,29 @@
+{
+  "name": "frouter-cli",
+  "version": "1.0.0",
+  "description": "Free model router — discover, ping, and configure free AI models for OpenCode / OpenClaw",
+  "bin": {
+    "frouter": "./bin/frouter.js"
+  },
+  "type": "module",
+  "packageManager": "bun@1.3.5",
+  "scripts": {
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "files": [
+    "bin/",
+    "lib/",
+    "model-rankings.json"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jyoung105/frouter.git"
+  },
+  "homepage": "https://github.com/jyoung105/frouter#readme",
+  "author": "Tony Lee",
+  "keywords": ["ai", "cli", "tui", "free-models", "openrouter", "nvidia", "nim", "opencode", "openclaw", "llm", "free-api"],
+  "license": "MIT"
+}

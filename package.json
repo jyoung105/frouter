@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Free model router — discover, ping, and configure free AI models for OpenCode / OpenClaw",
   "bin": {
-    "frouter": "./bin/frouter.js"
+    "frouter": "bin/frouter.js"
   },
   "type": "module",
   "packageManager": "bun@1.3.5",

@@ -81,6 +81,10 @@ if [ ! -f "$cfg" ]; then
   echo "missing-config" >> "${marker}"
   exit 1
 fi
+if [ "$NVIDIA_API_KEY" != "nvapi-test" ]; then
+  echo "missing-env" >> "${marker}"
+  exit 1
+fi
 if grep -q '"model": "nvidia/' "$cfg"; then
   echo "launched" >> "${marker}"
   exit 0
@@ -108,11 +112,15 @@ exit 0
       assert.equal(result.code, 0);
 
       assert.equal(await waitForFile(marker), true);
-      assert.match(readFileSync(marker, 'utf8'), /launched/);
+      const markerOut = readFileSync(marker, 'utf8');
+      assert.match(markerOut, /launched/);
+      assert.doesNotMatch(markerOut, /missing-env/);
       const openCodePath = join(home, '.config', 'opencode', 'opencode.json');
       assert.equal(existsSync(openCodePath), true);
       const openCode = readFileSync(openCodePath, 'utf8');
       assert.match(openCode, /"model": "nvidia\//);
+      const text = stripAnsi(result.stdout);
+      assert.doesNotMatch(text, /OpenCode auth uses NVIDIA_API_KEY/);
     } finally {
       cleanupTempHome(home);
     }
@@ -233,6 +241,8 @@ exit 0
       assert.equal(existsSync(openCodePath), true);
       assert.equal(existsSync(marker), false);
       assert.match(readFileSync(openCodePath, 'utf8'), /"model": "nvidia\//);
+      const text = stripAnsi(result.stdout);
+      assert.match(text, /OpenCode auth uses NVIDIA_API_KEY/);
     } finally {
       cleanupTempHome(home);
     }

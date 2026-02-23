@@ -8,6 +8,15 @@ import { cleanupTempHome, defaultConfig, makeTempHome, writeHomeConfig } from '.
 
 const SKIP = process.platform === 'win32';
 
+function getLatestFrame(rawOutput, needle) {
+  const chunks = String(rawOutput).split('\x1b[2J\x1b[H');
+  for (let i = chunks.length - 1; i >= 0; i--) {
+    const frame = stripAnsi(chunks[i]);
+    if (frame.includes(needle)) return frame;
+  }
+  return '';
+}
+
 test(
   'interactive model search flow (/, typing, backspace, ESC)',
   { skip: SKIP && 'PTY harness uses `script`, unavailable on Windows' },
@@ -77,6 +86,7 @@ test(
           { delayMs: 1110, data: 'z' },
           { delayMs: 1240, data: 'z' },
           { delayMs: 1370, data: 'z' },
+          { delayMs: 1490, data: '\x1b[B' }, // down on empty results must stay stable
           { delayMs: 1600, data: '\x1b' }, // exit search mode first
           { delayMs: 1900, data: 'q' },
         ],
@@ -88,6 +98,51 @@ test(
       const text = stripAnsi(result.stdout);
       assert.match(text, /\/zzzz_/);
       assert.match(text, /0\/\d+ models/);
+    } finally {
+      cleanupTempHome(home);
+    }
+  }
+);
+
+test(
+  'entering search mode resets viewport so rank 1 is visible',
+  { skip: SKIP && 'PTY harness uses `script`, unavailable on Windows' },
+  async () => {
+    const home = makeTempHome();
+    try {
+      writeHomeConfig(home, defaultConfig({
+        apiKeys: { nvidia: 'nvapi-test' },
+        providers: {
+          nvidia: { enabled: true },
+          openrouter: { enabled: false },
+        },
+      }));
+
+      const inputChunks = [];
+      let delayMs = 850;
+      for (let i = 0; i < 24; i++) {
+        inputChunks.push({ delayMs, data: 'j' });
+        delayMs += 45;
+      }
+      inputChunks.push({ delayMs: delayMs + 160, data: '/' });
+      inputChunks.push({ delayMs: delayMs + 420, data: '\x03' }); // Ctrl+C
+
+      const result = await runInPty(process.execPath, [BIN_PATH], {
+        cwd: ROOT_DIR,
+        env: { HOME: home, FROUTER_NO_FETCH: '1' },
+        inputChunks,
+        timeoutMs: 12_000,
+      });
+
+      assert.equal(result.timedOut, false);
+      assert.equal(result.code, 0);
+
+      const frame = getLatestFrame(result.stdout, '/_');
+      assert.ok(frame, 'expected a rendered search frame');
+      const lines = frame.split('\n');
+      const headerIdx = lines.findIndex((line) => line.includes('#') && line.includes('Model'));
+      assert.notEqual(headerIdx, -1);
+      assert.match(lines[headerIdx + 1] || '', /^\s+1\s+/);
     } finally {
       cleanupTempHome(home);
     }
@@ -136,6 +191,7 @@ test(
 
       const text = stripAnsi(result.stdout);
       assert.match(text, /OpenCode model set/);
+      assert.match(text, /OpenCode auth uses NVIDIA_API_KEY/);
       assert.doesNotMatch(text, /OpenClaw model set/);
     } finally {
       cleanupTempHome(home);

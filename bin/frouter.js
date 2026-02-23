@@ -362,6 +362,14 @@ const PGDN = '\x1b[6~';
 const HOME = '\x1b[H';
 const END  = '\x1b[F';
 
+function maxCursorIndex() {
+  return Math.max(0, filtered.length - 1);
+}
+
+function clampCursor(next) {
+  return Math.max(0, Math.min(maxCursorIndex(), next));
+}
+
 function enterTargetPickerFromSelection() {
   if (!filtered.length) return false;
   selModel = filtered[cursor];
@@ -372,34 +380,73 @@ function enterTargetPickerFromSelection() {
   return true;
 }
 
-function quickApplySelectionToTargets() {
-  if (!filtered.length) return false;
-  selModel = filtered[cursor];
-  searchMode = false;
-  const pk = selModel.providerKey;
+function resolveOpenCodeApplySelection(selectedModel) {
+  const pk = selectedModel.providerKey;
   const apiKey = getApiKey(config, pk);
-  const resolved = resolveOpenCodeSelection(selModel, pk, models);
-  let openCodeModel = selModel;
+  const resolved = resolveOpenCodeSelection(selectedModel, pk, models);
+  let openCodeModel = selectedModel;
   let openCodePk = pk;
   let openCodeApiKey = apiKey;
+  let notice = '';
+
   if (resolved.fallback) {
     const fallbackKey = getApiKey(config, resolved.providerKey);
     if (fallbackKey) {
       openCodeModel = resolved.model;
       openCodePk = resolved.providerKey;
       openCodeApiKey = fallbackKey;
-      w(`${YELLOW} ! OpenCode fallback: ${pk}/${selModel.id} -> ${openCodePk}/${openCodeModel.id} (${resolved.reason})${R}\n`);
+      notice = `${YELLOW} ! OpenCode fallback: ${pk}/${selectedModel.id} -> ${openCodePk}/${openCodeModel.id} (${resolved.reason})${R}`;
     } else {
-      w(`${YELLOW} ! OpenCode fallback skipped: missing ${resolved.providerKey.toUpperCase()} API key${R}\n`);
+      notice = `${YELLOW} ! OpenCode fallback skipped: missing ${resolved.providerKey.toUpperCase()} API key${R}`;
     }
   }
+
+  return {
+    openCodeModel,
+    openCodePk,
+    openCodeApiKey,
+    notice,
+  };
+}
+
+function getOpenCodeAuthHint(providerKey, apiKey, { launch = false } = {}) {
+  if (launch || !apiKey || ALLOW_PLAINTEXT_KEY_EXPORT) return '';
+  const envVar = PROVIDERS_META[providerKey]?.envVar;
+  if (!envVar || process.env[envVar]) return '';
+  return `${YELLOW} ! OpenCode auth uses ${envVar}. Export it before launching opencode outside frouter.${R}`;
+}
+
+function buildOpenCodeLaunchEnv(providerKey, apiKey) {
+  const launchEnv = { ...process.env };
+  const envVar = PROVIDERS_META[providerKey]?.envVar;
+  if (apiKey && envVar) {
+    launchEnv[envVar] = apiKey;
+  }
+  return launchEnv;
+}
+
+function quickApplySelectionToTargets() {
+  if (!filtered.length) return false;
+  selModel = filtered[cursor];
+  searchMode = false;
+
+  const {
+    openCodeModel,
+    openCodePk,
+    openCodeApiKey,
+    notice,
+  } = resolveOpenCodeApplySelection(selModel);
+
   let ok = true;
 
   try {
+    if (notice) w(`${notice}\n`);
     const ocPath = writeOpenCode(openCodeModel, openCodePk, openCodeApiKey, {
       persistApiKey: ALLOW_PLAINTEXT_KEY_EXPORT,
     });
     w(`\n${GREEN} ✓ OpenCode model set → ${openCodePk}/${openCodeModel.id}${R}\n${D}   ${ocPath}${R}\n`);
+    const authHint = getOpenCodeAuthHint(openCodePk, openCodeApiKey);
+    if (authHint) w(`${authHint}\n`);
   } catch (err) {
     ok = false;
     w(`\n${RED} ✗ OpenCode write failed: ${err.message}${R}\n`);
@@ -430,7 +477,7 @@ function handleMain(ch) {
       needsRefilter = true;
     }
     else if (ch === UP)   { cursor = Math.max(0, cursor - 1); }
-    else if (ch === DOWN) { cursor = Math.min(filtered.length - 1, cursor + 1); }
+    else if (ch === DOWN) { cursor = clampCursor(cursor + 1); }
     else if (ch.length === 1 && ch >= ' ') {
       searchQuery += ch;
       needsRefilter = true;
@@ -443,11 +490,11 @@ function handleMain(ch) {
 
   // Navigation
   if      (ch === UP   || ch === 'k') { cursor = Math.max(0, cursor - 1); }
-  else if (ch === DOWN || ch === 'j') { cursor = Math.min(filtered.length - 1, cursor + 1); }
+  else if (ch === DOWN || ch === 'j') { cursor = clampCursor(cursor + 1); }
   else if (ch === PGUP)               { cursor = Math.max(0, cursor - tRows()); }
-  else if (ch === PGDN)               { cursor = Math.min(filtered.length - 1, cursor + tRows()); }
+  else if (ch === PGDN)               { cursor = clampCursor(cursor + tRows()); }
   else if (ch === 'g' || ch === HOME) { cursor = 0; }
-  else if (ch === 'G' || ch === END)  { cursor = Math.max(0, filtered.length - 1); }
+  else if (ch === 'G' || ch === END)  { cursor = maxCursorIndex(); }
 
   // Actions
   else if (ch === '/')               {
@@ -575,36 +622,22 @@ async function handleTarget(ch) {
     }
 
     const launch = !(ch === 's' || ch === 'S');
-    const pk     = selModel.providerKey;
-    const apiKey = getApiKey(config, pk);
-    const resolved = resolveOpenCodeSelection(selModel, pk, models);
-    let openCodeModel = selModel;
-    let openCodePk = pk;
-    let openCodeApiKey = apiKey;
-    if (resolved.fallback) {
-      const fallbackKey = getApiKey(config, resolved.providerKey);
-      if (fallbackKey) {
-        openCodeModel = resolved.model;
-        openCodePk = resolved.providerKey;
-        openCodeApiKey = fallbackKey;
-        w(`\n${YELLOW} ! OpenCode fallback: ${pk}/${selModel.id} -> ${openCodePk}/${openCodeModel.id}${R}\n`);
-      } else {
-        w(`\n${YELLOW} ! OpenCode fallback skipped: missing ${resolved.providerKey.toUpperCase()} API key${R}\n`);
-      }
-    }
+    const {
+      openCodeModel,
+      openCodePk,
+      openCodeApiKey,
+      notice,
+    } = resolveOpenCodeApplySelection(selModel);
 
     try {
+      if (notice) w(`\n${notice}\n`);
       const writtenPath = writeOpenCode(openCodeModel, openCodePk, openCodeApiKey, {
         persistApiKey: ALLOW_PLAINTEXT_KEY_EXPORT,
       });
       w(`\n${GREEN} ✓ OpenCode config written → ${writtenPath}${R}\n`);
       if (launch) {
         cleanup();
-        const launchEnv = { ...process.env };
-        const envVar = PROVIDERS_META[openCodePk]?.envVar;
-        if (openCodeApiKey && envVar) {
-          launchEnv[envVar] = openCodeApiKey;
-        }
+        const launchEnv = buildOpenCodeLaunchEnv(openCodePk, openCodeApiKey);
         const result = spawnSync('opencode', [], {
           stdio: 'inherit',
           shell: true,
@@ -613,6 +646,8 @@ async function handleTarget(ch) {
         const code = Number.isInteger(result.status) ? result.status : 1;
         process.exit(code);
       }
+      const authHint = getOpenCodeAuthHint(openCodePk, openCodeApiKey, { launch });
+      if (authHint) w(`${authHint}\n`);
     } catch (err) {
       w(`\n${RED} ✗ ${err.message}${R}\n`);
     }

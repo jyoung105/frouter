@@ -36,7 +36,7 @@ test(
 
       const result = await runInPty(process.execPath, [BIN_PATH], {
         cwd: ROOT_DIR,
-        env: { HOME: home },
+        env: { HOME: home, FROUTER_NO_FETCH: '1' },
         inputChunks: sequence,
         timeoutMs: 12_000,
       });
@@ -70,7 +70,7 @@ test(
 
       const result = await runInPty(process.execPath, [BIN_PATH], {
         cwd: ROOT_DIR,
-        env: { HOME: home },
+        env: { HOME: home, FROUTER_NO_FETCH: '1' },
         inputChunks: [
           { delayMs: 850, data: '/' },
           { delayMs: 980, data: 'z' },
@@ -110,7 +110,7 @@ test(
 
       const result = await runInPty(process.execPath, [BIN_PATH], {
         cwd: ROOT_DIR,
-        env: { HOME: home },
+        env: { HOME: home, FROUTER_NO_FETCH: '1' },
         inputChunks: [
           { delayMs: 850, data: '/' },
           { delayMs: 980, data: 'l' },

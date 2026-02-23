@@ -347,9 +347,11 @@ function applyFilters() {
   // Restore cursor to the same model if it still exists
   if (trackedId) {
     const idx = filtered.findIndex(m => `${m.providerKey}|${m.id}` === trackedId);
-    if (idx !== -1) { cursor = idx; return; }
+    if (idx !== -1) cursor = idx;
   }
   if (cursor >= filtered.length) cursor = Math.max(0, filtered.length - 1);
+  if (cursor < 0) cursor = 0;
+  scrollOff = Math.max(0, Math.min(scrollOff, Math.max(0, filtered.length - tRows())));
 }
 
 // ─── Key handlers ──────────────────────────────────────────────────────────────
@@ -386,7 +388,7 @@ function quickApplySelectionToTargets() {
       openCodeModel = resolved.model;
       openCodePk = resolved.providerKey;
       openCodeApiKey = fallbackKey;
-      w(`${YELLOW} ! OpenCode fallback: ${modelId} -> ${openCodePk}/${openCodeModel.id} (${resolved.reason})${R}\n`);
+      w(`${YELLOW} ! OpenCode fallback: ${pk}/${selModel.id} -> ${openCodePk}/${openCodeModel.id} (${resolved.reason})${R}\n`);
     } else {
       w(`${YELLOW} ! OpenCode fallback skipped: missing ${resolved.providerKey.toUpperCase()} API key${R}\n`);
     }
@@ -410,17 +412,33 @@ function quickApplySelectionToTargets() {
 function handleMain(ch) {
   // Search mode: intercept all input
   if (searchMode) {
-    if      (ch === '\x1b')  { searchMode = false; }
+    let needsRefilter = false;
+    if      (ch === '\x1b')  {
+      searchMode = false;
+      searchQuery = '';
+      cursor = 0;
+      scrollOff = 0;
+      trackedId = null;
+      needsRefilter = true;
+    }
     else if (ch === '\r')    {
       if (quickApplySelectionToTargets()) { return; }
       searchMode = false;
     }
-    else if (ch === '\x7f')  { searchQuery = searchQuery.slice(0, -1); }
-    else if (ch === UP || ch === DOWN) { /* allow arrow navigation while searching */ }
-    else if (ch.length === 1 && ch >= ' ') { searchQuery += ch; }
-    if (ch === UP)   cursor = Math.max(0, cursor - 1);
-    if (ch === DOWN) cursor = Math.min(filtered.length - 1, cursor + 1);
-    applyFilters(); render(); return;
+    else if (ch === '\x7f')  {
+      searchQuery = searchQuery.slice(0, -1);
+      needsRefilter = true;
+    }
+    else if (ch === UP)   { cursor = Math.max(0, cursor - 1); }
+    else if (ch === DOWN) { cursor = Math.min(filtered.length - 1, cursor + 1); }
+    else if (ch.length === 1 && ch >= ' ') {
+      searchQuery += ch;
+      needsRefilter = true;
+    }
+
+    if (needsRefilter) applyFilters();
+    render();
+    return;
   }
 
   // Navigation
@@ -432,7 +450,14 @@ function handleMain(ch) {
   else if (ch === 'G' || ch === END)  { cursor = Math.max(0, filtered.length - 1); }
 
   // Actions
-  else if (ch === '/')               { searchMode = true; searchQuery = ''; }
+  else if (ch === '/')               {
+    searchMode = true;
+    searchQuery = '';
+    cursor = 0;
+    scrollOff = 0;
+    trackedId = null;
+    applyFilters();
+  }
   else if (ch === '\r') {
     enterTargetPickerFromSelection();
   }
@@ -575,7 +600,16 @@ async function handleTarget(ch) {
       w(`\n${GREEN} ✓ OpenCode config written → ${writtenPath}${R}\n`);
       if (launch) {
         cleanup();
-        const result = spawnSync('opencode', [], { stdio: 'inherit', shell: true });
+        const launchEnv = { ...process.env };
+        const envVar = PROVIDERS_META[openCodePk]?.envVar;
+        if (openCodeApiKey && envVar) {
+          launchEnv[envVar] = openCodeApiKey;
+        }
+        const result = spawnSync('opencode', [], {
+          stdio: 'inherit',
+          shell: true,
+          env: launchEnv,
+        });
         const code = Number.isInteger(result.status) ? result.status : 1;
         process.exit(code);
       }

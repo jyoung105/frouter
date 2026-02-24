@@ -14,6 +14,13 @@ import {
   R, B, D, RED, GREEN, YELLOW, CYAN, WHITE, BG_SEL,
 } from '../lib/utils.js';
 import { spawnSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { dirname, resolve } from 'node:path';
+
+// ─── Version ─────────────────────────────────────────────────────────────────
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const PKG_VERSION = JSON.parse(readFileSync(resolve(__dirname, '../../package.json'), 'utf8')).version;
 
 // ─── ANSI shortcuts ────────────────────────────────────────────────────────────
 const w      = (s) => process.stdout.write(String(s));
@@ -30,6 +37,12 @@ const ALLOW_PLAINTEXT_KEY_EXPORT = process.env.FROUTER_EXPORT_PLAINTEXT_KEYS ===
 const argv = process.argv.slice(2);
 const BEST = argv.includes('--best');
 const HELP = argv.includes('--help') || argv.includes('-h');
+const VERSION = argv.includes('--version') || argv.includes('-v');
+
+if (VERSION) {
+  console.log(`frouter ${PKG_VERSION}`);
+  process.exit(0);
+}
 
 if (HELP) {
   console.log(`
@@ -40,6 +53,7 @@ if (HELP) {
   Flags:
     (none)    Interactive TUI — discover, compare, select
     --best    Non-interactive: print best model ID to stdout after ~10s
+    --version Show version
     --help    Show this help
 
   TUI keys:

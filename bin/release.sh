@@ -2,9 +2,9 @@
 # release.sh — Bump version, commit, tag, and push for automated npm publish
 #
 # Usage:
-#   ./bin/release.sh patch    # 1.0.1 → 1.0.2
-#   ./bin/release.sh minor    # 1.0.1 → 1.1.0
-#   ./bin/release.sh major    # 1.0.1 → 2.0.0
+#   ./bin/release.sh patch    # 1.1.0 → 1.1.1
+#   ./bin/release.sh minor    # 1.1.0 → 1.2.0
+#   ./bin/release.sh major    # 1.1.0 → 2.0.0
 #   ./bin/release.sh 1.2.3    # explicit version
 #
 # What it does:

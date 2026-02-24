@@ -24,6 +24,28 @@ frouter
 
 최초 실행 시 API 키 설정 마법사가 시작됩니다 (ESC로 각 프로바이더를 건너뛸 수 있습니다).
 
+## 최초 실행 온보딩 테스트 (클린 상태)
+
+실제 설치/설정을 지우지 않고, 임시 `HOME`에서 완전 초기 상태 온보딩을 테스트할 수 있습니다.
+
+```bash
+npm run test:onboarding
+npm run test:fresh-start
+```
+
+`test:fresh-start` 실행 시:
+- 임시 홈에 `~/.frouter.json` 이 없는 상태로 시작
+- 프로바이더 환경 변수 키(`NVIDIA_API_KEY`, `OPENROUTER_API_KEY`) 비활성화
+- 실제 `~/.frouter.json` 은 변경하지 않음
+
+옵션:
+
+```bash
+npm run test:fresh-start -- --keep-home
+```
+
+종료 후 임시 `HOME` 디렉터리를 유지하여 결과 파일을 확인할 수 있습니다.
+
 ## 프로바이더
 
 | 프로바이더 | 무료 키 발급 |

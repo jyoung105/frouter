@@ -24,6 +24,28 @@ frouter
 
 On first run, a setup wizard prompts for API keys (ESC to skip any provider).
 
+## First-run onboarding test (clean state)
+
+Use an isolated temporary `HOME` to test onboarding from zero without deleting your real install/config:
+
+```bash
+npm run test:onboarding
+npm run test:fresh-start
+```
+
+`test:fresh-start` launches interactive onboarding with:
+- no `~/.frouter.json` in the temp home
+- provider env keys unset (`NVIDIA_API_KEY`, `OPENROUTER_API_KEY`)
+- your real `~/.frouter.json` untouched
+
+Optional:
+
+```bash
+npm run test:fresh-start -- --keep-home
+```
+
+This keeps the temp `HOME` path after exit for inspection.
+
 ## Providers
 
 | Provider | Free key |

@@ -11,6 +11,7 @@ REFERENCE.md
 # OMX local state
 .omx/
 .omc/
+.frouter.json
 
 # Dependencies
 node_modules/

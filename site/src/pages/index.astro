@@ -27,7 +27,25 @@ import Layout from '../layouts/Layout.astro';
         <div class="line prompt">
           <span class="ps1">$</span> frouter --install
         </div>
-        <div class="line output indent">npx frouter-cli</div>
+        <div class="line output indent install-line">
+          <span class="install-cmd">npx frouter-cli</span>
+          <button class="copy-btn" data-cmd="npx frouter-cli">[copy]</button>
+        </div>
+        <div class="line output indent dim"># or</div>
+        <div class="line output indent install-line">
+          <span class="install-cmd">npm i -g frouter-cli</span>
+          <button class="copy-btn" data-cmd="npm i -g frouter-cli">[copy]</button>
+        </div>
+        <div class="line output indent dim"># or</div>
+        <div class="line output indent install-line">
+          <span class="install-cmd">bunx frouter-cli</span>
+          <button class="copy-btn" data-cmd="bunx frouter-cli">[copy]</button>
+        </div>
+        <div class="line output indent dim"># or</div>
+        <div class="line output indent install-line">
+          <span class="install-cmd">bun install -g frouter-cli</span>
+          <button class="copy-btn" data-cmd="bun install -g frouter-cli">[copy]</button>
+        </div>
 
         <div class="spacer"></div>
 
@@ -183,6 +201,40 @@ import Layout from '../layouts/Layout.astro';
     color: #febc2e;
   }
 
+  .install-line {
+    display: flex;
+    align-items: center;
+    gap: 1em;
+  }
+
+  .install-cmd {
+    flex: 1;
+  }
+
+  .copy-btn {
+    background: none;
+    border: 1px solid #333;
+    color: #555;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+    padding: 0.1em 0.5em;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: color 0.2s, border-color 0.2s;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .copy-btn:hover {
+    color: #00ff41;
+    border-color: #00ff41;
+  }
+
+  .copy-btn.copied {
+    color: #28c840;
+    border-color: #28c840;
+  }
+
   .spacer {
     height: 1em;
   }
@@ -246,4 +298,18 @@ import Layout from '../layouts/Layout.astro';
   }
 
   run();
+
+  document.querySelectorAll('.copy-btn').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const cmd = (btn as HTMLElement).dataset.cmd!;
+      await navigator.clipboard.writeText(cmd);
+      const original = btn.textContent;
+      btn.textContent = '[copied!]';
+      btn.classList.add('copied');
+      setTimeout(() => {
+        btn.textContent = original;
+        btn.classList.remove('copied');
+      }, 1500);
+    });
+  });
 </script>

@@ -17,6 +17,15 @@ function getLatestFrame(rawOutput, needle) {
   return '';
 }
 
+function buildInputChunks(tokens, startDelayMs = 850, stepMs = 120) {
+  let delayMs = startDelayMs;
+  return tokens.map((data) => {
+    const chunk = { delayMs, data };
+    delayMs += stepMs;
+    return chunk;
+  });
+}
+
 test(
   'interactive model search flow (/, typing, backspace, ESC)',
   { skip: SKIP && 'PTY harness uses `script`, unavailable on Windows' },
@@ -193,6 +202,126 @@ test(
       assert.match(text, /OpenCode model set/);
       assert.match(text, /OpenCode auth uses NVIDIA_API_KEY/);
       assert.doesNotMatch(text, /OpenClaw model set/);
+    } finally {
+      cleanupTempHome(home);
+    }
+  }
+);
+
+test(
+  'main-tab quick API key flow adds a missing key',
+  { skip: SKIP && 'PTY harness uses `script`, unavailable on Windows' },
+  async () => {
+    const home = makeTempHome();
+    try {
+      writeHomeConfig(home, defaultConfig({
+        apiKeys: { openrouter: 'sk-or-test' },
+        providers: {
+          nvidia: { enabled: true },
+          openrouter: { enabled: false },
+        },
+      }));
+
+      const result = await runInPty(process.execPath, [BIN_PATH], {
+        cwd: ROOT_DIR,
+        env: { HOME: home, FROUTER_NO_FETCH: '1' },
+        inputChunks: buildInputChunks([
+          'a',
+          ...'nvapi-added-main-tab',
+          '\r',
+          'q',
+          'q',
+        ]),
+        timeoutMs: 12_000,
+      });
+
+      assert.equal(result.timedOut, false);
+      assert.equal(result.code, 0);
+
+      const cfg = JSON.parse(readFileSync(join(home, '.frouter.json'), 'utf8'));
+      assert.equal(cfg.apiKeys.nvidia, 'nvapi-added-main-tab');
+      assert.equal(cfg.apiKeys.openrouter, 'sk-or-test');
+    } finally {
+      cleanupTempHome(home);
+    }
+  }
+);
+
+test(
+  'main-tab quick API key flow changes an existing key',
+  { skip: SKIP && 'PTY harness uses `script`, unavailable on Windows' },
+  async () => {
+    const home = makeTempHome();
+    try {
+      writeHomeConfig(home, defaultConfig({
+        apiKeys: { nvidia: 'nvapi-old', openrouter: 'sk-or-test' },
+        providers: {
+          nvidia: { enabled: true },
+          openrouter: { enabled: false },
+        },
+      }));
+
+      const result = await runInPty(process.execPath, [BIN_PATH], {
+        cwd: ROOT_DIR,
+        env: { HOME: home, FROUTER_NO_FETCH: '1' },
+        inputChunks: buildInputChunks([
+          'A',
+          ...'nvapi-new-main-tab',
+          '\r',
+          'q',
+          'q',
+        ]),
+        timeoutMs: 12_000,
+      });
+
+      assert.equal(result.timedOut, false);
+      assert.equal(result.code, 0);
+
+      const cfg = JSON.parse(readFileSync(join(home, '.frouter.json'), 'utf8'));
+      assert.equal(cfg.apiKeys.nvidia, 'nvapi-new-main-tab');
+    } finally {
+      cleanupTempHome(home);
+    }
+  }
+);
+
+test(
+  'main-tab quick API key flow rejects invalid prefix and preserves previous key',
+  { skip: SKIP && 'PTY harness uses `script`, unavailable on Windows' },
+  async () => {
+    const home = makeTempHome();
+    try {
+      writeHomeConfig(home, defaultConfig({
+        apiKeys: { nvidia: 'nvapi-keep-me', openrouter: 'sk-or-test' },
+        providers: {
+          nvidia: { enabled: true },
+          openrouter: { enabled: false },
+        },
+      }));
+
+      const result = await runInPty(process.execPath, [BIN_PATH], {
+        cwd: ROOT_DIR,
+        env: { HOME: home, FROUTER_NO_FETCH: '1' },
+        inputChunks: buildInputChunks([
+          'a',
+          ...'bad-prefix',
+          '\r',
+          '\x1b',
+          'q',
+          'q',
+        ]),
+        timeoutMs: 12_000,
+      });
+
+      assert.equal(result.timedOut, false);
+      assert.equal(result.code, 0);
+
+      const text = stripAnsi(result.stdout);
+      assert.match(text, /Invalid key for NVIDIA NIM/);
+      assert.match(text, /Expected prefix "nvapi-"/);
+
+      const cfg = JSON.parse(readFileSync(join(home, '.frouter.json'), 'utf8'));
+      assert.equal(cfg.apiKeys.nvidia, 'nvapi-keep-me');
     } finally {
       cleanupTempHome(home);
     }

@@ -77,6 +77,7 @@ Default ranking: **availability first**, then **higher tier first** (S+ → S �
 |-----|--------|
 | `Enter` | Select model → target picker (OpenCode / OpenClaw) |
 | `/` | Search / filter models (Enter in search = apply to both targets) |
+| `A` | Quick API key add/change (opens key editor in Settings) |
 | `T` | Cycle tier filter: All → S+ → S → A+ → … |
 | `P` | Settings screen (edit keys, toggle providers, test) |
 | `W` / `X` | Faster / slower ping interval |
@@ -116,6 +117,8 @@ Configs written:
 Existing configs are backed up before writing.
 
 ### Settings screen (`P`)
+
+Tip: press `A` from the main list to jump directly into API key editing.
 
 | Key | Action |
 |-----|--------|

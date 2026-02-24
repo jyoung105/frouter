@@ -48,6 +48,7 @@ if (HELP) {
     g / G          Jump to top / bottom
     /              Search (type to filter, ESC to clear)
     Enter          Select model → choose target (OpenClaw currently disabled)
+    A              Quick API key add/change (opens key editor)
     P              Settings (edit keys, toggle providers, test)
     T              Cycle tier filter
     W / X          Faster / slower ping interval
@@ -225,7 +226,7 @@ function renderMain() {
   }
 
   // Footer
-  const footer = ` ↑↓/jk:nav  Enter:target  /:search (Enter=apply OpenCode)  P:settings  T:tier  ?:help  0-9:sort  q:quit `;
+  const footer = ` ↑↓/jk:nav  Enter:target  /:search (Enter=apply OpenCode)  A:api key  P:settings  T:tier  ?:help  0-9:sort  q:quit `;
   out += `${INVERT}${footer}${' '.repeat(Math.max(0, c - visLen(footer)))}${R}`;
   w(out);
 }
@@ -244,6 +245,7 @@ function renderHelp() {
   out += `${B}  Actions${R}\n`;
   out += `  Enter       Select model → target picker (OpenCode / OpenClaw disabled)\n`;
   out += `  /           Search / filter models (Enter applies to OpenCode only)\n`;
+  out += `  A           Quick API key add/change (opens key editor)\n`;
   out += `  T           Cycle tier filter (All → S+ → S → …)\n`;
   out += `  P           Settings (API keys, toggle providers)\n`;
   out += `  W / X       Faster / slower ping interval\n`;
@@ -456,6 +458,33 @@ function quickApplySelectionToTargets() {
   return true;
 }
 
+function resolveQuickApiKeyProviderIndex() {
+  const pks = Object.keys(PROVIDERS_META);
+  if (!pks.length) return 0;
+
+  const selectedPk = filtered[cursor]?.providerKey;
+  if (selectedPk) {
+    const selectedIdx = pks.indexOf(selectedPk);
+    if (selectedIdx !== -1) return selectedIdx;
+  }
+
+  const missingIdx = pks.findIndex((pk) => !config?.apiKeys?.[pk]);
+  if (missingIdx !== -1) return missingIdx;
+
+  return 0;
+}
+
+function openApiKeyEditorFromMain() {
+  stopPingLoop(pingRef);
+  sCursor = resolveQuickApiKeyProviderIndex();
+  sEditing = true;
+  sKeyBuf = '';
+  sNotice = '';
+  sTestRes = {};
+  searchMode = false;
+  screen = 'settings';
+}
+
 function handleMain(ch) {
   // Search mode: intercept all input
   if (searchMode) {
@@ -510,6 +539,9 @@ function handleMain(ch) {
   }
   else if (ch === 'p' || ch === 'P') {
     stopPingLoop(pingRef); sCursor = 0; sEditing = false; screen = 'settings';
+  }
+  else if (ch === 'a' || ch === 'A') {
+    openApiKeyEditorFromMain();
   }
   else if (ch === '?')               { screen = 'help'; }
   else if (ch === 'q')               { cleanup(); process.exit(0); }

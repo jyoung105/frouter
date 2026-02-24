@@ -1,6 +1,6 @@
 {
   "name": "frouter-cli",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Free model router — discover, ping, and configure free AI models for OpenCode / OpenClaw",
   "bin": {
     "frouter": "bin/frouter.js"

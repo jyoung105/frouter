@@ -2,10 +2,10 @@
 // bin/frouter.js — frouter main entry: TUI + --best mode
 // Zero dependencies — pure Node.js built-ins
 
-import { loadConfig, saveConfig, getApiKey, runFirstRunWizard, PROVIDERS_META, validateProviderApiKey } from '../lib/config.js';
+import { loadConfig, saveConfig, getApiKey, runFirstRunWizard, promptMasked, PROVIDERS_META, validateProviderApiKey } from '../lib/config.js';
 import { getAllModels } from '../lib/models.js';
 import { ping, pingAllOnce, startPingLoop, stopPingLoop } from '../lib/ping.js';
-import { writeOpenCode, resolveOpenCodeSelection } from '../lib/targets.js';
+import { writeOpenCode, resolveOpenCodeSelection, isOpenCodeInstalled, detectAvailableInstallers, installOpenCode } from '../lib/targets.js';
 import {
   getAvg, getUptime, getVerdict, findBestModel,
   sortModels, filterByTier, filterBySearch,
@@ -427,6 +427,48 @@ function buildOpenCodeLaunchEnv(providerKey, apiKey) {
   return launchEnv;
 }
 
+async function promptInstallOpenCode() {
+  w(`\n${YELLOW} ! opencode CLI is not installed.${R}\n`);
+  const installers = detectAvailableInstallers();
+  if (!installers.length) {
+    w(`${D}   No supported package manager found (npm, brew, go).${R}\n`);
+    w(`${D}   Install manually: ${CYAN}https://github.com/opencode-ai/opencode${R}\n`);
+    return false;
+  }
+
+  w(`\n${B}   Available installers:${R}\n`);
+  installers.forEach((inst, i) => {
+    w(`   ${B}${i + 1}${R}) ${inst.label}  ${D}(${inst.command})${R}\n`);
+  });
+
+  const answer = await promptMasked(`\n   Install opencode? (1-${installers.length} to install, ESC to skip): `);
+  if (!answer) return false;
+
+  const idx = parseInt(answer, 10) - 1;
+  if (isNaN(idx) || idx < 0 || idx >= installers.length) {
+    w(`${RED}   Invalid choice.${R}\n`);
+    return false;
+  }
+
+  const chosen = installers[idx];
+  w(`\n${D}   Running: ${chosen.command}${R}\n\n`);
+  const result = installOpenCode(chosen);
+
+  if (!result.ok) {
+    w(`\n${RED} ✗ Installation failed: ${result.error}${R}\n`);
+    return false;
+  }
+
+  if (!isOpenCodeInstalled()) {
+    w(`\n${YELLOW} ! opencode was installed but is not on your PATH.${R}\n`);
+    w(`${D}   You may need to restart your shell or add its location to PATH.${R}\n`);
+    return false;
+  }
+
+  w(`\n${GREEN} ✓ opencode installed successfully.${R}\n`);
+  return true;
+}
+
 function quickApplySelectionToTargets() {
   if (!filtered.length) return false;
   selModel = filtered[cursor];
@@ -449,6 +491,9 @@ function quickApplySelectionToTargets() {
     w(`\n${GREEN} ✓ OpenCode model set → ${openCodePk}/${openCodeModel.id}${R}\n${D}   ${ocPath}${R}\n`);
     const authHint = getOpenCodeAuthHint(openCodePk, openCodeApiKey);
     if (authHint) w(`${authHint}\n`);
+    if (!isOpenCodeInstalled()) {
+      w(`${YELLOW} ! opencode CLI is not installed. Install it to use this config.${R}\n`);
+    }
   } catch (err) {
     ok = false;
     w(`\n${RED} ✗ OpenCode write failed: ${err.message}${R}\n`);
@@ -654,6 +699,15 @@ async function handleTarget(ch) {
     }
 
     const launch = !(ch === 's' || ch === 'S');
+
+    if (launch && !isOpenCodeInstalled()) {
+      cleanup();
+      const installed = await promptInstallOpenCode();
+      if (!installed) {
+        process.exit(0);
+      }
+    }
+
     const {
       openCodeModel,
       openCodePk,
@@ -680,6 +734,9 @@ async function handleTarget(ch) {
       }
       const authHint = getOpenCodeAuthHint(openCodePk, openCodeApiKey, { launch });
       if (authHint) w(`${authHint}\n`);
+      if (!launch && !isOpenCodeInstalled()) {
+        w(`${YELLOW} ! opencode CLI is not installed. Install it to use this config.${R}\n`);
+      }
     } catch (err) {
       w(`\n${RED} ✗ ${err.message}${R}\n`);
     }

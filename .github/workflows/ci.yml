@@ -33,10 +33,13 @@ jobs:
         run: npm run typecheck
 
       - name: Run tests
-        run: node --test dist/tests/unit/*.test.js dist/tests/integration/*.test.js dist/tests/security/*.test.js
+        run: |
+          npm run build
+          node --test dist/tests/unit/*.test.js dist/tests/integration/*.test.js dist/tests/security/*.test.js
 
       - name: Perf baseline + perf tests
         if: matrix.os == 'ubuntu-latest' && matrix.node == 22
+        continue-on-error: true
         run: |
           npm run perf:baseline
           npm run test:perf

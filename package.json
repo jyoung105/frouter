@@ -1,24 +1,31 @@
 {
   "name": "frouter-cli",
-  "version": "1.0.2",
+  "version": "1.0.1",
   "description": "Free model router — discover, ping, and configure free AI models for OpenCode / OpenClaw",
   "bin": {
-    "frouter": "bin/frouter.js"
+    "frouter": "dist/bin/frouter.js"
   },
   "type": "module",
   "packageManager": "bun@1.3.5",
   "scripts": {
-    "test": "node --test",
-    "test:onboarding": "node --test tests/integration/onboarding.test.js",
-    "test:fresh-start": "bash ./bin/frouter-fresh-start.sh"
+    "build": "tsc -p tsconfig.json && cp model-rankings.json dist/model-rankings.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "pretest": "npm run build",
+    "test": "node --test \"dist/tests/unit/*.test.js\" \"dist/tests/integration/*.test.js\" \"dist/tests/security/*.test.js\"",
+    "test:perf": "npm run build && node --test dist/tests/perf/*.perf.test.js",
+    "perf:baseline": "npm run build && node dist/tests/perf/collect-baseline.js",
+    "test:onboarding": "node --test dist/tests/integration/onboarding.test.js",
+    "test:fresh-start": "npm run build && bash ./bin/frouter-fresh-start.sh",
+    "prepack": "npm run build"
   },
   "engines": {
     "node": ">=18.0.0"
   },
   "files": [
-    "bin/",
-    "lib/",
-    "model-rankings.json"
+    "dist/bin/",
+    "dist/lib/",
+    "dist/model-rankings.json",
+    "bin/frouter-fresh-start.sh"
   ],
   "repository": {
     "type": "git",
@@ -26,6 +33,22 @@
   },
   "homepage": "https://github.com/jyoung105/frouter#readme",
   "author": "Tony Lee",
-  "keywords": ["ai", "cli", "tui", "free-models", "openrouter", "nvidia", "nim", "opencode", "openclaw", "llm", "free-api"],
-  "license": "MIT"
+  "keywords": [
+    "ai",
+    "cli",
+    "tui",
+    "free-models",
+    "openrouter",
+    "nvidia",
+    "nim",
+    "opencode",
+    "openclaw",
+    "llm",
+    "free-api"
+  ],
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^25.3.0",
+    "typescript": "^5.9.3"
+  }
 }

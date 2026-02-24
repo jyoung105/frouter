@@ -1,0 +1,889 @@
+#!/usr/bin/env node
+// bin/frouter.js — frouter main entry: TUI + --best mode
+// Zero dependencies — pure Node.js built-ins
+
+import { loadConfig, saveConfig, getApiKey, runFirstRunWizard, promptMasked, PROVIDERS_META, validateProviderApiKey } from '../lib/config.js';
+import { getAllModels } from '../lib/models.js';
+import { ping, pingAllOnce, startPingLoop, stopPingLoop } from '../lib/ping.js';
+import { writeOpenCode, resolveOpenCodeSelection, isOpenCodeInstalled, detectAvailableInstallers, installOpenCode } from '../lib/targets.js';
+import {
+  getAvg, getUptime, getVerdict, findBestModel,
+  sortModels, filterByTier, filterBySearch,
+  tierColor, latColor, uptimeColor,
+  TIER_CYCLE, pad, visLen,
+  R, B, D, RED, GREEN, YELLOW, CYAN, WHITE, BG_SEL,
+} from '../lib/utils.js';
+import { spawnSync } from 'node:child_process';
+
+// ─── ANSI shortcuts ────────────────────────────────────────────────────────────
+const w      = (s) => process.stdout.write(String(s));
+const CLEAR  = '\x1b[2J\x1b[H';
+const HIDEC  = '\x1b[?25l';
+const SHOWC  = '\x1b[?25h';
+const INVERT = '\x1b[7m';
+const BG_HDR = '\x1b[48;5;17m';
+const ALT_ON  = '\x1b[?1049h';
+const ALT_OFF = '\x1b[?1049l';
+const ALLOW_PLAINTEXT_KEY_EXPORT = process.env.FROUTER_EXPORT_PLAINTEXT_KEYS === '1';
+
+// ─── Parse CLI args ────────────────────────────────────────────────────────────
+const argv = process.argv.slice(2);
+const BEST = argv.includes('--best');
+const HELP = argv.includes('--help') || argv.includes('-h');
+
+if (HELP) {
+  console.log(`
+  frouter — Free Model Router
+
+  Usage: frouter [flags]
+
+  Flags:
+    (none)    Interactive TUI — discover, compare, select
+    --best    Non-interactive: print best model ID to stdout after ~10s
+    --help    Show this help
+
+  TUI keys:
+    ↑↓ / j k     Navigate models
+    PgUp / PgDn   Jump one page
+    g / G          Jump to top / bottom
+    /              Search (type to filter, ESC to clear)
+    Enter          Select model → choose target (OpenClaw currently disabled)
+    A              Quick API key add/change (opens key editor)
+    P              Settings (edit keys, toggle providers, test)
+    T              Cycle tier filter
+    W / X          Faster / slower ping interval
+    ?              Help overlay
+    q / Ctrl+C     Exit
+
+  Sort keys (press to sort, press again to reverse):
+    0:Priority  1:Tier  2:Provider  3:Model  4:Avg  5:Latest
+    6:Uptime  7:Context  8:Verdict  9:Intelligence
+`);
+  process.exit(0);
+}
+
+// ─── State ─────────────────────────────────────────────────────────────────────
+let config         = null;
+let models         = [];
+let filtered       = [];
+let cursor         = 0;
+let scrollOff      = 0;
+let sortCol        = 'priority';
+let sortAsc        = true;
+let searchMode     = false;
+let searchQuery    = '';
+let tierFilter     = 'All';
+let pingMs         = 2000;
+let screen         = 'main'; // 'main' | 'settings' | 'target' | 'help'
+let sCursor        = 0;
+let tCursor        = 0;
+let selModel       = null;
+let sEditing       = false;
+let sKeyBuf        = '';
+let sTestRes       = {};
+let sNotice        = '';
+let tNotice        = '';
+let pingRef        = null;
+let trackedId      = null;   // model id to track cursor across re-sorts
+
+// ─── Geometry ──────────────────────────────────────────────────────────────────
+const cols  = () => process.stdout.columns || 120;
+const rows  = () => process.stdout.rows    || 40;
+const tRows = () => Math.max(1, rows() - 9); // header(3) + detail(1) + footer(1) + margins
+
+// ─── Sort column metadata ──────────────────────────────────────────────────────
+const SORT_COLS = [
+  { key: '0', col: 'priority', label: 'Priority' },
+  { key: '1', col: 'tier',     label: 'Tier' },
+  { key: '2', col: 'provider', label: 'Provider' },
+  { key: '3', col: 'model',    label: 'Model' },
+  { key: '4', col: 'avg',      label: 'Avg' },
+  { key: '5', col: 'latest',   label: 'Lat' },
+  { key: '6', col: 'uptime',   label: 'Up%' },
+  { key: '7', col: 'context',  label: 'Ctx' },
+  { key: '8', col: 'verdict',  label: 'Verdict' },
+  { key: '9', col: 'intel',    label: 'AA' },
+];
+
+function sortArrow(colName) {
+  if (sortCol !== colName) return '';
+  return sortAsc ? '▲' : '▼';
+}
+
+function colHdr(label, colName, width, rightAlign = false) {
+  const arrow = sortArrow(colName);
+  const text = arrow ? `${label}${arrow}` : label;
+  return rightAlign ? text.padStart(width) : text.padEnd(width);
+}
+
+// ─── Render helpers ────────────────────────────────────────────────────────────
+function fmtCtx(n) {
+  if (!n) return '  —  ';
+  if (n >= 1_000_000) return `${(n/1_000_000).toFixed(1)}M`.padStart(5);
+  return `${Math.round(n/1000)}k`.padStart(5);
+}
+
+function fmtMs(ms) {
+  if (ms === Infinity || ms == null) return '   — ';
+  return `${Math.round(ms)}ms`.padStart(6);
+}
+
+function fmtUp(pct, hasPings) {
+  if (!hasPings) return '  — ';
+  return `${pct}%`.padStart(4);
+}
+
+function statusDot(model) {
+  switch (model.status) {
+    case 'up':       return `${GREEN}*${R}`;
+    case 'noauth':   return `${YELLOW}!${R}`;
+    case 'notfound': return `${RED}?${R}`;
+    case 'timeout':  return `${RED}o${R}`;
+    case 'down':     return `${RED}x${R}`;
+    default:        return `${D}.${R}`;
+  }
+}
+
+// ─── Main TUI ──────────────────────────────────────────────────────────────────
+function renderMain() {
+  const c = cols(), tr = tRows();
+  if (cursor < scrollOff)           scrollOff = cursor;
+  if (cursor >= scrollOff + tr)     scrollOff = cursor - tr + 1;
+
+  const provStatus = Object.entries(PROVIDERS_META).map(([pk, m]) => {
+    const on = config.providers?.[pk]?.enabled !== false;
+    return on ? `${GREEN}${m.name}${R}` : `${D}${m.name} off${R}`;
+  }).join('  ');
+
+  const searchBar = searchMode
+    ? `${CYAN}/${searchQuery}_${R}`
+    : `${D}/ search${R}`;
+
+  const tierBar = tierFilter !== 'All' ? `${YELLOW}tier:${tierFilter}${R}  ` : '';
+  const stats   = `${D}${filtered.length}/${models.length} models  ${pingMs/1000}s${R}`;
+
+  let out = CLEAR + HIDEC;
+
+  // Header
+  out += `${BG_HDR}${WHITE}${B} frouter ${R}  ${provStatus}`;
+  out += `${' '.repeat(Math.max(1, c - visLen(` frouter  ${provStatus}`) - 2))}\n`;
+
+  // Search + stats bar
+  out += ` ${searchBar}   ${tierBar}${stats}\n`;
+
+  // Column headers with sort indicators
+  const hdr = `  ${'#'.padStart(3)}  ${colHdr('Tier', 'tier', 4)}  ${colHdr('Provider', 'provider', 11)}  ${colHdr('Model', 'model', 32)}  ${colHdr('Ctx', 'context', 5, true)}  ${colHdr('AA', 'intel', 3, true)}  ${colHdr('Avg', 'avg', 6, true)}  ${colHdr('Lat', 'latest', 6, true)}  ${colHdr('Up%', 'uptime', 4, true)}  ${colHdr('Verdict', 'verdict', 7)}`;
+  out += `${INVERT}${hdr}${' '.repeat(Math.max(0, c - visLen(hdr)))}${R}\n`;
+
+  // Model rows
+  if (filtered.length === 0 && models.length === 0) {
+    out += `\n${D}    Loading models…${R}\n`;
+    for (let i = 1; i < tr; i++) out += '\n';
+  }
+  const slice = filtered.slice(scrollOff, scrollOff + tr);
+  for (let i = 0; i < tr; i++) {
+    const m = slice[i];
+    if (!m) { out += '\n'; continue; }
+
+    const idx     = scrollOff + i;
+    const isSel   = idx === cursor;
+    const rank    = String(idx + 1).padStart(3);
+    const tier    = pad(tierColor(m.tier) + (m.tier || '?') + R, 4);
+    const prov    = pad(m.providerKey === 'nvidia' ? 'NIM' : 'OpenRouter', 11);
+    const name    = pad(m.displayName || m.id, 32);
+    const ctx     = fmtCtx(m.context);
+    const avg     = getAvg(m);
+    const avgStr  = avg !== Infinity
+      ? latColor(avg) + fmtMs(avg) + R
+      : `${D}${fmtMs(null)}${R}`;
+    const last    = m.pings.at(-1);
+    const latMs   = last?.code === '200' ? last.ms : null;
+    const latStr  = latMs != null
+      ? latColor(latMs) + fmtMs(latMs) + R
+      : `${D}${fmtMs(null)}${R}`;
+    const up      = getUptime(m);
+    const upStr   = uptimeColor(up) + fmtUp(up, m.pings.length > 0) + R;
+    const dot     = statusDot(m);
+    const verdict = `${D}${getVerdict(m)}${R}`;
+    const aaStr   = m.aaIntelligence != null
+      ? String(Math.round(m.aaIntelligence)).padStart(3)
+      : `${D}  —${R}`;
+
+    const row = `  ${rank}  ${tier}  ${prov}  ${name}  ${ctx}  ${aaStr}  ${avgStr}  ${latStr}  ${upStr}  ${dot} ${verdict}`;
+    if (isSel) out += `${BG_SEL}${B}${row}${R}\n`;
+    else       out += `${row}${R}\n`;
+  }
+
+  // Detail bar — full model ID of highlighted model
+  const sel = filtered[cursor];
+  if (sel) {
+    const fullId = `${sel.providerKey}/${sel.id}`;
+    const sweStr = sel.sweScore != null ? `  SWE:${sel.sweScore}%` : '';
+    const ctxStr = sel.context ? `  ctx:${fmtCtx(sel.context).trim()}` : '';
+    out += `${D} ${fullId}${sweStr}${ctxStr}${R}\n`;
+  } else {
+    out += '\n';
+  }
+
+  // Footer
+  const footer = ` ↑↓/jk:nav  Enter:target  /:search (Enter=apply OpenCode)  A:api key  P:settings  T:tier  ?:help  0-9:sort  q:quit `;
+  out += `${INVERT}${footer}${' '.repeat(Math.max(0, c - visLen(footer)))}${R}`;
+  w(out);
+}
+
+// ─── Help overlay ──────────────────────────────────────────────────────────────
+function renderHelp() {
+  let out = CLEAR + HIDEC;
+  out += `${BG_HDR}${WHITE}${B} frouter — Keyboard Reference ${R}\n\n`;
+  out += `${B}  Navigation${R}\n`;
+  out += `  ↑ / k       Move up\n`;
+  out += `  ↓ / j       Move down\n`;
+  out += `  PgUp        Page up\n`;
+  out += `  PgDn        Page down\n`;
+  out += `  g           Jump to top\n`;
+  out += `  G           Jump to bottom\n\n`;
+  out += `${B}  Actions${R}\n`;
+  out += `  Enter       Select model → target picker (OpenCode / OpenClaw disabled)\n`;
+  out += `  /           Search / filter models (Enter applies to OpenCode only)\n`;
+  out += `  A           Quick API key add/change (opens key editor)\n`;
+  out += `  T           Cycle tier filter (All → S+ → S → …)\n`;
+  out += `  P           Settings (API keys, toggle providers)\n`;
+  out += `  W / X       Faster / slower ping interval\n`;
+  out += `  q           Quit\n\n`;
+  out += `${B}  Sort (press key to sort, press again to reverse)${R}\n`;
+  for (const s of SORT_COLS) {
+    const active = sortCol === s.col ? ` ${CYAN}← active${R}` : '';
+    out += `  ${s.key}           ${s.label}${active}\n`;
+  }
+  out += `\n${B}  Target Picker${R}\n`;
+  out += `  Enter       Save config + open selected target (OpenCode only)\n`;
+  out += `  G           Same as Enter\n`;
+  out += `  S           Save config only\n`;
+  out += `  ESC         Cancel\n`;
+  out += `\n${INVERT} Press any key to close ${R}\n`;
+  w(out);
+}
+
+// ─── Settings screen ───────────────────────────────────────────────────────────
+function renderSettings() {
+  let out = CLEAR + HIDEC;
+  out += `${BG_HDR}${WHITE}${B} frouter Settings ${R}\n\n`;
+
+  const pks = Object.keys(PROVIDERS_META);
+  pks.forEach((pk, i) => {
+    const meta    = PROVIDERS_META[pk];
+    const enabled = config.providers?.[pk]?.enabled !== false;
+    const key     = getApiKey(config, pk);
+    const isSel   = i === sCursor;
+
+    const toggleStr = enabled ? `${GREEN}[ ON  ]${R}` : `${RED}[ OFF ]${R}`;
+    const keyDisp   = sEditing && isSel
+      ? `${CYAN}${'•'.repeat(sKeyBuf.length)}_${R}`
+      : (key ? `${D}${key.slice(0,4)}${'•'.repeat(Math.min(16, Math.max(4, key.length-8)))}${key.slice(-4)}${R}` : `${D}(no key)${R}`);
+    const testDisp  = sTestRes[pk] ? `  ${D}[${sTestRes[pk]}]${R}` : '';
+
+    const prefix = isSel ? `${B} ❯ ${R}` : '   ';
+    out += `${prefix}${toggleStr} ${pad(meta.name, 14)} ${keyDisp}${testDisp}\n`;
+  });
+
+  out += `\n${INVERT} ↑↓:navigate  Enter:edit key  Space:toggle  T:test  D:delete key  ESC:back ${R}\n`;
+  if (sEditing) out += `\n${D} Type key  •  Enter:save  •  ESC:cancel${R}\n`;
+  if (sNotice) out += `\n${sNotice}\n`;
+  w(out);
+}
+
+// ─── Target picker ─────────────────────────────────────────────────────────────
+const TARGETS = [
+  { id: 'opencode', label: 'OpenCode CLI',  path: '~/.config/opencode/opencode.json', enabled: true },
+  { id: 'openclaw', label: 'OpenClaw',      path: '~/.openclaw/openclaw.json', enabled: false },
+];
+
+function renderTarget() {
+  const name = selModel?.displayName || selModel?.id || '?';
+  const fullId = selModel ? `${selModel.providerKey}/${selModel.id}` : '';
+  let out = CLEAR + HIDEC;
+  out += `${BG_HDR}${WHITE}${B} Configure: ${name} ${R}\n`;
+  out += `${D}  ${fullId}${R}\n\n`;
+
+  TARGETS.forEach((t, i) => {
+    const isSel  = i === tCursor;
+    const prefix = isSel ? `${B} ❯ ${R}` : '   ';
+    const status = t.enabled ? `${GREEN}[enabled]${R}` : `${YELLOW}[disabled]${R}`;
+    out += `${prefix}${pad(t.label, 12)} ${status}  ${D}${t.path}${R}\n`;
+  });
+
+  const target = TARGETS[tCursor];
+  if (target && !target.enabled) {
+    out += `\n${YELLOW} ${target.label} is currently disabled.${R}\n`;
+  } else if (tNotice) {
+    out += `\n${tNotice}\n`;
+  }
+
+  out += `\n${INVERT} Enter:save + open  G:same  S:save only  ESC:cancel ${R}\n`;
+  w(out);
+}
+
+// ─── Render dispatcher ─────────────────────────────────────────────────────────
+function render() {
+  switch (screen) {
+    case 'main':     renderMain();     break;
+    case 'settings': renderSettings(); break;
+    case 'target':   renderTarget();   break;
+    case 'help':     renderHelp();     break;
+  }
+}
+
+// ─── Filter + sort (with cursor tracking) ──────────────────────────────────────
+function applyFilters() {
+  // Remember which model the cursor is on
+  if (filtered[cursor]) {
+    trackedId = `${filtered[cursor].providerKey}|${filtered[cursor].id}`;
+  }
+
+  let r = models;
+  if (tierFilter !== 'All')  r = filterByTier(r, tierFilter);
+  if (searchQuery)           r = filterBySearch(r, searchQuery);
+  r = sortModels(r, sortCol, sortAsc);
+  filtered = r;
+
+  // Restore cursor to the same model if it still exists
+  if (trackedId) {
+    const idx = filtered.findIndex(m => `${m.providerKey}|${m.id}` === trackedId);
+    if (idx !== -1) cursor = idx;
+  }
+  if (cursor >= filtered.length) cursor = Math.max(0, filtered.length - 1);
+  if (cursor < 0) cursor = 0;
+  scrollOff = Math.max(0, Math.min(scrollOff, Math.max(0, filtered.length - tRows())));
+}
+
+// ─── Key handlers ──────────────────────────────────────────────────────────────
+const UP   = '\x1b[A';
+const DOWN = '\x1b[B';
+const PGUP = '\x1b[5~';
+const PGDN = '\x1b[6~';
+const HOME = '\x1b[H';
+const END  = '\x1b[F';
+
+function maxCursorIndex() {
+  return Math.max(0, filtered.length - 1);
+}
+
+function clampCursor(next) {
+  return Math.max(0, Math.min(maxCursorIndex(), next));
+}
+
+function enterTargetPickerFromSelection() {
+  if (!filtered.length) return false;
+  selModel = filtered[cursor];
+  tCursor = 0;
+  tNotice = '';
+  searchMode = false;
+  screen = 'target';
+  return true;
+}
+
+function resolveOpenCodeApplySelection(selectedModel) {
+  const pk = selectedModel.providerKey;
+  const apiKey = getApiKey(config, pk);
+  const resolved = resolveOpenCodeSelection(selectedModel, pk, models);
+  let openCodeModel = selectedModel;
+  let openCodePk = pk;
+  let openCodeApiKey = apiKey;
+  let notice = '';
+
+  if (resolved.fallback) {
+    const fallbackKey = getApiKey(config, resolved.providerKey);
+    if (fallbackKey) {
+      openCodeModel = resolved.model;
+      openCodePk = resolved.providerKey;
+      openCodeApiKey = fallbackKey;
+      notice = `${YELLOW} ! OpenCode fallback: ${pk}/${selectedModel.id} -> ${openCodePk}/${openCodeModel.id} (${resolved.reason})${R}`;
+    } else {
+      notice = `${YELLOW} ! OpenCode fallback skipped: missing ${resolved.providerKey.toUpperCase()} API key${R}`;
+    }
+  }
+
+  return {
+    openCodeModel,
+    openCodePk,
+    openCodeApiKey,
+    notice,
+  };
+}
+
+function getOpenCodeAuthHint(providerKey, apiKey, { launch = false } = {}) {
+  if (launch || !apiKey || ALLOW_PLAINTEXT_KEY_EXPORT) return '';
+  const envVar = PROVIDERS_META[providerKey]?.envVar;
+  if (!envVar || process.env[envVar]) return '';
+  return `${YELLOW} ! OpenCode auth uses ${envVar}. Export it before launching opencode outside frouter.${R}`;
+}
+
+function buildOpenCodeLaunchEnv(providerKey, apiKey) {
+  const launchEnv = { ...process.env };
+  const envVar = PROVIDERS_META[providerKey]?.envVar;
+  if (apiKey && envVar) {
+    launchEnv[envVar] = apiKey;
+  }
+  return launchEnv;
+}
+
+async function promptInstallOpenCode() {
+  w(`\n${YELLOW} ! opencode CLI is not installed.${R}\n`);
+  const installers = detectAvailableInstallers();
+  if (!installers.length) {
+    w(`${D}   No supported package manager found (npm, brew, go).${R}\n`);
+    w(`${D}   Install manually: ${CYAN}https://github.com/opencode-ai/opencode${R}\n`);
+    return false;
+  }
+
+  w(`\n${B}   Available installers:${R}\n`);
+  installers.forEach((inst, i) => {
+    w(`   ${B}${i + 1}${R}) ${inst.label}  ${D}(${inst.command})${R}\n`);
+  });
+
+  const answer = await promptMasked(`\n   Install opencode? (1-${installers.length} to install, ESC to skip): `);
+  if (!answer) return false;
+
+  const idx = parseInt(answer, 10) - 1;
+  if (isNaN(idx) || idx < 0 || idx >= installers.length) {
+    w(`${RED}   Invalid choice.${R}\n`);
+    return false;
+  }
+
+  const chosen = installers[idx];
+  w(`\n${D}   Running: ${chosen.command}${R}\n\n`);
+  const result = installOpenCode(chosen);
+
+  if (!result.ok) {
+    w(`\n${RED} ✗ Installation failed: ${result.error}${R}\n`);
+    return false;
+  }
+
+  if (!isOpenCodeInstalled()) {
+    w(`\n${YELLOW} ! opencode was installed but is not on your PATH.${R}\n`);
+    w(`${D}   You may need to restart your shell or add its location to PATH.${R}\n`);
+    return false;
+  }
+
+  w(`\n${GREEN} ✓ opencode installed successfully.${R}\n`);
+  return true;
+}
+
+function quickApplySelectionToTargets() {
+  if (!filtered.length) return false;
+  selModel = filtered[cursor];
+  searchMode = false;
+
+  const {
+    openCodeModel,
+    openCodePk,
+    openCodeApiKey,
+    notice,
+  } = resolveOpenCodeApplySelection(selModel);
+
+  let ok = true;
+
+  try {
+    if (notice) w(`${notice}\n`);
+    const ocPath = writeOpenCode(openCodeModel, openCodePk, openCodeApiKey, {
+      persistApiKey: ALLOW_PLAINTEXT_KEY_EXPORT,
+    });
+    w(`\n${GREEN} ✓ OpenCode model set → ${openCodePk}/${openCodeModel.id}${R}\n${D}   ${ocPath}${R}\n`);
+    const authHint = getOpenCodeAuthHint(openCodePk, openCodeApiKey);
+    if (authHint) w(`${authHint}\n`);
+    if (!isOpenCodeInstalled()) {
+      w(`${YELLOW} ! opencode CLI is not installed. Install it to use this config.${R}\n`);
+    }
+  } catch (err) {
+    ok = false;
+    w(`\n${RED} ✗ OpenCode write failed: ${err.message}${R}\n`);
+  }
+
+  setTimeout(() => { screen = 'main'; render(); }, ok ? 1400 : 2000);
+  return true;
+}
+
+function resolveQuickApiKeyProviderIndex() {
+  const pks = Object.keys(PROVIDERS_META);
+  if (!pks.length) return 0;
+
+  const selectedPk = filtered[cursor]?.providerKey;
+  if (selectedPk) {
+    const selectedIdx = pks.indexOf(selectedPk);
+    if (selectedIdx !== -1) return selectedIdx;
+  }
+
+  const missingIdx = pks.findIndex((pk) => !config?.apiKeys?.[pk]);
+  if (missingIdx !== -1) return missingIdx;
+
+  return 0;
+}
+
+function openApiKeyEditorFromMain() {
+  stopPingLoop(pingRef);
+  sCursor = resolveQuickApiKeyProviderIndex();
+  sEditing = true;
+  sKeyBuf = '';
+  sNotice = '';
+  sTestRes = {};
+  searchMode = false;
+  screen = 'settings';
+}
+
+function handleMain(ch) {
+  // Search mode: intercept all input
+  if (searchMode) {
+    let needsRefilter = false;
+    if      (ch === '\x1b')  {
+      searchMode = false;
+      searchQuery = '';
+      cursor = 0;
+      scrollOff = 0;
+      trackedId = null;
+      needsRefilter = true;
+    }
+    else if (ch === '\r')    {
+      if (quickApplySelectionToTargets()) { return; }
+      searchMode = false;
+    }
+    else if (ch === '\x7f')  {
+      searchQuery = searchQuery.slice(0, -1);
+      needsRefilter = true;
+    }
+    else if (ch === UP)   { cursor = Math.max(0, cursor - 1); }
+    else if (ch === DOWN) { cursor = clampCursor(cursor + 1); }
+    else if (ch.length === 1 && ch >= ' ') {
+      searchQuery += ch;
+      needsRefilter = true;
+    }
+
+    if (needsRefilter) applyFilters();
+    render();
+    return;
+  }
+
+  // Navigation
+  if      (ch === UP   || ch === 'k') { cursor = Math.max(0, cursor - 1); }
+  else if (ch === DOWN || ch === 'j') { cursor = clampCursor(cursor + 1); }
+  else if (ch === PGUP)               { cursor = Math.max(0, cursor - tRows()); }
+  else if (ch === PGDN)               { cursor = clampCursor(cursor + tRows()); }
+  else if (ch === 'g' || ch === HOME) { cursor = 0; }
+  else if (ch === 'G' || ch === END)  { cursor = maxCursorIndex(); }
+
+  // Actions
+  else if (ch === '/')               {
+    searchMode = true;
+    searchQuery = '';
+    cursor = 0;
+    scrollOff = 0;
+    trackedId = null;
+    applyFilters();
+  }
+  else if (ch === '\r') {
+    enterTargetPickerFromSelection();
+  }
+  else if (ch === 'p' || ch === 'P') {
+    stopPingLoop(pingRef); sCursor = 0; sEditing = false; screen = 'settings';
+  }
+  else if (ch === 'a' || ch === 'A') {
+    openApiKeyEditorFromMain();
+  }
+  else if (ch === '?')               { screen = 'help'; }
+  else if (ch === 'q')               { cleanup(); process.exit(0); }
+  else if (ch === 't' || ch === 'T') {
+    tierFilter = TIER_CYCLE[(TIER_CYCLE.indexOf(tierFilter) + 1) % TIER_CYCLE.length];
+    applyFilters();
+  }
+  else if (ch === 'w' || ch === 'W') { pingMs = Math.max(1000, pingMs - 1000); restartLoop(); }
+  else if (ch === 'x' || ch === 'X') { pingMs = Math.min(30000, pingMs + 1000); restartLoop(); }
+
+  // Number-key sorting (0-9)
+  else {
+    const sortDef = SORT_COLS.find(s => s.key === ch);
+    if (sortDef) toggleSort(sortDef.col);
+  }
+
+  render();
+}
+
+function toggleSort(col) {
+  if (sortCol === col) sortAsc = !sortAsc;
+  else { sortCol = col; sortAsc = true; }
+  applyFilters();
+}
+
+function handleSettings(ch) {
+  const pks = Object.keys(PROVIDERS_META);
+
+  if (sEditing) {
+    if      (ch === '\x1b')  { sEditing = false; sKeyBuf = ''; }
+    else if (ch === '\r')    {
+      const pk = pks[sCursor];
+      // Empty buffer = clear the key; non-empty = set the key
+      config.apiKeys ??= {};
+      if (sKeyBuf) {
+        const checked = validateProviderApiKey(pk, sKeyBuf);
+        if (!checked.ok) {
+          sNotice = `${RED}Invalid key for ${PROVIDERS_META[pk].name}: ${checked.reason}${R}`;
+          render();
+          return;
+        }
+        config.apiKeys[pk] = checked.key;
+        sNotice = `${GREEN}Saved ${PROVIDERS_META[pk].name} key${R}`;
+      } else {
+        delete config.apiKeys[pk];
+        sNotice = `${YELLOW}Removed ${PROVIDERS_META[pk].name} key${R}`;
+      }
+      saveConfig(config);
+      sEditing = false; sKeyBuf = '';
+    }
+    else if (ch === '\x7f')  { sKeyBuf = sKeyBuf.slice(0, -1); }
+    else if (ch.length === 1 && ch >= ' ') { sKeyBuf += ch; }
+    render(); return;
+  }
+
+  if      (ch === '\x1b' || ch === 'q')  {
+    screen = 'main';
+    render(); // show main immediately
+    refreshModels().then(() => { restartLoop(); render(); });
+    return;
+  }
+  else if (ch === UP)   { sCursor = Math.max(0, sCursor - 1); }
+  else if (ch === DOWN) { sCursor = Math.min(pks.length - 1, sCursor + 1); }
+  else if (ch === ' ')  {
+    const pk = pks[sCursor];
+    config.providers ??= {};
+    config.providers[pk] ??= {};
+    config.providers[pk].enabled = !(config.providers[pk].enabled !== false);
+    saveConfig(config);
+    sNotice = '';
+  }
+  else if (ch === '\r') { sEditing = true; sKeyBuf = ''; sNotice = ''; }
+  else if (ch === 'd' || ch === 'D') {
+    // Delete key for current provider
+    const pk = pks[sCursor];
+    if (config.apiKeys?.[pk]) {
+      delete config.apiKeys[pk];
+      saveConfig(config);
+      sNotice = `${YELLOW}Removed ${PROVIDERS_META[pk].name} key${R}`;
+    }
+  }
+  else if (ch === 't' || ch === 'T') {
+    const pk = pks[sCursor];
+    const meta = PROVIDERS_META[pk];
+    const key  = getApiKey(config, pk);
+    sTestRes[pk] = 'testing…';
+    render();
+    ping(key, meta.testModel, meta.chatUrl).then(r => {
+      sTestRes[pk] = r.code === '200' ? `${r.ms}ms ✓` : `${r.code} ✗`;
+      render();
+    });
+    return;
+  }
+
+  render();
+}
+
+async function handleTarget(ch) {
+  if      (ch === '\x1b' || ch === 'q') { screen = 'main'; tNotice = ''; render(); return; }
+  else if (ch === UP)     { tCursor = Math.max(0, tCursor - 1); tNotice = ''; }
+  else if (ch === DOWN)   { tCursor = Math.min(TARGETS.length - 1, tCursor + 1); tNotice = ''; }
+
+  // Enter/G = write config + open target; S = write config only
+  if (ch === '\r' || ch === 'g' || ch === 'G' || ch === 's' || ch === 'S') {
+    const target = TARGETS[tCursor];
+    if (!target?.enabled) {
+      tNotice = `${YELLOW} ${target?.label || 'This target'} is currently disabled.${R}`;
+      render();
+      return;
+    }
+
+    const launch = !(ch === 's' || ch === 'S');
+
+    if (launch && !isOpenCodeInstalled()) {
+      cleanup();
+      const installed = await promptInstallOpenCode();
+      if (!installed) {
+        process.exit(0);
+      }
+    }
+
+    const {
+      openCodeModel,
+      openCodePk,
+      openCodeApiKey,
+      notice,
+    } = resolveOpenCodeApplySelection(selModel);
+
+    try {
+      if (notice) w(`\n${notice}\n`);
+      const writtenPath = writeOpenCode(openCodeModel, openCodePk, openCodeApiKey, {
+        persistApiKey: ALLOW_PLAINTEXT_KEY_EXPORT,
+      });
+      w(`\n${GREEN} ✓ OpenCode config written → ${writtenPath}${R}\n`);
+      if (launch) {
+        cleanup();
+        const launchEnv = buildOpenCodeLaunchEnv(openCodePk, openCodeApiKey);
+        const result = spawnSync('opencode', [], {
+          stdio: 'inherit',
+          shell: true,
+          env: launchEnv,
+        });
+        const code = Number.isInteger(result.status) ? result.status : 1;
+        process.exit(code);
+      }
+      const authHint = getOpenCodeAuthHint(openCodePk, openCodeApiKey, { launch });
+      if (authHint) w(`${authHint}\n`);
+      if (!launch && !isOpenCodeInstalled()) {
+        w(`${YELLOW} ! opencode CLI is not installed. Install it to use this config.${R}\n`);
+      }
+    } catch (err) {
+      w(`\n${RED} ✗ ${err.message}${R}\n`);
+    }
+
+    setTimeout(() => { screen = 'main'; render(); }, launch ? 2000 : 1400);
+    return;
+  }
+
+  render();
+}
+
+// ─── Raw input dispatcher ──────────────────────────────────────────────────────
+// Buffer escape sequences: if \x1b arrives alone, wait 50ms to see if [ follows.
+let escBuf = '';
+let escTimer = null;
+
+function flushEsc() {
+  const buf = escBuf;
+  escBuf = '';
+  escTimer = null;
+  dispatch(buf);
+}
+
+function onData(raw) {
+  const ch = String(raw);
+  if (ch.length > 1) {
+    if (escTimer) { clearTimeout(escTimer); escBuf = ''; escTimer = null; }
+    dispatch(ch);
+    return;
+  }
+  if (ch === '\x1b') {
+    if (escTimer) { clearTimeout(escTimer); dispatch('\x1b'); }
+    escBuf = '\x1b';
+    escTimer = setTimeout(flushEsc, 50);
+    return;
+  }
+  if (escBuf) {
+    escBuf += ch;
+    // Complete sequences: \x1b[A (3 chars), \x1b[5~ (4 chars)
+    if (escBuf.length >= 3 && (escBuf.at(-1) !== '[' && !escBuf.endsWith('\x1b['))) {
+      // Check if we need more chars (e.g. \x1b[5 needs the trailing ~)
+      if (escBuf.length === 3 && escBuf[2] >= '0' && escBuf[2] <= '9') {
+        return; // wait for one more char
+      }
+      clearTimeout(escTimer);
+      const buf = escBuf; escBuf = ''; escTimer = null;
+      dispatch(buf);
+    }
+    return;
+  }
+  dispatch(ch);
+}
+
+function dispatch(ch) {
+  if (ch === '\x03') { cleanup(); process.exit(0); }
+
+  if (screen === 'help') { screen = 'main'; render(); return; }
+
+  if      (screen === 'main')     handleMain(ch);
+  else if (screen === 'settings') handleSettings(ch);
+  else if (screen === 'target')   handleTarget(ch).catch(() => {});
+}
+
+// ─── Model management ──────────────────────────────────────────────────────────
+async function refreshModels() {
+  const fresh = await getAllModels(config);
+  const byKey = new Map(models.map(m => [`${m.providerKey}|${m.id}`, m]));
+  models = fresh.map(m => {
+    const existing = byKey.get(`${m.providerKey}|${m.id}`);
+    return existing ? { ...m, pings: existing.pings, status: existing.status, httpCode: existing.httpCode } : m;
+  });
+  applyFilters();
+}
+
+function restartLoop() {
+  stopPingLoop(pingRef);
+  pingRef = startPingLoop(models, config, pingMs, () => {
+    applyFilters();
+    if (screen === 'main') render();
+  });
+}
+
+// ─── Cleanup ───────────────────────────────────────────────────────────────────
+function cleanup() {
+  stopPingLoop(pingRef);
+  w(SHOWC + ALT_OFF);
+  try { if (process.stdin.isTTY) process.stdin.setRawMode(false); } catch {}
+}
+
+process.on('exit', () => w(SHOWC + ALT_OFF));
+
+// ─── --best mode ───────────────────────────────────────────────────────────────
+async function runBest() {
+  config = loadConfig();
+  const hasKeys = Object.keys(config.apiKeys || {}).length > 0;
+  if (!hasKeys) {
+    process.stderr.write('No API keys configured. Run `frouter` to set up keys.\n');
+    process.exit(1);
+  }
+
+  models = await getAllModels(config);
+
+  for (let i = 0; i < 4; i++) {
+    const upCount = models.filter(m => m.status === 'up').length;
+    process.stderr.write(`  Round ${i + 1}/4… ${upCount} up of ${models.length}\n`);
+    await pingAllOnce(models, config);
+    if (i < 3) await new Promise(r => setTimeout(r, 2500));
+  }
+
+  const upFinal = models.filter(m => m.status === 'up').length;
+  process.stderr.write(`  Done. ${upFinal} models responding.\n`);
+
+  const best = findBestModel(models);
+  if (!best) { process.stderr.write('No models responded.\n'); process.exit(1); }
+  process.stdout.write(`${best.providerKey}/${best.id}\n`);
+  process.exit(0);
+}
+
+// ─── Main ──────────────────────────────────────────────────────────────────────
+async function main() {
+  if (BEST) { await runBest(); return; }
+
+  config = loadConfig();
+
+  if (!Object.keys(config.apiKeys || {}).length) {
+    config = await runFirstRunWizard(config);
+  }
+
+  if (!process.stdin.isTTY) {
+    process.stderr.write('frouter requires an interactive terminal.\n');
+    process.exit(1);
+  }
+
+  w(ALT_ON);
+  process.stdin.setRawMode(true);
+  process.stdin.resume();
+  process.stdin.setEncoding('utf8');
+  process.stdin.on('data', onData);
+
+  process.on('SIGINT',  () => { cleanup(); process.exit(0); });
+  process.on('SIGTERM', () => { cleanup(); process.exit(0); });
+  process.stdout.on('resize', render);
+
+  render(); // show loading state immediately
+  await refreshModels();
+  restartLoop();
+  render();
+}
+
+main().catch(err => { cleanup(); console.error('Fatal:', err); process.exit(1); });

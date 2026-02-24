@@ -28,7 +28,13 @@ printf 'Onboarding tips:\n'
 printf '  - Press ESC to skip a provider.\n'
 printf '  - Enter y to open signup page for a provider key.\n\n'
 
-HOME="${TMP_HOME}" node "${ROOT_DIR}/bin/frouter.js" "$@"
+BIN_PATH="${ROOT_DIR}/dist/bin/frouter.js"
+if [[ ! -f "${BIN_PATH}" ]]; then
+  printf 'Missing %s. Run `npm run build` first.\n' "${BIN_PATH}" >&2
+  exit 1
+fi
+
+HOME="${TMP_HOME}" node "${BIN_PATH}" "$@"
 
 CONFIG_PATH="${TMP_HOME}/.frouter.json"
 if [[ -f "${CONFIG_PATH}" ]]; then

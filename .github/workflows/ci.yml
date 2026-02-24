@@ -26,11 +26,16 @@ jobs:
         with:
           node-version: ${{ matrix.node }}
 
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-
       - name: Install dependencies
-        run: bun install --frozen-lockfile
+        run: npm install
+
+      - name: Typecheck
+        run: npm run typecheck
 
       - name: Run tests
-        run: bun run test
+        run: npm test
+
+      - name: Perf baseline + perf tests
+        run: |
+          npm run perf:baseline
+          npm run test:perf

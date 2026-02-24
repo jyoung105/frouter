@@ -7,6 +7,7 @@ dist/
 
 # Local reference notes
 REFERENCE.md
+EXPLANATION.md
 
 # OMX local state
 .omx/

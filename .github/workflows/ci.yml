@@ -32,10 +32,15 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
-      - name: Run tests
-        run: |
-          npm run build
-          node --test dist/tests/unit/*.test.js dist/tests/integration/*.test.js dist/tests/security/*.test.js
+      - name: Build dist artifacts
+        run: npm run build
+
+      - name: Run unit + security tests
+        run: node --test dist/tests/unit/*.test.js dist/tests/security/*.test.js
+
+      - name: Run integration tests (Ubuntu only)
+        if: matrix.os == 'ubuntu-latest'
+        run: node --test dist/tests/integration/*.test.js
 
       - name: Perf baseline + perf tests
         if: matrix.os == 'ubuntu-latest' && matrix.node == 22

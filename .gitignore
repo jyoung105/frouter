@@ -17,8 +17,15 @@ EXPLANATION.md
 # Dependencies
 node_modules/
 
+# Test artifacts
+coverage/
+.nyc_output/
+test-results/
+*.lcov
+
 # OS/editor noise
 .DS_Store
 *.log
 
+# Legacy JS test wrappers (TS source of truth lives under src/tests)
 /tests/

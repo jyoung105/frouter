@@ -1,4 +1,4 @@
-import { spawn } from 'node:child_process';
+import { spawn } from "node:child_process";
 
 type InputChunk = {
   delayMs?: number;
@@ -21,33 +21,34 @@ type RunNodeResult = {
   timedOut: boolean;
 };
 
-export function runNode(args: string[], options: RunNodeOptions = {}): Promise<RunNodeResult> {
-  const {
-    cwd,
-    env,
-    input,
-    inputChunks,
-    timeoutMs = 10_000,
-  } = options;
+export function runNode(
+  args: string[],
+  options: RunNodeOptions = {},
+): Promise<RunNodeResult> {
+  const { cwd, env, input, inputChunks, timeoutMs = 10_000 } = options;
 
   return new Promise((resolve, reject) => {
     const child = spawn(process.execPath, args, {
       cwd,
       env: { ...process.env, ...env },
-      stdio: ['pipe', 'pipe', 'pipe'],
+      stdio: ["pipe", "pipe", "pipe"],
     });
 
-    let stdout = '';
-    let stderr = '';
+    let stdout = "";
+    let stderr = "";
     let settled = false;
     let timedOut = false;
 
-    child.stdout.setEncoding('utf8');
-    child.stderr.setEncoding('utf8');
-    child.stdout.on('data', (chunk) => { stdout += chunk; });
-    child.stderr.on('data', (chunk) => { stderr += chunk; });
+    child.stdout.setEncoding("utf8");
+    child.stderr.setEncoding("utf8");
+    child.stdout.on("data", (chunk) => {
+      stdout += chunk;
+    });
+    child.stderr.on("data", (chunk) => {
+      stderr += chunk;
+    });
 
-    child.on('error', (err) => {
+    child.on("error", (err) => {
       if (settled) return;
       settled = true;
       clearTimeout(timer);
@@ -56,7 +57,7 @@ export function runNode(args: string[], options: RunNodeOptions = {}): Promise<R
 
     const timer = setTimeout(() => {
       timedOut = true;
-      child.kill('SIGKILL');
+      child.kill("SIGKILL");
     }, timeoutMs);
 
     if (Array.isArray(inputChunks) && inputChunks.length > 0) {
@@ -66,20 +67,20 @@ export function runNode(args: string[], options: RunNodeOptions = {}): Promise<R
         if (delayMs > maxDelay) maxDelay = delayMs;
         setTimeout(() => {
           if (!child.killed && child.stdin.writable) {
-            child.stdin.write(String(chunk?.data ?? ''));
+            child.stdin.write(String(chunk?.data ?? ""));
           }
         }, delayMs);
       }
       setTimeout(() => {
         if (child.stdin.writable) child.stdin.end();
       }, maxDelay + 50);
-    } else if (typeof input === 'string') {
+    } else if (typeof input === "string") {
       child.stdin.end(input);
     } else {
       child.stdin.end();
     }
 
-    child.on('close', (code, signal) => {
+    child.on("close", (code, signal) => {
       if (settled) return;
       settled = true;
       clearTimeout(timer);

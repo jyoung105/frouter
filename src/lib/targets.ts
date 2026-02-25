@@ -1,38 +1,50 @@
 // src/lib/targets.ts — write config to OpenCode and OpenClaw
-import { execSync, spawnSync } from 'node:child_process';
-import { readFileSync, writeFileSync, copyFileSync, mkdirSync, existsSync, chmodSync, statSync } from 'node:fs';
-import { homedir, platform } from 'node:os';
-import { join, dirname } from 'node:path';
-import { PROVIDERS_META, validateProviderApiKey } from './config.js';
+import { execSync, spawnSync } from "node:child_process";
+import {
+  readFileSync,
+  writeFileSync,
+  copyFileSync,
+  mkdirSync,
+  existsSync,
+  chmodSync,
+  statSync,
+} from "node:fs";
+import { homedir, platform } from "node:os";
+import { join, dirname } from "node:path";
+import { PROVIDERS_META, validateProviderApiKey } from "./config.js";
 
-const OPENCODE_PATH = join(homedir(), '.config', 'opencode', 'opencode.json');
-const OPENCLAW_PATH = join(homedir(), '.openclaw', 'openclaw.json');
-const IS_WIN = platform() === 'win32';
+const OPENCODE_PATH = join(homedir(), ".config", "opencode", "opencode.json");
+const OPENCLAW_PATH = join(homedir(), ".openclaw", "openclaw.json");
+const IS_WIN = platform() === "win32";
 let cachedOpenCodeConfig: Record<string, any> | null = null;
 let cachedOpenCodeConfigFingerprint: string | null = null;
 
 function readJson(path) {
   if (!existsSync(path)) return {};
   try {
-    return JSON.parse(readFileSync(path, 'utf8'));
+    return JSON.parse(readFileSync(path, "utf8"));
   } catch {
     return {};
   }
 }
 
 function readOpenCodeFingerprint() {
-  if (!existsSync(OPENCODE_PATH)) return 'missing';
+  if (!existsSync(OPENCODE_PATH)) return "missing";
   try {
     const stat = statSync(OPENCODE_PATH);
     return `${stat.mtimeMs}:${stat.size}`;
   } catch {
-    return 'missing';
+    return "missing";
   }
 }
 
 function readOpenCodeConfig(force = false) {
   const fingerprint = readOpenCodeFingerprint();
-  if (!force && cachedOpenCodeConfig && cachedOpenCodeConfigFingerprint === fingerprint) {
+  if (
+    !force &&
+    cachedOpenCodeConfig &&
+    cachedOpenCodeConfigFingerprint === fingerprint
+  ) {
     return cachedOpenCodeConfig;
   }
   cachedOpenCodeConfig = readJson(OPENCODE_PATH);
@@ -44,10 +56,10 @@ function backupAndWriteJson(path, data) {
   const dir = dirname(path);
   if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
   if (existsSync(path)) {
-    const ts = new Date().toISOString().replace(/[:.]/g, '-');
+    const ts = new Date().toISOString().replace(/[:.]/g, "-");
     copyFileSync(path, `${path}.backup-${ts}`);
   }
-  writeFileSync(path, JSON.stringify(data, null, 2) + '\n', { mode: 0o600 });
+  writeFileSync(path, JSON.stringify(data, null, 2) + "\n", { mode: 0o600 });
   chmodSync(path, 0o600);
 }
 
@@ -57,11 +69,17 @@ function getProviderMeta(providerKey) {
   return meta;
 }
 
-function resolvePersistedApiKey(providerKey: string, apiKey: string | null, options: { persistApiKey?: boolean } = {}) {
+function resolvePersistedApiKey(
+  providerKey: string,
+  apiKey: string | null,
+  options: { persistApiKey?: boolean } = {},
+) {
   if (!options.persistApiKey || !apiKey) return null;
   const checked = validateProviderApiKey(providerKey, apiKey);
   if (!checked.ok) {
-    throw new Error(`Refusing to persist invalid ${providerKey} API key: ${checked.reason}`);
+    throw new Error(
+      `Refusing to persist invalid ${providerKey} API key: ${checked.reason}`,
+    );
   }
   return checked.key;
 }
@@ -69,7 +87,7 @@ function resolvePersistedApiKey(providerKey: string, apiKey: string | null, opti
 /** Check whether a binary is available on PATH. */
 function hasBinary(bin: string) {
   try {
-    execSync(IS_WIN ? `where ${bin}` : `which ${bin}`, { stdio: 'ignore' });
+    execSync(IS_WIN ? `where ${bin}` : `which ${bin}`, { stdio: "ignore" });
     return true;
   } catch {
     return false;
@@ -79,23 +97,37 @@ function hasBinary(bin: string) {
 // ─── OpenCode installation detection ─────────────────────────────────────────
 
 export function isOpenCodeInstalled() {
-  return hasBinary('opencode');
+  return hasBinary("opencode");
 }
 
 export function detectAvailableInstallers() {
   const installers = [];
-  if (hasBinary('npm'))  installers.push({ id: 'npm',  label: 'npm',  command: 'npm install -g opencode' });
-  if (platform() === 'darwin' && hasBinary('brew')) {
-    installers.push({ id: 'brew', label: 'Homebrew', command: 'brew install opencode' });
+  if (hasBinary("npm"))
+    installers.push({
+      id: "npm",
+      label: "npm",
+      command: "npm install -g opencode",
+    });
+  if (platform() === "darwin" && hasBinary("brew")) {
+    installers.push({
+      id: "brew",
+      label: "Homebrew",
+      command: "brew install opencode",
+    });
   }
-  if (hasBinary('go'))   installers.push({ id: 'go',   label: 'Go',   command: 'go install github.com/opencode-ai/opencode@latest' });
+  if (hasBinary("go"))
+    installers.push({
+      id: "go",
+      label: "Go",
+      command: "go install github.com/opencode-ai/opencode@latest",
+    });
   return installers;
 }
 
 export function installOpenCode(installer: { command: string }) {
   try {
     const result = spawnSync(installer.command, {
-      stdio: 'inherit',
+      stdio: "inherit",
       shell: true,
       timeout: 120_000,
     });
@@ -109,17 +141,17 @@ export function installOpenCode(installer: { command: string }) {
 // ─── Provider config blocks ───────────────────────────────────────────────────
 
 function getBaseUrl(meta) {
-  return meta.chatUrl.replace('/chat/completions', '');
+  return meta.chatUrl.replace("/chat/completions", "");
 }
 
 function openCodeProviderBlock(providerKey, apiKey) {
   const meta = getProviderMeta(providerKey);
   return {
-    npm:     '@ai-sdk/openai-compatible',
-    name:    meta.name,
+    npm: "@ai-sdk/openai-compatible",
+    name: meta.name,
     options: {
       baseURL: getBaseUrl(meta),
-      apiKey:  apiKey || `{env:${meta.envVar}}`,
+      apiKey: apiKey || `{env:${meta.envVar}}`,
     },
   };
 }
@@ -173,12 +205,15 @@ export function resolveOpenCodeSelection(model, providerKey, _allModels = []) {
 export function writeOpenClaw(model, providerKey, apiKey = null, options = {}) {
   const persistedApiKey = resolvePersistedApiKey(providerKey, apiKey, options);
   const meta = getProviderMeta(providerKey);
-  const cfg  = readJson(OPENCLAW_PATH);
-  const qid  = `${providerKey}/${model.id}`;
+  const cfg = readJson(OPENCLAW_PATH);
+  const qid = `${providerKey}/${model.id}`;
 
   cfg.models ??= {};
   cfg.models.providers ??= {};
-  cfg.models.providers[providerKey] = { baseUrl: getBaseUrl(meta), api: 'openai-completions' };
+  cfg.models.providers[providerKey] = {
+    baseUrl: getBaseUrl(meta),
+    api: "openai-completions",
+  };
 
   if (persistedApiKey) {
     cfg.env ??= {};

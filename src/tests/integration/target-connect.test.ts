@@ -1,13 +1,18 @@
-import test from 'node:test';
-import assert from 'node:assert/strict';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
-import { pathToFileURL } from 'node:url';
-import { runInPty, stripAnsi } from '../helpers/run-pty.js';
-import { ROOT_DIR } from '../helpers/test-paths.js';
-import { BIN_PATH } from '../helpers/test-paths.js';
-import { cleanupTempHome, defaultConfig, makeTempHome, writeHomeConfig } from '../helpers/temp-home.js';
-import { runNode } from '../helpers/spawn-cli.js';
+import test from "node:test";
+import assert from "node:assert/strict";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+import { pathToFileURL } from "node:url";
+import { runInPty, stripAnsi } from "../helpers/run-pty.js";
+import { ROOT_DIR } from "../helpers/test-paths.js";
+import { BIN_PATH } from "../helpers/test-paths.js";
+import {
+  cleanupTempHome,
+  defaultConfig,
+  makeTempHome,
+  writeHomeConfig,
+} from "../helpers/temp-home.js";
+import { runNode } from "../helpers/spawn-cli.js";
 
 async function waitForFile(path, timeoutMs = 1500) {
   const start = Date.now();
@@ -18,10 +23,10 @@ async function waitForFile(path, timeoutMs = 1500) {
   return existsSync(path);
 }
 
-test('direct target writers preserve selected provider/model IDs', async () => {
+test("direct target writers preserve selected provider/model IDs", async () => {
   const home = makeTempHome();
   try {
-    const targetsUrl = pathToFileURL(join(ROOT_DIR, 'lib', 'targets.js')).href;
+    const targetsUrl = pathToFileURL(join(ROOT_DIR, "lib", "targets.js")).href;
     const script = `
 import { writeOpenCode, writeOpenClaw } from ${JSON.stringify(targetsUrl)};
 
@@ -35,46 +40,61 @@ writeOpenCode(orModel, 'openrouter', 'sk-or-demo');
 writeOpenClaw(orModel, 'openrouter', 'sk-or-demo');
 `;
 
-    const result = await runNode(['--input-type=module', '-e', script], {
+    const result = await runNode(["--input-type=module", "-e", script], {
       cwd: ROOT_DIR,
       env: { HOME: home },
     });
 
     assert.equal(result.code, 0);
 
-    const openCode = readFileSync(join(home, '.config', 'opencode', 'opencode.json'), 'utf8');
-    const openClaw = readFileSync(join(home, '.openclaw', 'openclaw.json'), 'utf8');
+    const openCode = readFileSync(
+      join(home, ".config", "opencode", "opencode.json"),
+      "utf8",
+    );
+    const openClaw = readFileSync(
+      join(home, ".openclaw", "openclaw.json"),
+      "utf8",
+    );
 
-    assert.match(openCode, /"model": "openrouter\/mistralai\/mistral-small-3.2-24b-instruct:free"/);
+    assert.match(
+      openCode,
+      /"model": "openrouter\/mistralai\/mistral-small-3.2-24b-instruct:free"/,
+    );
     assert.match(openCode, /"apiKey": "\{env:OPENROUTER_API_KEY\}"/);
-    assert.match(openClaw, /"primary": "openrouter\/mistralai\/mistral-small-3.2-24b-instruct:free"/);
+    assert.match(
+      openClaw,
+      /"primary": "openrouter\/mistralai\/mistral-small-3.2-24b-instruct:free"/,
+    );
     assert.doesNotMatch(openClaw, /"OPENROUTER_API_KEY":/);
   } finally {
     cleanupTempHome(home);
   }
 });
 
-const SKIP = process.platform === 'win32';
+const SKIP = process.platform === "win32";
 
 test(
-  'interactive target picker confirm path (Enter) invokes opencode',
-  { skip: SKIP && 'PTY harness uses `script`, unavailable on Windows' },
+  "interactive target picker confirm path (Enter) invokes opencode",
+  { skip: SKIP && "PTY harness uses `script`, unavailable on Windows" },
   async () => {
     const home = makeTempHome();
     try {
-      writeHomeConfig(home, defaultConfig({
-        apiKeys: { nvidia: 'nvapi-test' },
-        providers: {
-          nvidia: { enabled: true },
-          openrouter: { enabled: false },
-        },
-      }));
+      writeHomeConfig(
+        home,
+        defaultConfig({
+          apiKeys: { nvidia: "nvapi-test" },
+          providers: {
+            nvidia: { enabled: true },
+            openrouter: { enabled: false },
+          },
+        }),
+      );
 
-      const fakeBin = join(home, 'fake-bin');
-      const marker = join(home, 'opencode-launched.log');
+      const fakeBin = join(home, "fake-bin");
+      const marker = join(home, "opencode-launched.log");
       mkdirSync(fakeBin, { recursive: true });
       writeFileSync(
-        join(fakeBin, 'opencode'),
+        join(fakeBin, "opencode"),
         `#!/bin/sh
 cfg="$HOME/.config/opencode/opencode.json"
 if [ ! -f "$cfg" ]; then
@@ -92,18 +112,18 @@ fi
 echo "bad-config" >> "${marker}"
 exit 0
 `,
-        { mode: 0o755 }
+        { mode: 0o755 },
       );
 
       const result = await runInPty(process.execPath, [BIN_PATH], {
         cwd: ROOT_DIR,
         env: {
           HOME: home,
-          PATH: `${fakeBin}:${process.env.PATH ?? ''}`,
+          PATH: `${fakeBin}:${process.env.PATH ?? ""}`,
         },
         inputChunks: [
-          { delayMs: 850, data: '\r' },  // select highlighted model -> target screen
-          { delayMs: 1100, data: '\r' },  // write + launch opencode
+          { delayMs: 850, data: "\r" }, // select highlighted model -> target screen
+          { delayMs: 1100, data: "\r" }, // write + launch opencode
         ],
         timeoutMs: 12_000,
       });
@@ -112,40 +132,43 @@ exit 0
       assert.equal(result.code, 0);
 
       assert.equal(await waitForFile(marker), true);
-      const markerOut = readFileSync(marker, 'utf8');
+      const markerOut = readFileSync(marker, "utf8");
       assert.match(markerOut, /launched/);
       assert.doesNotMatch(markerOut, /missing-env/);
-      const openCodePath = join(home, '.config', 'opencode', 'opencode.json');
+      const openCodePath = join(home, ".config", "opencode", "opencode.json");
       assert.equal(existsSync(openCodePath), true);
-      const openCode = readFileSync(openCodePath, 'utf8');
+      const openCode = readFileSync(openCodePath, "utf8");
       assert.match(openCode, /"model": "nvidia\//);
       const text = stripAnsi(result.stdout);
       assert.doesNotMatch(text, /OpenCode auth uses NVIDIA_API_KEY/);
     } finally {
       cleanupTempHome(home);
     }
-  }
+  },
 );
 
 test(
-  'interactive target picker shows OpenClaw as disabled and does not launch it',
-  { skip: SKIP && 'PTY harness uses `script`, unavailable on Windows' },
+  "interactive target picker shows OpenClaw as disabled and does not launch it",
+  { skip: SKIP && "PTY harness uses `script`, unavailable on Windows" },
   async () => {
     const home = makeTempHome();
     try {
-      writeHomeConfig(home, defaultConfig({
-        apiKeys: { nvidia: 'nvapi-test' },
-        providers: {
-          nvidia: { enabled: true },
-          openrouter: { enabled: false },
-        },
-      }));
+      writeHomeConfig(
+        home,
+        defaultConfig({
+          apiKeys: { nvidia: "nvapi-test" },
+          providers: {
+            nvidia: { enabled: true },
+            openrouter: { enabled: false },
+          },
+        }),
+      );
 
-      const fakeBin = join(home, 'fake-bin');
-      const marker = join(home, 'openclaw-launched.log');
+      const fakeBin = join(home, "fake-bin");
+      const marker = join(home, "openclaw-launched.log");
       mkdirSync(fakeBin, { recursive: true });
       writeFileSync(
-        join(fakeBin, 'openclaw'),
+        join(fakeBin, "openclaw"),
         `#!/bin/sh
 cfg="$HOME/.openclaw/openclaw.json"
 if [ ! -f "$cfg" ]; then
@@ -159,21 +182,21 @@ fi
 echo "bad-config" >> "${marker}"
 exit 0
 `,
-        { mode: 0o755 }
+        { mode: 0o755 },
       );
 
       const result = await runInPty(process.execPath, [BIN_PATH], {
         cwd: ROOT_DIR,
         env: {
           HOME: home,
-          PATH: `${fakeBin}:${process.env.PATH ?? ''}`,
+          PATH: `${fakeBin}:${process.env.PATH ?? ""}`,
         },
         inputChunks: [
-          { delayMs: 850, data: '\r' },     // model -> target screen
-          { delayMs: 1050, data: '\x1b[B' }, // select OpenClaw
-          { delayMs: 1250, data: '\r' },    // attempt launch (disabled)
-          { delayMs: 1650, data: 'q' },     // back to main screen
-          { delayMs: 1850, data: 'q' },     // quit app
+          { delayMs: 850, data: "\r" }, // model -> target screen
+          { delayMs: 1050, data: "\x1b[B" }, // select OpenClaw
+          { delayMs: 1250, data: "\r" }, // attempt launch (disabled)
+          { delayMs: 1650, data: "q" }, // back to main screen
+          { delayMs: 1850, data: "q" }, // quit app
         ],
         timeoutMs: 15_000,
       });
@@ -182,7 +205,7 @@ exit 0
       assert.equal(result.code, 0);
 
       assert.equal(await waitForFile(marker, 350), false);
-      const openClawPath = join(home, '.openclaw', 'openclaw.json');
+      const openClawPath = join(home, ".openclaw", "openclaw.json");
       assert.equal(existsSync(openClawPath), false);
 
       const text = stripAnsi(result.stdout);
@@ -191,45 +214,48 @@ exit 0
     } finally {
       cleanupTempHome(home);
     }
-  }
+  },
 );
 
 test(
-  'interactive target picker save-only path (S key) writes config without launching target',
-  { skip: SKIP && 'PTY harness uses `script`, unavailable on Windows' },
+  "interactive target picker save-only path (S key) writes config without launching target",
+  { skip: SKIP && "PTY harness uses `script`, unavailable on Windows" },
   async () => {
     const home = makeTempHome();
     try {
-      writeHomeConfig(home, defaultConfig({
-        apiKeys: { nvidia: 'nvapi-test' },
-        providers: {
-          nvidia: { enabled: true },
-          openrouter: { enabled: false },
-        },
-      }));
+      writeHomeConfig(
+        home,
+        defaultConfig({
+          apiKeys: { nvidia: "nvapi-test" },
+          providers: {
+            nvidia: { enabled: true },
+            openrouter: { enabled: false },
+          },
+        }),
+      );
 
-      const fakeBin = join(home, 'fake-bin');
-      const marker = join(home, 'opencode-launched.log');
+      const fakeBin = join(home, "fake-bin");
+      const marker = join(home, "opencode-launched.log");
       mkdirSync(fakeBin, { recursive: true });
       writeFileSync(
-        join(fakeBin, 'opencode'),
+        join(fakeBin, "opencode"),
         `#!/bin/sh
 echo "launched" >> "${marker}"
 exit 0
 `,
-        { mode: 0o755 }
+        { mode: 0o755 },
       );
 
       const result = await runInPty(process.execPath, [BIN_PATH], {
         cwd: ROOT_DIR,
         env: {
           HOME: home,
-          PATH: `${fakeBin}:${process.env.PATH ?? ''}`,
+          PATH: `${fakeBin}:${process.env.PATH ?? ""}`,
         },
         inputChunks: [
-          { delayMs: 850, data: '\r' },   // model -> target screen
-          { delayMs: 1100, data: 'S' },   // save only, no launch
-          { delayMs: 2800, data: 'q' },   // back on main screen, quit
+          { delayMs: 850, data: "\r" }, // model -> target screen
+          { delayMs: 1100, data: "S" }, // save only, no launch
+          { delayMs: 2800, data: "q" }, // back on main screen, quit
         ],
         timeoutMs: 12_000,
       });
@@ -237,14 +263,14 @@ exit 0
       assert.equal(result.timedOut, false);
       assert.equal(result.code, 0);
 
-      const openCodePath = join(home, '.config', 'opencode', 'opencode.json');
+      const openCodePath = join(home, ".config", "opencode", "opencode.json");
       assert.equal(existsSync(openCodePath), true);
       assert.equal(existsSync(marker), false);
-      assert.match(readFileSync(openCodePath, 'utf8'), /"model": "nvidia\//);
+      assert.match(readFileSync(openCodePath, "utf8"), /"model": "nvidia\//);
       const text = stripAnsi(result.stdout);
       assert.match(text, /OpenCode auth uses NVIDIA_API_KEY/);
     } finally {
       cleanupTempHome(home);
     }
-  }
+  },
 );

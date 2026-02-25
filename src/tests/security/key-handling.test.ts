@@ -1,13 +1,13 @@
-import test from 'node:test';
-import assert from 'node:assert/strict';
-import { join } from 'node:path';
-import { pathToFileURL } from 'node:url';
-import { importFresh } from '../helpers/import-fresh.js';
-import { ROOT_DIR } from '../helpers/test-paths.js';
-import { cleanupTempHome, makeTempHome } from '../helpers/temp-home.js';
-import { runNode } from '../helpers/spawn-cli.js';
+import test from "node:test";
+import assert from "node:assert/strict";
+import { join } from "node:path";
+import { pathToFileURL } from "node:url";
+import { importFresh } from "../helpers/import-fresh.js";
+import { ROOT_DIR } from "../helpers/test-paths.js";
+import { cleanupTempHome, makeTempHome } from "../helpers/temp-home.js";
+import { runNode } from "../helpers/spawn-cli.js";
 
-const CONFIG_MODULE_PATH = join(ROOT_DIR, 'lib', 'config.js');
+const CONFIG_MODULE_PATH = join(ROOT_DIR, "lib", "config.js");
 
 async function withTempConfigModule(fn) {
   const home = makeTempHome();
@@ -31,16 +31,16 @@ async function withTempConfigModule(fn) {
   }
 }
 
-test('security: env key has precedence over file key', async () => {
+test("security: env key has precedence over file key", async () => {
   await withTempConfigModule(async ({ getApiKey }) => {
-    process.env.NVIDIA_API_KEY = 'env-priority';
-    const key = getApiKey({ apiKeys: { nvidia: 'file-fallback' } }, 'nvidia');
-    assert.equal(key, 'env-priority');
+    process.env.NVIDIA_API_KEY = "env-priority";
+    const key = getApiKey({ apiKeys: { nvidia: "file-fallback" } }, "nvidia");
+    assert.equal(key, "env-priority");
   });
 });
 
-test('security: promptMasked does not echo plaintext key to stdout', async () => {
-  const secret = 'supersecret';
+test("security: promptMasked does not echo plaintext key to stdout", async () => {
+  const secret = "supersecret";
   const configUrl = pathToFileURL(CONFIG_MODULE_PATH).href;
 
   const script = `
@@ -63,14 +63,14 @@ console.log('\\nLEN=' + value.length);
     return chunk;
   });
 
-  const result = await runNode(['--input-type=module', '-e', script], {
+  const result = await runNode(["--input-type=module", "-e", script], {
     cwd: ROOT_DIR,
     inputChunks,
     timeoutMs: 8_000,
   });
 
   assert.equal(result.code, 0);
-  assert.match(result.stdout, /•{3,}/u);      // masked bullets are shown
+  assert.match(result.stdout, /•{3,}/u); // masked bullets are shown
   assert.doesNotMatch(result.stdout, /supersecret/); // plaintext should not be echoed
   assert.match(result.stdout, /LEN=11/);
 });

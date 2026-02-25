@@ -1,22 +1,29 @@
-import test from 'node:test';
-import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
-import { createHttpServer } from '../helpers/mock-http.js';
-import { BIN_PATH, ROOT_DIR } from '../helpers/test-paths.js';
-import { cleanupTempHome, defaultConfig, makeTempHome, writeHomeConfig } from '../helpers/temp-home.js';
-import { runNode } from '../helpers/spawn-cli.js';
-import { runInPty } from '../helpers/run-pty.js';
+import test from "node:test";
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { createHttpServer } from "../helpers/mock-http.js";
+import { BIN_PATH, ROOT_DIR } from "../helpers/test-paths.js";
+import {
+  cleanupTempHome,
+  defaultConfig,
+  makeTempHome,
+  writeHomeConfig,
+} from "../helpers/temp-home.js";
+import { runNode } from "../helpers/spawn-cli.js";
+import { runInPty } from "../helpers/run-pty.js";
 
-const PKG_VERSION = JSON.parse(readFileSync(join(ROOT_DIR, '..', 'package.json'), 'utf8')).version;
+const PKG_VERSION = JSON.parse(
+  readFileSync(join(ROOT_DIR, "..", "package.json"), "utf8"),
+).version;
 
 function makeConfig(home: string) {
-  writeHomeConfig(home, defaultConfig({ apiKeys: { nvidia: 'nvapi-test' } }));
+  writeHomeConfig(home, defaultConfig({ apiKeys: { nvidia: "nvapi-test" } }));
 }
 
-test('update check: skips silently when version matches', async () => {
+test("update check: skips silently when version matches", async () => {
   const server = await createHttpServer((_req, res) => {
-    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.writeHead(200, { "Content-Type": "application/json" });
     res.end(JSON.stringify({ version: PKG_VERSION }));
   });
 
@@ -39,10 +46,10 @@ test('update check: skips silently when version matches', async () => {
   }
 });
 
-test('update check: shows update available in non-TTY and auto-skips', async () => {
+test("update check: shows update available in non-TTY and auto-skips", async () => {
   const server = await createHttpServer((_req, res) => {
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ version: '99.0.0' }));
+    res.writeHead(200, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ version: "99.0.0" }));
   });
 
   const home = makeTempHome();
@@ -69,15 +76,15 @@ test('update check: shows update available in non-TTY and auto-skips', async () 
   }
 });
 
-const SKIP_PTY = process.platform === 'win32';
+const SKIP_PTY = process.platform === "win32";
 
 test(
   'update check: interactive TTY prompt declines update on "n"',
-  { skip: SKIP_PTY && 'PTY harness not available on Windows' },
+  { skip: SKIP_PTY && "PTY harness not available on Windows" },
   async () => {
     const server = await createHttpServer((_req, res) => {
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ version: '99.0.0' }));
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ version: "99.0.0" }));
     });
 
     const home = makeTempHome();
@@ -91,8 +98,8 @@ test(
         },
         // Send 'n' to decline update, then 'q' to quit TUI
         inputChunks: [
-          { delayMs: 2000, data: 'n' },
-          { delayMs: 4000, data: 'q' },
+          { delayMs: 2000, data: "n" },
+          { delayMs: 4000, data: "q" },
         ],
         timeoutMs: 15_000,
       });
@@ -104,10 +111,10 @@ test(
       cleanupTempHome(home);
       await server.close();
     }
-  }
+  },
 );
 
-test('update check: silently continues when registry is unreachable', async () => {
+test("update check: silently continues when registry is unreachable", async () => {
   const home = makeTempHome();
   try {
     makeConfig(home);
@@ -115,7 +122,7 @@ test('update check: silently continues when registry is unreachable', async () =
       cwd: ROOT_DIR,
       env: {
         HOME: home,
-        FROUTER_REGISTRY_URL: 'http://127.0.0.1:1/frouter-cli/latest',
+        FROUTER_REGISTRY_URL: "http://127.0.0.1:1/frouter-cli/latest",
       },
       timeoutMs: 7_000,
     });
@@ -127,10 +134,10 @@ test('update check: silently continues when registry is unreachable', async () =
   }
 });
 
-test('update check: silently continues when registry returns invalid JSON', async () => {
+test("update check: silently continues when registry returns invalid JSON", async () => {
   const server = await createHttpServer((_req, res) => {
-    res.writeHead(200, { 'Content-Type': 'text/plain' });
-    res.end('not json at all');
+    res.writeHead(200, { "Content-Type": "text/plain" });
+    res.end("not json at all");
   });
 
   const home = makeTempHome();
@@ -153,16 +160,16 @@ test('update check: silently continues when registry returns invalid JSON', asyn
   }
 });
 
-test('update check: --best mode does not prompt for updates', async () => {
+test("update check: --best mode does not prompt for updates", async () => {
   const server = await createHttpServer((_req, res) => {
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ version: '99.0.0' }));
+    res.writeHead(200, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ version: "99.0.0" }));
   });
 
   const home = makeTempHome();
   try {
     makeConfig(home);
-    const result = await runNode([BIN_PATH, '--best'], {
+    const result = await runNode([BIN_PATH, "--best"], {
       cwd: ROOT_DIR,
       env: {
         HOME: home,

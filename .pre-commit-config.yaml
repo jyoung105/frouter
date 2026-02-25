@@ -12,11 +12,11 @@ repos:
       - id: check-yaml
       - id: check-merge-conflict
       - id: check-added-large-files
-        args: ['--maxkb=500']
+        args: ["--maxkb=500"]
 
   - repo: https://github.com/pre-commit/mirrors-prettier
     rev: v4.0.0-alpha.8
     hooks:
       - id: prettier
         files: '\.(js|ts|json|ya?ml|md)$'
-        exclude: '^(site/|dist/|node_modules/)'
+        exclude: "^(site/|dist/|node_modules/)"

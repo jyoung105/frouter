@@ -1,8 +1,8 @@
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
-export function makeTempHome(prefix = 'frouter-test-'): string {
+export function makeTempHome(prefix = "frouter-test-"): string {
   return mkdtempSync(join(tmpdir(), prefix));
 }
 
@@ -11,7 +11,10 @@ export function cleanupTempHome(homePath: string): void {
 }
 
 export function writeHomeConfig(homePath: string, config: any): void {
-  writeFileSync(join(homePath, '.frouter.json'), JSON.stringify(config, null, 2) + '\n');
+  writeFileSync(
+    join(homePath, ".frouter.json"),
+    JSON.stringify(config, null, 2) + "\n",
+  );
 }
 
 export function defaultConfig(partial: any = {}) {

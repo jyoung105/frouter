@@ -1,4 +1,4 @@
-import { spawn } from 'node:child_process';
+import { spawn } from "node:child_process";
 
 const PY_PTY_RUNNER = `
 import base64
@@ -122,20 +122,26 @@ type RunInPtyResult = {
   stderr: string;
 };
 
-function runPythonPty(options: { cwd?: string; env?: NodeJS.ProcessEnv; stdio?: any[] } = {}): Promise<PtyRunnerJson> {
+function runPythonPty(
+  options: { cwd?: string; env?: NodeJS.ProcessEnv; stdio?: any[] } = {},
+): Promise<PtyRunnerJson> {
   return new Promise((resolve, reject) => {
-    const child = spawn('python3', ['-c', PY_PTY_RUNNER], options);
+    const child = spawn("python3", ["-c", PY_PTY_RUNNER], options);
 
-    let stdout = '';
-    let stderr = '';
+    let stdout = "";
+    let stderr = "";
 
-    child.stdout.setEncoding('utf8');
-    child.stderr.setEncoding('utf8');
-    child.stdout.on('data', (chunk) => { stdout += chunk; });
-    child.stderr.on('data', (chunk) => { stderr += chunk; });
+    child.stdout.setEncoding("utf8");
+    child.stderr.setEncoding("utf8");
+    child.stdout.on("data", (chunk) => {
+      stdout += chunk;
+    });
+    child.stderr.on("data", (chunk) => {
+      stderr += chunk;
+    });
 
-    child.on('error', reject);
-    child.on('close', (code) => {
+    child.on("error", reject);
+    child.on("close", (code) => {
       if (code !== 0) {
         reject(new Error(`python3 PTY runner failed (${code}): ${stderr}`));
         return;
@@ -145,23 +151,26 @@ function runPythonPty(options: { cwd?: string; env?: NodeJS.ProcessEnv; stdio?: 
         resolve(parsed as PtyRunnerJson);
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
-        reject(new Error(`Failed to parse PTY runner JSON: ${message}\nRAW:${stdout}\nERR:${stderr}`));
+        reject(
+          new Error(
+            `Failed to parse PTY runner JSON: ${message}\nRAW:${stdout}\nERR:${stderr}`,
+          ),
+        );
       }
     });
   });
 }
 
-export async function runInPty(command: string, args: string[] = [], options: RunInPtyOptions = {}): Promise<RunInPtyResult> {
-  if (process.platform === 'win32') {
-    throw new Error('runInPty is not supported on Windows');
+export async function runInPty(
+  command: string,
+  args: string[] = [],
+  options: RunInPtyOptions = {},
+): Promise<RunInPtyResult> {
+  if (process.platform === "win32") {
+    throw new Error("runInPty is not supported on Windows");
   }
 
-  const {
-    cwd,
-    env,
-    inputChunks = [],
-    timeoutMs = 12_000,
-  } = options;
+  const { cwd, env, inputChunks = [], timeoutMs = 12_000 } = options;
 
   const runnerEnv = {
     ...process.env,
@@ -174,21 +183,21 @@ export async function runInPty(command: string, args: string[] = [], options: Ru
   const result = await runPythonPty({
     cwd,
     env: runnerEnv,
-    stdio: ['ignore', 'pipe', 'pipe'],
+    stdio: ["ignore", "pipe", "pipe"],
   });
 
   return {
     code: result.code,
     signal: result.signal,
     timedOut: Boolean(result.timedOut),
-    stdout: Buffer.from(result.stdout_b64 || '', 'base64').toString('utf8'),
-    stderr: Buffer.from(result.stderr_b64 || '', 'base64').toString('utf8'),
+    stdout: Buffer.from(result.stdout_b64 || "", "base64").toString("utf8"),
+    stderr: Buffer.from(result.stderr_b64 || "", "base64").toString("utf8"),
   };
 }
 
 export function stripAnsi(text: string) {
   return String(text)
-    .replace(/\x1B\][^\x07]*\x07/g, '') // OSC sequences
-    .replace(/\x1B\[[0-9;?]*[ -/]*[@-~]/g, '') // CSI sequences
-    .replace(/\r/g, '');
+    .replace(/\x1B\][^\x07]*\x07/g, "") // OSC sequences
+    .replace(/\x1B\[[0-9;?]*[ -/]*[@-~]/g, "") // CSI sequences
+    .replace(/\r/g, "");
 }

@@ -1,59 +1,72 @@
-import test from 'node:test';
-import assert from 'node:assert/strict';
-import { createHttpServer } from '../helpers/mock-http.js';
-import { ping } from '../../lib/ping.js';
+import test from "node:test";
+import assert from "node:assert/strict";
+import { createHttpServer } from "../helpers/mock-http.js";
+import { ping } from "../../lib/ping.js";
 
 // ─── ping() returning 404 → status = 'notfound' ──────────────────────────────
 
-test('ping returns 404 code for not-found models', async () => {
+test("ping returns 404 code for not-found models", async () => {
   const server = await createHttpServer((req, res) => {
-    req.on('data', () => {});
-    req.on('end', () => {
-      res.writeHead(404, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ error: 'not found' }));
+    req.on("data", () => {});
+    req.on("end", () => {
+      res.writeHead(404, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ error: "not found" }));
     });
   });
 
   try {
-    const result = await ping(null, 'fake/model', `${server.baseUrl}/chat/completions`);
-    assert.equal(result.code, '404');
-    assert.ok(typeof result.ms === 'number');
+    const result = await ping(
+      null,
+      "fake/model",
+      `${server.baseUrl}/chat/completions`,
+    );
+    assert.equal(result.code, "404");
+    assert.ok(typeof result.ms === "number");
   } finally {
     await server.close();
   }
 });
 
-test('pingAllOnce sets status notfound for 404 responses', async () => {
+test("pingAllOnce sets status notfound for 404 responses", async () => {
   const server = await createHttpServer((req, res) => {
-    req.on('data', () => {});
-    req.on('end', () => {
-      res.writeHead(404, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ error: 'not found' }));
+    req.on("data", () => {});
+    req.on("end", () => {
+      res.writeHead(404, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ error: "not found" }));
     });
   });
 
   try {
-    const models = [{
-      id: 'fake/model', providerKey: 'testprov',
-      pings: [], status: 'pending', httpCode: null,
-    }];
+    const models = [
+      {
+        id: "fake/model",
+        providerKey: "testprov",
+        pings: [],
+        status: "pending",
+        httpCode: null,
+      },
+    ];
     // Patch PROVIDERS_META temporarily via a direct call approach:
     // We'll test via ping directly since pingAllOnce needs PROVIDERS_META.
     // Instead, verify the status mapping logic by calling ping + applying status.
-    const result = await ping(null, 'fake/model', `${server.baseUrl}/chat/completions`);
-    assert.equal(result.code, '404');
+    const result = await ping(
+      null,
+      "fake/model",
+      `${server.baseUrl}/chat/completions`,
+    );
+    assert.equal(result.code, "404");
 
     // Simulate the status assignment from pingAllOnce
     const m = models[0];
     const code = String(result.code);
     m.httpCode = code;
-    if      (code === '200') m.status = 'up';
-    else if (code === '401') m.status = 'noauth';
-    else if (code === '404') m.status = 'notfound';
-    else if (code === '000') m.status = 'timeout';
-    else                            m.status = 'down';
+    if (code === "200") m.status = "up";
+    else if (code === "401") m.status = "noauth";
+    else if (code === "404") m.status = "notfound";
+    else if (code === "000") m.status = "timeout";
+    else m.status = "down";
 
-    assert.equal(m.status, 'notfound');
+    assert.equal(m.status, "notfound");
   } finally {
     await server.close();
   }
@@ -61,13 +74,13 @@ test('pingAllOnce sets status notfound for 404 responses', async () => {
 
 // ─── Concurrency pool ─────────────────────────────────────────────────────────
 
-test('pooled helper limits concurrency', async () => {
+test("pooled helper limits concurrency", async () => {
   // We can't import pooled directly (not exported), so test via pingAllOnce behavior.
   // Instead, test that pingAllOnce completes successfully with multiple models.
   const server = await createHttpServer((req, res) => {
-    req.on('data', () => {});
-    req.on('end', () => {
-      res.writeHead(200, { 'Content-Type': 'application/json' });
+    req.on("data", () => {});
+    req.on("end", () => {
+      res.writeHead(200, { "Content-Type": "application/json" });
       res.end(JSON.stringify({ ok: true }));
     });
   });
@@ -85,23 +98,31 @@ test('pooled helper limits concurrency', async () => {
       async function next() {
         const i = idx++;
         if (i >= items.length) return;
-        res[i] = await fn(items[i]).catch(e => e);
+        res[i] = await fn(items[i]).catch((e) => e);
         await next();
       }
-      await Promise.allSettled(Array.from({ length: Math.min(limit, items.length) }, () => next()));
+      await Promise.allSettled(
+        Array.from({ length: Math.min(limit, items.length) }, () => next()),
+      );
       return res;
     }
 
     await pooled(items, 5, async (item) => {
       current++;
       if (current > maxConcurrent) maxConcurrent = current;
-      await new Promise(r => setTimeout(r, 10));
+      await new Promise((r) => setTimeout(r, 10));
       current--;
       return item;
     });
 
-    assert.ok(maxConcurrent <= 5, `Max concurrency was ${maxConcurrent}, expected <= 5`);
-    assert.ok(maxConcurrent >= 2, `Max concurrency was ${maxConcurrent}, expected >= 2 (parallelism)`);
+    assert.ok(
+      maxConcurrent <= 5,
+      `Max concurrency was ${maxConcurrent}, expected <= 5`,
+    );
+    assert.ok(
+      maxConcurrent >= 2,
+      `Max concurrency was ${maxConcurrent}, expected >= 2 (parallelism)`,
+    );
   } finally {
     await server.close();
   }
@@ -109,21 +130,27 @@ test('pooled helper limits concurrency', async () => {
 
 // ─── Backoff skip logic ───────────────────────────────────────────────────────
 
-test('consecutive fail counter increments on non-200/401 responses', async () => {
+test("consecutive fail counter increments on non-200/401 responses", async () => {
   const server = await createHttpServer((req, res) => {
-    req.on('data', () => {});
-    req.on('end', () => {
-      res.writeHead(500, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ error: 'internal' }));
+    req.on("data", () => {});
+    req.on("end", () => {
+      res.writeHead(500, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ error: "internal" }));
     });
   });
 
   try {
-    const result = await ping(null, 'fake/model', `${server.baseUrl}/chat/completions`);
-    assert.equal(result.code, '500');
+    const result = await ping(
+      null,
+      "fake/model",
+      `${server.baseUrl}/chat/completions`,
+    );
+    assert.equal(result.code, "500");
 
     // Simulate backoff tracking
-    const m: { _consecutiveFails: number; _skipUntilRound?: number } = { _consecutiveFails: 0 };
+    const m: { _consecutiveFails: number; _skipUntilRound?: number } = {
+      _consecutiveFails: 0,
+    };
     m._consecutiveFails++;
     assert.equal(m._consecutiveFails, 1);
 
@@ -144,23 +171,27 @@ test('consecutive fail counter increments on non-200/401 responses', async () =>
   }
 });
 
-test('consecutive fails reset on 200 response', async () => {
+test("consecutive fails reset on 200 response", async () => {
   const server = await createHttpServer((req, res) => {
-    req.on('data', () => {});
-    req.on('end', () => {
-      res.writeHead(200, { 'Content-Type': 'application/json' });
+    req.on("data", () => {});
+    req.on("end", () => {
+      res.writeHead(200, { "Content-Type": "application/json" });
       res.end(JSON.stringify({ ok: true }));
     });
   });
 
   try {
-    const result = await ping(null, 'fake/model', `${server.baseUrl}/chat/completions`);
-    assert.equal(result.code, '200');
+    const result = await ping(
+      null,
+      "fake/model",
+      `${server.baseUrl}/chat/completions`,
+    );
+    assert.equal(result.code, "200");
 
     // Simulate the reset logic from pingAllOnce
     const m = { _consecutiveFails: 7, _skipUntilRound: 99 };
     const code = String(result.code);
-    if (code === '200' || code === '401') {
+    if (code === "200" || code === "401") {
       m._consecutiveFails = 0;
     }
     assert.equal(m._consecutiveFails, 0);
@@ -171,11 +202,11 @@ test('consecutive fails reset on 200 response', async () => {
 
 // ─── Verdict for notfound ─────────────────────────────────────────────────────
 
-test('getVerdict returns Not Found for notfound status', async () => {
-  const { getVerdict } = await import('../../lib/utils.js');
+test("getVerdict returns Not Found for notfound status", async () => {
+  const { getVerdict } = await import("../../lib/utils.js");
   const model = {
-    pings: [{ code: '404', ms: 100 }],
-    status: 'notfound',
+    pings: [{ code: "404", ms: 100 }],
+    status: "notfound",
   };
-  assert.equal(getVerdict(model), '🚫 Not Found');
+  assert.equal(getVerdict(model), "🚫 Not Found");
 });

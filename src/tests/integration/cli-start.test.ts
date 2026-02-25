@@ -1,38 +1,43 @@
-import test from 'node:test';
-import assert from 'node:assert/strict';
-import { runInPty } from '../helpers/run-pty.js';
-import { BIN_PATH, ROOT_DIR } from '../helpers/test-paths.js';
-import { cleanupTempHome, defaultConfig, makeTempHome, writeHomeConfig } from '../helpers/temp-home.js';
-import { runNode } from '../helpers/spawn-cli.js';
+import test from "node:test";
+import assert from "node:assert/strict";
+import { runInPty } from "../helpers/run-pty.js";
+import { BIN_PATH, ROOT_DIR } from "../helpers/test-paths.js";
+import {
+  cleanupTempHome,
+  defaultConfig,
+  makeTempHome,
+  writeHomeConfig,
+} from "../helpers/temp-home.js";
+import { runNode } from "../helpers/spawn-cli.js";
 
-test('CLI --help prints usage and exits with code 0', async () => {
-  const result = await runNode([BIN_PATH, '--help'], { cwd: ROOT_DIR });
+test("CLI --help prints usage and exits with code 0", async () => {
+  const result = await runNode([BIN_PATH, "--help"], { cwd: ROOT_DIR });
   assert.equal(result.code, 0);
   assert.match(result.stdout, /Usage: frouter/);
 });
 
-test('CLI -h (edge alias) prints usage and exits with code 0', async () => {
-  const result = await runNode([BIN_PATH, '-h'], { cwd: ROOT_DIR });
+test("CLI -h (edge alias) prints usage and exits with code 0", async () => {
+  const result = await runNode([BIN_PATH, "-h"], { cwd: ROOT_DIR });
   assert.equal(result.code, 0);
   assert.match(result.stdout, /frouter — Free Model Router/);
 });
 
-test('CLI --version prints semver and exits with code 0', async () => {
-  const result = await runNode([BIN_PATH, '--version'], { cwd: ROOT_DIR });
+test("CLI --version prints semver and exits with code 0", async () => {
+  const result = await runNode([BIN_PATH, "--version"], { cwd: ROOT_DIR });
   assert.equal(result.code, 0);
   assert.match(result.stdout, /^frouter \d+\.\d+\.\d+/);
 });
 
-test('CLI -v (edge alias) prints semver and exits with code 0', async () => {
-  const result = await runNode([BIN_PATH, '-v'], { cwd: ROOT_DIR });
+test("CLI -v (edge alias) prints semver and exits with code 0", async () => {
+  const result = await runNode([BIN_PATH, "-v"], { cwd: ROOT_DIR });
   assert.equal(result.code, 0);
   assert.match(result.stdout, /^frouter \d+\.\d+\.\d+/);
 });
 
-test('CLI --best exits with code 1 when no API keys are configured', async () => {
+test("CLI --best exits with code 1 when no API keys are configured", async () => {
   const home = makeTempHome();
   try {
-    const result = await runNode([BIN_PATH, '--best'], {
+    const result = await runNode([BIN_PATH, "--best"], {
       cwd: ROOT_DIR,
       env: { HOME: home },
       timeoutMs: 15_000,
@@ -48,18 +53,21 @@ test('CLI --best exits with code 1 when no API keys are configured', async () =>
 test('CLI --best accepts env-var keys and skips the "no keys" error', async () => {
   const home = makeTempHome();
   try {
-    writeHomeConfig(home, defaultConfig({
-      providers: {
-        nvidia: { enabled: false },
-        openrouter: { enabled: false },
-      },
-    }));
+    writeHomeConfig(
+      home,
+      defaultConfig({
+        providers: {
+          nvidia: { enabled: false },
+          openrouter: { enabled: false },
+        },
+      }),
+    );
 
-    const result = await runNode([BIN_PATH, '--best'], {
+    const result = await runNode([BIN_PATH, "--best"], {
       cwd: ROOT_DIR,
       env: {
         HOME: home,
-        NVIDIA_API_KEY: 'nvapi-env-only',
+        NVIDIA_API_KEY: "nvapi-env-only",
       },
       timeoutMs: 15_000,
     });
@@ -72,12 +80,15 @@ test('CLI --best accepts env-var keys and skips the "no keys" error', async () =
   }
 });
 
-test('CLI (interactive mode) fails fast without a TTY', async () => {
+test("CLI (interactive mode) fails fast without a TTY", async () => {
   const home = makeTempHome();
   try {
-    writeHomeConfig(home, defaultConfig({
-      apiKeys: { nvidia: 'nvapi-test' },
-    }));
+    writeHomeConfig(
+      home,
+      defaultConfig({
+        apiKeys: { nvidia: "nvapi-test" },
+      }),
+    );
 
     const result = await runNode([BIN_PATH], {
       cwd: ROOT_DIR,
@@ -92,26 +103,29 @@ test('CLI (interactive mode) fails fast without a TTY', async () => {
   }
 });
 
-const SKIP = process.platform === 'win32';
+const SKIP = process.platform === "win32";
 
 test(
-  'CLI interactive happy path starts in TTY and exits on q',
-  { skip: SKIP && 'PTY harness uses python pty (not available on Windows)' },
+  "CLI interactive happy path starts in TTY and exits on q",
+  { skip: SKIP && "PTY harness uses python pty (not available on Windows)" },
   async () => {
     const home = makeTempHome();
     try {
-      writeHomeConfig(home, defaultConfig({
-        apiKeys: { nvidia: 'nvapi-test' },
-        providers: {
-          nvidia: { enabled: true },
-          openrouter: { enabled: false },
-        },
-      }));
+      writeHomeConfig(
+        home,
+        defaultConfig({
+          apiKeys: { nvidia: "nvapi-test" },
+          providers: {
+            nvidia: { enabled: true },
+            openrouter: { enabled: false },
+          },
+        }),
+      );
 
       const result = await runInPty(process.execPath, [BIN_PATH], {
         cwd: ROOT_DIR,
         env: { HOME: home },
-        inputChunks: [{ delayMs: 1000, data: 'q' }],
+        inputChunks: [{ delayMs: 1000, data: "q" }],
         timeoutMs: 10_000,
       });
 
@@ -120,5 +134,5 @@ test(
     } finally {
       cleanupTempHome(home);
     }
-  }
+  },
 );

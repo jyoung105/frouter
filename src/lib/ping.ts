@@ -1,4 +1,4 @@
-// lib/ping.js — single ping, parallel batch, continuous re-ping loop
+// src/lib/ping.ts — single ping, parallel batch, continuous re-ping loop
 import https from 'node:https';
 import http  from 'node:http';
 import { getApiKey, PROVIDERS_META } from './config.js';

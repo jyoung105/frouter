@@ -1,4 +1,4 @@
-// lib/utils.js — sort, filter, search, verdict, tier logic, ANSI color helpers
+// src/lib/utils.ts — sort, filter, search, verdict, tier logic, ANSI color helpers
 
 // ─── ANSI ──────────────────────────────────────────────────────────────────────
 export const R  = '\x1b[0m';   // reset

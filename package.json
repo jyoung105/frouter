@@ -10,11 +10,10 @@
   "scripts": {
     "build": "tsc -p tsconfig.json && cp model-rankings.json dist/model-rankings.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "lint": "eslint \"src/**/*.ts\" --max-warnings=0",
-    "lint:fix": "eslint \"src/**/*.ts\" --fix",
+    "lint": "eslint src --ext .ts --max-warnings=0",
+    "lint:fix": "eslint src --ext .ts --fix",
     "pretest": "npm run build",
     "test": "node --test dist/tests/unit/*.test.js dist/tests/integration/*.test.js dist/tests/security/*.test.js",
-    "test:js-compat": "npm run build && node --test dist/tests/unit/*.test.js dist/tests/integration/*.test.js dist/tests/security/*.test.js",
     "test:perf": "npm run build && node --test dist/tests/perf/*.perf.test.js",
     "perf:baseline": "npm run build && node dist/tests/perf/collect-baseline.js",
     "test:onboarding": "node --test dist/tests/integration/onboarding.test.js",
@@ -55,6 +54,7 @@
     "@eslint/js": "^9.39.3",
     "eslint": "^9.39.3",
     "globals": "^16.5.0",
+    "jiti": "^2.6.1",
     "typescript-eslint": "^8.56.1",
     "typescript": "^5.9.3"
   }

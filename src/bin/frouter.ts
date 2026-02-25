@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// bin/frouter.js — frouter main entry: TUI + --best mode
+// src/bin/frouter.ts — frouter main entry: TUI + --best mode
 // Zero dependencies — pure Node.js built-ins
 
 import { loadConfig, saveConfig, getApiKey, runFirstRunWizard, promptMasked, PROVIDERS_META, validateProviderApiKey } from '../lib/config.js';

@@ -1,4 +1,4 @@
-// lib/targets.js — write config to OpenCode and OpenClaw
+// src/lib/targets.ts — write config to OpenCode and OpenClaw
 import { execSync, spawnSync } from 'node:child_process';
 import { readFileSync, writeFileSync, copyFileSync, mkdirSync, existsSync, chmodSync } from 'node:fs';
 import { homedir, platform } from 'node:os';

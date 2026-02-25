@@ -216,5 +216,18 @@ API 키가 최소 하나 이상 설정되어 있어야 합니다. 선택 기준:
 ## 테스트
 
 ```bash
-bun run test
+npm run lint
+npm test
+npm run typecheck
+
+# 선택: 성능 기준선/회귀 테스트
+npm run perf:baseline
+npm run test:perf
 ```
+
+## 개발 노트
+
+- 소스 오브 트루스는 TypeScript `src/` (앱 + 테스트) 입니다.
+- ESLint 설정도 TypeScript 파일(`eslint.config.ts`)로 관리합니다.
+- 런타임 JavaScript는 `npm run build` 시 `dist/`에만 생성됩니다.
+- 테스트는 빌드 후 `dist/tests/` 산출물을 기준으로 실행됩니다.

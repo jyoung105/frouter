@@ -1,4 +1,4 @@
-// lib/config.js — BYOK key management, first-run wizard, config I/O
+// src/lib/config.ts — BYOK key management, first-run wizard, config I/O
 import { readFileSync, writeFileSync, existsSync, chmodSync, copyFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';

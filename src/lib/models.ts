@@ -1,4 +1,4 @@
-// lib/models.js — NIM hardcoded list + OpenRouter dynamic fetch
+// src/lib/models.ts — NIM hardcoded list + OpenRouter dynamic fetch
 import https from 'node:https';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';

@@ -13,10 +13,12 @@ import {
   TIER_CYCLE, pad, visLen,
   R, B, D, RED, GREEN, YELLOW, CYAN, WHITE, ORANGE, BG_SEL,
 } from '../lib/utils.js';
-import { spawnSync } from 'node:child_process';
+import { spawnSync, execSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
+import { get as httpsGet } from 'node:https';
+import { get as httpGet } from 'node:http';
 
 // ─── Version ─────────────────────────────────────────────────────────────────
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -953,6 +955,70 @@ function restartLoop() {
   }, onPingTick);
 }
 
+// ─── Update check ────────────────────────────────────────────────────────────
+const REGISTRY_URL = process.env.FROUTER_REGISTRY_URL || 'https://registry.npmjs.org/frouter-cli/latest';
+
+function fetchLatestVersion(): Promise<string | null> {
+  return new Promise((resolve) => {
+    const timeout = setTimeout(() => resolve(null), 3000);
+    const getter = REGISTRY_URL.startsWith('http://') ? httpGet : httpsGet;
+    const req = getter(REGISTRY_URL, { headers: { 'Accept': 'application/json' } }, (res) => {
+      let data = '';
+      res.on('data', (chunk) => { data += chunk; });
+      res.on('end', () => {
+        clearTimeout(timeout);
+        try { resolve(JSON.parse(data).version || null); } catch { resolve(null); }
+      });
+    });
+    req.on('error', () => { clearTimeout(timeout); resolve(null); });
+  });
+}
+
+function promptYesNo(question: string): Promise<boolean> {
+  if (!process.stdin.isTTY) return Promise.resolve(false);
+  return new Promise((resolve) => {
+    process.stdout.write(question);
+    const wasRaw = process.stdin.isRaw;
+    process.stdin.setRawMode(true);
+    process.stdin.resume();
+    process.stdin.setEncoding('utf8');
+
+    function handler(ch: string) {
+      process.stdin.removeListener('data', handler);
+      try { process.stdin.setRawMode(wasRaw || false); } catch { /* best-effort */ }
+      process.stdout.write(ch + '\n');
+      if (ch === '\x03') { process.exit(0); } // Ctrl+C
+      resolve(ch.toLowerCase() === 'y');
+    }
+    process.stdin.on('data', handler);
+  });
+}
+
+async function checkForUpdate(): Promise<void> {
+  const latest = await fetchLatestVersion();
+  if (!latest || latest === PKG_VERSION) return;
+
+  process.stdout.write(`\n${YELLOW}  Update available: ${D}${PKG_VERSION}${R} → ${GREEN}${latest}${R}\n`);
+
+  const yes = await promptYesNo(`${D}  Update now? (y/N): ${R}`);
+  if (!yes) {
+    process.stdout.write(`${D}  Skipped update.${R}\n\n`);
+    return;
+  }
+
+  process.stdout.write(`${D}  Updating frouter-cli…${R}\n`);
+  try {
+    // Detect package manager: prefer bun if available, else npm
+    let cmd = 'npm install -g frouter-cli';
+    try { execSync('bun --version', { stdio: 'ignore' }); cmd = 'bun install -g frouter-cli'; } catch { /* npm fallback */ }
+    execSync(cmd, { stdio: 'inherit' });
+    process.stdout.write(`${GREEN}  ✓ Updated to ${latest}. Please re-run frouter.${R}\n`);
+    process.exit(0);
+  } catch {
+    process.stdout.write(`${RED}  ✗ Update failed. Run manually: npm install -g frouter-cli${R}\n\n`);
+  }
+}
+
 // ─── Cleanup ───────────────────────────────────────────────────────────────────
 function cleanup() {
   stopPingLoop(pingRef);
@@ -1013,6 +1079,8 @@ async function main() {
   if (!Object.keys(config.apiKeys || {}).length) {
     config = await runFirstRunWizard(config);
   }
+
+  await checkForUpdate();
 
   if (!process.stdin.isTTY) {
     process.stderr.write('frouter requires an interactive terminal.\n');

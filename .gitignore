@@ -8,6 +8,8 @@ dist/
 # Local reference notes
 REFERENCE.md
 EXPLANATION.md
+AGENTS.md
+CLAUDE.md
 
 # OMX local state
 .omx/
@@ -27,5 +29,5 @@ test-results/
 .DS_Store
 *.log
 
-# Legacy JS test wrappers (TS source of truth lives under src/tests)
-/tests/
+# Test code
+tests/

@@ -144,7 +144,7 @@ export function startPingLoop(models: any[], config: any, intervalMs: number, on
     if (ref.running) ref.timer = setTimeout(tick, intervalMs);
   }
 
-  tick(); // fire immediately, don't await
+  void tick(); // fire immediately, don't await
   return ref;
 }
 

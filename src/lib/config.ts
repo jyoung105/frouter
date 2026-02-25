@@ -1,5 +1,5 @@
 // lib/config.js — BYOK key management, first-run wizard, config I/O
-import { readFileSync, writeFileSync, existsSync, chmodSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync, chmodSync, copyFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { execSync } from 'node:child_process';
@@ -46,13 +46,19 @@ export function loadConfig() {
       providers: parsed.providers || defaults.providers,
     };
   } catch {
+    try {
+      const backupPath = `${CONFIG_PATH}.corrupt-${Date.now()}`;
+      copyFileSync(CONFIG_PATH, backupPath);
+      try { chmodSync(backupPath, 0o600); } catch { /* best-effort */ }
+      process.stderr.write(`Warning: malformed config at ${CONFIG_PATH}; backup saved to ${backupPath}\n`);
+    } catch { /* best-effort */ }
     return defaults;
   }
 }
 
 export function saveConfig(config) {
   writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2) + '\n', { mode: 0o600 });
-  try { chmodSync(CONFIG_PATH, 0o600); } catch {}
+  try { chmodSync(CONFIG_PATH, 0o600); } catch { /* best-effort */ }
 }
 
 /**
@@ -104,7 +110,7 @@ export function promptMasked(promptText: string): Promise<string> {
 
     const cleanup = () => {
       process.stdin.removeListener('data', handler);
-      try { process.stdin.setRawMode(wasRaw || false); } catch {}
+      try { process.stdin.setRawMode(wasRaw || false); } catch { /* best-effort */ }
     };
 
     const handler = (ch: string) => {

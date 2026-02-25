@@ -659,7 +659,7 @@ function handleSettings(ch) {
   if      (ch === '\x1b' || ch === 'q')  {
     screen = 'main';
     render(); // show main immediately
-    refreshModels().then(() => { restartLoop(); render(); });
+    void refreshModels().then(() => { restartLoop(); render(); });
     return;
   }
   else if (ch === UP)   { sCursor = Math.max(0, sCursor - 1); }
@@ -688,7 +688,7 @@ function handleSettings(ch) {
     const key  = getApiKey(config, pk);
     sTestRes[pk] = 'testing…';
     render();
-    ping(key, meta.testModel, meta.chatUrl).then(r => {
+    void ping(key, meta.testModel, meta.chatUrl).then(r => {
       sTestRes[pk] = r.code === '200' ? `${r.ms}ms ✓` : `${r.code} ✗`;
       render();
     });
@@ -820,7 +820,14 @@ async function refreshModels() {
   const byKey = new Map(models.map(m => [`${m.providerKey}|${m.id}`, m]));
   models = fresh.map(m => {
     const existing = byKey.get(`${m.providerKey}|${m.id}`);
-    return existing ? { ...m, pings: existing.pings, status: existing.status, httpCode: existing.httpCode } : m;
+    return existing ? {
+      ...m,
+      pings: existing.pings,
+      status: existing.status,
+      httpCode: existing.httpCode,
+      _consecutiveFails: existing._consecutiveFails,
+      _skipUntilRound: existing._skipUntilRound,
+    } : m;
   });
   applyFilters();
 }
@@ -837,7 +844,7 @@ function restartLoop() {
 function cleanup() {
   stopPingLoop(pingRef);
   w(SHOWC + ALT_OFF);
-  try { if (process.stdin.isTTY) process.stdin.setRawMode(false); } catch {}
+  try { if (process.stdin.isTTY) process.stdin.setRawMode(false); } catch { /* best-effort */ }
 }
 
 process.on('exit', () => w(SHOWC + ALT_OFF));
@@ -845,13 +852,17 @@ process.on('exit', () => w(SHOWC + ALT_OFF));
 // ─── --best mode ───────────────────────────────────────────────────────────────
 async function runBest() {
   config = loadConfig();
-  const hasKeys = Object.keys(config.apiKeys || {}).length > 0;
+  const hasKeys = Object.keys(PROVIDERS_META).some((providerKey) => Boolean(getApiKey(config, providerKey)));
   if (!hasKeys) {
     process.stderr.write('No API keys configured. Run `frouter` to set up keys.\n');
     process.exit(1);
   }
 
   models = await getAllModels(config);
+  if (!models.length) {
+    process.stderr.write('No enabled models available to test.\n');
+    process.exit(1);
+  }
 
   for (let i = 0; i < 4; i++) {
     const upCount = models.filter(m => m.status === 'up').length;

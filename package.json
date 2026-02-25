@@ -17,7 +17,7 @@
     "test:perf": "npm run build && node --test dist/tests/perf/*.perf.test.js",
     "perf:baseline": "npm run build && node dist/tests/perf/collect-baseline.js",
     "test:onboarding": "node --test dist/tests/integration/onboarding.test.js",
-    "test:fresh-start": "npm run build && bash ./bin/frouter-fresh-start.sh",
+    "test:fresh-start": "npm run build && bash ./scripts/frouter-fresh-start.sh",
     "prepack": "npm run build"
   },
   "engines": {
@@ -27,7 +27,7 @@
     "dist/bin/",
     "dist/lib/",
     "dist/model-rankings.json",
-    "bin/frouter-fresh-start.sh"
+    "scripts/frouter-fresh-start.sh"
   ],
   "repository": {
     "type": "git",

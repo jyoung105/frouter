@@ -2,10 +2,10 @@
 # release.sh — Bump version, commit, tag, and push for automated npm publish
 #
 # Usage:
-#   ./bin/release.sh patch    # 1.1.0 → 1.1.1
-#   ./bin/release.sh minor    # 1.1.0 → 1.2.0
-#   ./bin/release.sh major    # 1.1.0 → 2.0.0
-#   ./bin/release.sh 1.2.3    # explicit version
+#   ./scripts/release.sh patch    # 1.1.0 → 1.1.1
+#   ./scripts/release.sh minor    # 1.1.0 → 1.2.0
+#   ./scripts/release.sh major    # 1.1.0 → 2.0.0
+#   ./scripts/release.sh 1.2.3    # explicit version
 #
 # What it does:
 #   1. Bumps version in package.json
@@ -22,7 +22,7 @@ set -euo pipefail
 BUMP="${1:-}"
 
 if [ -z "$BUMP" ]; then
-  echo "Usage: ./bin/release.sh <patch|minor|major|x.y.z>"
+  echo "Usage: ./scripts/release.sh <patch|minor|major|x.y.z>"
   exit 1
 fi
 

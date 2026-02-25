@@ -288,21 +288,6 @@
     },
     {
       "source": "nim",
-      "model_id": "qwen/qwen3-235b-a22b-instruct-fp8",
-      "name": "Qwen3 235B A22B",
-      "swe_bench": null,
-      "tier": "S",
-      "context": "32k",
-      "aa_slug": "",
-      "aa_intelligence": null,
-      "aa_speed_tps": null,
-      "aa_price_input": null,
-      "aa_price_output": null,
-      "aa_context": null,
-      "aa_url": ""
-    },
-    {
-      "source": "nim",
       "model_id": "qwen/qwen3-next-80b-a3b-instruct",
       "name": "Qwen3 80B Instruct",
       "swe_bench": "65.0%",
@@ -392,21 +377,6 @@
       "aa_url": ""
     },
     {
-      "source": "nim",
-      "model_id": "qwen/qwen3-32b-instruct",
-      "name": "Qwen3 32B",
-      "swe_bench": null,
-      "tier": "A+",
-      "context": "32k",
-      "aa_slug": "",
-      "aa_intelligence": null,
-      "aa_speed_tps": null,
-      "aa_price_input": null,
-      "aa_price_output": null,
-      "aa_context": null,
-      "aa_url": ""
-    },
-    {
       "source": "openrouter",
       "model_id": "qwen/qwen3-coder:free",
       "name": "Qwen3 Coder 480B",
@@ -420,21 +390,6 @@
       "aa_price_output": null,
       "aa_context": "",
       "aa_url": ""
-    },
-    {
-      "source": "nim",
-      "model_id": "deepseek-ai/deepseek-r1",
-      "name": "DeepSeek R1",
-      "swe_bench": null,
-      "tier": "A",
-      "context": "128k",
-      "aa_slug": "deepseek-r1",
-      "aa_intelligence": 27,
-      "aa_speed_tps": null,
-      "aa_price_input": null,
-      "aa_price_output": null,
-      "aa_context": null,
-      "aa_url": "https://artificialanalysis.ai/models/deepseek-r1"
     },
     {
       "source": "nim",
@@ -495,21 +450,6 @@
       "aa_price_output": 0,
       "aa_context": "40k",
       "aa_url": "https://artificialanalysis.ai/models/magistral-small"
-    },
-    {
-      "source": "nim",
-      "model_id": "qwen/qwen2.5-72b-instruct",
-      "name": "Qwen2.5 72B",
-      "swe_bench": null,
-      "tier": "A",
-      "context": "128k",
-      "aa_slug": "qwen2-5-72b-instruct",
-      "aa_intelligence": 16,
-      "aa_speed_tps": 46,
-      "aa_price_input": null,
-      "aa_price_output": null,
-      "aa_context": null,
-      "aa_url": "https://artificialanalysis.ai/models/qwen2-5-72b-instruct"
     },
     {
       "source": "nim",
@@ -689,21 +629,6 @@
       "aa_price_input": null,
       "aa_price_output": null,
       "aa_context": "",
-      "aa_url": ""
-    },
-    {
-      "source": "nim",
-      "model_id": "qwen/qwen3-30b-a3b-instruct",
-      "name": "Qwen3 30B A3B",
-      "swe_bench": null,
-      "tier": "A",
-      "context": "32k",
-      "aa_slug": "",
-      "aa_intelligence": null,
-      "aa_speed_tps": null,
-      "aa_price_input": null,
-      "aa_price_output": null,
-      "aa_context": null,
       "aa_url": ""
     },
     {
@@ -1233,21 +1158,6 @@
     },
     {
       "source": "openrouter",
-      "model_id": "deepseek/deepseek-r1-0528:free",
-      "name": "DeepSeek R1 0528",
-      "swe_bench": null,
-      "tier": "B",
-      "context": "164k",
-      "aa_slug": "deepseek-r1",
-      "aa_intelligence": 27,
-      "aa_speed_tps": null,
-      "aa_price_input": 1.35,
-      "aa_price_output": 4.2,
-      "aa_context": "128k",
-      "aa_url": "https://artificialanalysis.ai/models/deepseek-r1"
-    },
-    {
-      "source": "openrouter",
       "model_id": "openai/gpt-oss-20b:free",
       "name": "GPT OSS 20B",
       "swe_bench": null,
@@ -1275,21 +1185,6 @@
       "aa_price_output": 1.1,
       "aa_context": "128k",
       "aa_url": "https://artificialanalysis.ai/models/glm-4-5-air"
-    },
-    {
-      "source": "nim",
-      "model_id": "microsoft/phi-4",
-      "name": "Phi-4",
-      "swe_bench": null,
-      "tier": "B",
-      "context": "16k",
-      "aa_slug": "phi-4",
-      "aa_intelligence": 10,
-      "aa_speed_tps": 6.7,
-      "aa_price_input": null,
-      "aa_price_output": null,
-      "aa_context": null,
-      "aa_url": "https://artificialanalysis.ai/models/phi-4"
     },
     {
       "source": "nim",
@@ -2603,6 +2498,21 @@
       "swe_bench": null,
       "tier": "C",
       "context": "8k",
+      "aa_slug": "",
+      "aa_intelligence": null,
+      "aa_speed_tps": null,
+      "aa_price_input": null,
+      "aa_price_output": null,
+      "aa_context": "",
+      "aa_url": ""
+    },
+    {
+      "source": "nim",
+      "model_id": "nvidia/llama-3.1-nemotron-nano-vl-8b-v1",
+      "name": "Nemotron Nano VL 8B",
+      "swe_bench": null,
+      "tier": "C",
+      "context": "128k",
       "aa_slug": "",
       "aa_intelligence": null,
       "aa_speed_tps": null,

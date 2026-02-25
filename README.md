@@ -4,6 +4,8 @@
 
 Free model router CLI — discover, ping, and configure free AI models for OpenCode / OpenClaw.
 
+![frouter-gif](./frouter-example.gif)
+
 ## Install
 
 ```bash

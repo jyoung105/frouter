@@ -4,6 +4,8 @@
 
 무료 AI 모델 라우터 CLI — OpenCode / OpenClaw용 무료 모델을 탐색, 핑 테스트, 설정합니다.
 
+![frouter-gif](./frouter-example.gif)
+
 ## 설치
 
 ```bash

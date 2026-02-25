@@ -1,19 +1,27 @@
 // src/lib/ping.ts — single ping, parallel batch, continuous re-ping loop
-import https from 'node:https';
 import http  from 'node:http';
+import https from 'node:https';
 import { getApiKey, PROVIDERS_META } from './config.js';
 
-const TIMEOUT_MS = 15_000;
-const MAX_PINGS  = 100; // cap history per model
+const TIMEOUT_MS       = 15_000;
+const MAX_PINGS        = 100; // cap history per model
 const PING_CONCURRENCY = 20;
+const BACKOFF_THRESHOLD = 5;
 
 type PingResult = { code: string; ms: number };
 
+const STATUS_MAP: Record<string, string> = {
+  '200': 'up',
+  '401': 'noauth',
+  '404': 'notfound',
+  '000': 'timeout',
+};
+
 // ─── Concurrency limiter ──────────────────────────────────────────────────────
-async function pooled(items: any[], limit: number, fn: (item: any) => Promise<any>) {
-  const results: any[] = [];
+async function pooled<T, R>(items: T[], limit: number, fn: (item: T) => Promise<R>): Promise<R[]> {
+  const results: R[] = [];
   let i = 0;
-  async function next() {
+  async function next(): Promise<void> {
     const idx = i++;
     if (idx >= items.length) return;
     results[idx] = await fn(items[idx]).catch(e => e);
@@ -42,15 +50,24 @@ export function ping(apiKey: string | null | undefined, modelId: string, chatUrl
       max_tokens: 1,
     });
 
-    const headers = { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) };
+    const headers: Record<string, string | number> = {
+      'Content-Type':   'application/json',
+      'Content-Length':  Buffer.byteLength(body),
+    };
     if (apiKey) headers['Authorization'] = `Bearer ${apiKey}`;
 
-    const t0  = performance.now();
-    let done  = false;
+    const t0 = performance.now();
+    function elapsed(): number { return Math.round(performance.now() - t0); }
 
-    const timer = setTimeout(() => {
-      if (!done) { done = true; req.destroy(); resolve({ code: '000', ms: elapsed() }); }
-    }, TIMEOUT_MS);
+    let settled = false;
+    function settle(code: string): void {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      resolve({ code, ms: elapsed() });
+    }
+
+    const timer = setTimeout(() => { settle('000'); req.destroy(); }, TIMEOUT_MS);
 
     const req = lib.request({
       hostname: url.hostname,
@@ -60,25 +77,13 @@ export function ping(apiKey: string | null | undefined, modelId: string, chatUrl
       headers,
     }, (res) => {
       res.on('data', () => {});  // drain to free socket
-      res.on('end', () => {
-        if (done) return;
-        done = true;
-        clearTimeout(timer);
-        resolve({ code: String(res.statusCode), ms: elapsed() });
-      });
+      res.on('end', () => settle(String(res.statusCode)));
     });
 
-    req.on('error', (err: NodeJS.ErrnoException) => {
-      if (done) return;
-      done = true;
-      clearTimeout(timer);
-      resolve({ code: err.code === 'ECONNRESET' ? 'ERR' : 'ERR', ms: elapsed() });
-    });
+    req.on('error', () => settle('ERR'));
 
     req.write(body);
     req.end();
-
-    function elapsed() { return Math.round(performance.now() - t0); }
   });
 }
 
@@ -89,12 +94,10 @@ export function ping(apiKey: string | null | undefined, modelId: string, chatUrl
 export async function pingAllOnce(models: any[], config: any) {
   _roundCounter++;
 
-  // Filter out models that should be skipped this round (backoff)
   const toPing = models.filter(m => {
     if (!PROVIDERS_META[m.providerKey]) return false;
-    // Progressive backoff: after 5 consecutive fails, skip exponentially
     const fails = m._consecutiveFails || 0;
-    if (fails >= 5) {
+    if (fails >= BACKOFF_THRESHOLD) {
       const skipUntil = m._skipUntilRound || 0;
       if (_roundCounter < skipUntil) return false;
     }
@@ -110,19 +113,15 @@ export async function pingAllOnce(models: any[], config: any) {
     if (m.pings.length > MAX_PINGS) m.pings.shift();
 
     m.httpCode = result.code;
-    if      (result.code === '200') m.status = 'up';
-    else if (result.code === '401') m.status = 'noauth';
-    else if (result.code === '404') m.status = 'notfound';
-    else if (result.code === '000') m.status = 'timeout';
-    else                            m.status = 'down';
+    m.status   = STATUS_MAP[result.code] || 'down';
 
     // Track consecutive failures for backoff
     if (result.code === '200' || result.code === '401') {
       m._consecutiveFails = 0;
     } else {
       m._consecutiveFails = (m._consecutiveFails || 0) + 1;
-      if (m._consecutiveFails >= 5) {
-        const delay = Math.min(32, Math.pow(2, m._consecutiveFails - 5));
+      if (m._consecutiveFails >= BACKOFF_THRESHOLD) {
+        const delay = Math.min(32, 2 ** (m._consecutiveFails - BACKOFF_THRESHOLD));
         m._skipUntilRound = _roundCounter + delay;
       }
     }
@@ -148,7 +147,7 @@ export function startPingLoop(models: any[], config: any, intervalMs: number, on
   return ref;
 }
 
-export function stopPingLoop(ref: { running: boolean; timer: NodeJS.Timeout | null } | null | undefined) {
+export function stopPingLoop(ref: { running: boolean; timer: NodeJS.Timeout | null } | null | undefined): void {
   if (!ref) return;
   ref.running = false;
   if (ref.timer) clearTimeout(ref.timer);

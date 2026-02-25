@@ -133,8 +133,8 @@ function colHdr(label, colName, width, rightAlign = false) {
 // ─── Render helpers ────────────────────────────────────────────────────────────
 function fmtCtx(n) {
   if (!n) return '  —  ';
-  if (n >= 1_000_000) return `${(n/1_000_000).toFixed(1)}M`.padStart(5);
-  return `${Math.round(n/1000)}k`.padStart(5);
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`.padStart(5);
+  return `${Math.round(n / 1000)}k`.padStart(5);
 }
 
 function fmtMs(ms) {
@@ -145,6 +145,15 @@ function fmtMs(ms) {
 function fmtUp(pct, hasPings) {
   if (!hasPings) return '  — ';
   return `${pct}%`.padStart(4);
+}
+
+function fmtLatency(ms) {
+  if (ms != null) return latColor(ms) + fmtMs(ms) + R;
+  return `${D}${fmtMs(null)}${R}`;
+}
+
+function fullWidthBar(content, style = INVERT) {
+  return `${style}${content}${' '.repeat(Math.max(0, cols() - visLen(content)))}${R}`;
 }
 
 function statusDot(model) {
@@ -174,7 +183,7 @@ function renderMain() {
     : `${D}/ search${R}`;
 
   const tierBar = tierFilter !== 'All' ? `${YELLOW}tier:${tierFilter}${R}  ` : '';
-  const stats   = `${D}${filtered.length}/${models.length} models  ${pingMs/1000}s${R}`;
+  const stats   = `${D}${filtered.length}/${models.length} models  ${pingMs / 1000}s${R}`;
 
   let out = CLEAR + HIDEC;
 
@@ -187,7 +196,7 @@ function renderMain() {
 
   // Column headers with sort indicators
   const hdr = `  ${'#'.padStart(3)}  ${colHdr('Tier', 'tier', 4)}  ${colHdr('Provider', 'provider', 11)}  ${colHdr('Model', 'model', 32)}  ${colHdr('Ctx', 'context', 5, true)}  ${colHdr('AA', 'intel', 3, true)}  ${colHdr('Avg', 'avg', 6, true)}  ${colHdr('Lat', 'latest', 6, true)}  ${colHdr('Up%', 'uptime', 4, true)}  ${colHdr('Verdict', 'verdict', 7)}`;
-  out += `${INVERT}${hdr}${' '.repeat(Math.max(0, c - visLen(hdr)))}${R}\n`;
+  out += fullWidthBar(hdr) + '\n';
 
   // Model rows
   if (filtered.length === 0 && models.length === 0) {
@@ -207,14 +216,10 @@ function renderMain() {
     const name    = pad(m.displayName || m.id, 32);
     const ctx     = fmtCtx(m.context);
     const avg     = getAvg(m);
-    const avgStr  = avg !== Infinity
-      ? latColor(avg) + fmtMs(avg) + R
-      : `${D}${fmtMs(null)}${R}`;
+    const avgStr  = fmtLatency(avg !== Infinity ? avg : null);
     const last    = m.pings.at(-1);
     const latMs   = last?.code === '200' ? last.ms : null;
-    const latStr  = latMs != null
-      ? latColor(latMs) + fmtMs(latMs) + R
-      : `${D}${fmtMs(null)}${R}`;
+    const latStr  = fmtLatency(latMs);
     const up      = getUptime(m);
     const upStr   = uptimeColor(up) + fmtUp(up, m.pings.length > 0) + R;
     const dot     = statusDot(m);
@@ -241,64 +246,76 @@ function renderMain() {
 
   // Footer
   const footer = ` ↑↓/jk:nav  Enter:target  /:search (Enter=apply OpenCode)  A:api key  P:settings  T:tier  ?:help  0-9:sort  q:quit `;
-  out += `${INVERT}${footer}${' '.repeat(Math.max(0, c - visLen(footer)))}${R}`;
+  out += fullWidthBar(footer);
   w(out);
 }
 
 // ─── Help overlay ──────────────────────────────────────────────────────────────
 function renderHelp() {
-  let out = CLEAR + HIDEC;
-  out += `${BG_HDR}${WHITE}${B} frouter — Keyboard Reference ${R}\n\n`;
-  out += `${B}  Navigation${R}\n`;
-  out += `  ↑ / k       Move up\n`;
-  out += `  ↓ / j       Move down\n`;
-  out += `  PgUp        Page up\n`;
-  out += `  PgDn        Page down\n`;
-  out += `  g           Jump to top\n`;
-  out += `  G           Jump to bottom\n\n`;
-  out += `${B}  Actions${R}\n`;
-  out += `  Enter       Select model → target picker (OpenCode / OpenClaw disabled)\n`;
-  out += `  /           Search / filter models (Enter applies to OpenCode only)\n`;
-  out += `  A           Quick API key add/change (opens key editor)\n`;
-  out += `  T           Cycle tier filter (All → S+ → S → …)\n`;
-  out += `  P           Settings (API keys, toggle providers)\n`;
-  out += `  W / X       Faster / slower ping interval\n`;
-  out += `  q           Quit\n\n`;
-  out += `${B}  Sort (press key to sort, press again to reverse)${R}\n`;
-  for (const s of SORT_COLS) {
+  const sortLines = SORT_COLS.map(s => {
     const active = sortCol === s.col ? ` ${CYAN}← active${R}` : '';
-    out += `  ${s.key}           ${s.label}${active}\n`;
-  }
-  out += `\n${B}  Target Picker${R}\n`;
-  out += `  Enter       Save config + open selected target (OpenCode only)\n`;
-  out += `  G           Same as Enter\n`;
-  out += `  S           Save config only\n`;
-  out += `  ESC         Cancel\n`;
-  out += `\n${INVERT} Press any key to close ${R}\n`;
-  w(out);
+    return `  ${s.key}           ${s.label}${active}`;
+  }).join('\n');
+
+  w(CLEAR + HIDEC
+    + `${BG_HDR}${WHITE}${B} frouter — Keyboard Reference ${R}\n\n`
+    + `${B}  Navigation${R}\n`
+    + `  ↑ / k       Move up\n`
+    + `  ↓ / j       Move down\n`
+    + `  PgUp        Page up\n`
+    + `  PgDn        Page down\n`
+    + `  g           Jump to top\n`
+    + `  G           Jump to bottom\n\n`
+    + `${B}  Actions${R}\n`
+    + `  Enter       Select model → target picker (OpenCode / OpenClaw disabled)\n`
+    + `  /           Search / filter models (Enter applies to OpenCode only)\n`
+    + `  A           Quick API key add/change (opens key editor)\n`
+    + `  T           Cycle tier filter (All → S+ → S → …)\n`
+    + `  P           Settings (API keys, toggle providers)\n`
+    + `  W / X       Faster / slower ping interval\n`
+    + `  q           Quit\n\n`
+    + `${B}  Sort (press key to sort, press again to reverse)${R}\n`
+    + sortLines + '\n'
+    + `\n${B}  Target Picker${R}\n`
+    + `  Enter       Save config + open selected target (OpenCode only)\n`
+    + `  G           Same as Enter\n`
+    + `  S           Save config only\n`
+    + `  ESC         Cancel\n`
+    + `\n${INVERT} Press any key to close ${R}\n`);
 }
 
 // ─── Settings screen ───────────────────────────────────────────────────────────
+function maskKey(key) {
+  const masked = '•'.repeat(Math.min(16, Math.max(4, key.length - 8)));
+  return `${D}${key.slice(0, 4)}${masked}${key.slice(-4)}${R}`;
+}
+
 function renderSettings() {
   let out = CLEAR + HIDEC;
   out += `${BG_HDR}${WHITE}${B} frouter Settings ${R}\n\n`;
 
   const pks = Object.keys(PROVIDERS_META);
-  pks.forEach((pk, i) => {
+  for (let i = 0; i < pks.length; i++) {
+    const pk      = pks[i];
     const meta    = PROVIDERS_META[pk];
     const enabled = config.providers?.[pk]?.enabled !== false;
     const key     = getApiKey(config, pk);
     const isSel   = i === sCursor;
 
     const toggleStr = enabled ? `${GREEN}[ ON  ]${R}` : `${RED}[ OFF ]${R}`;
-    const keyDisp   = sEditing && isSel
-      ? `${CYAN}${'•'.repeat(sKeyBuf.length)}_${R}`
-      : (key ? `${D}${key.slice(0,4)}${'•'.repeat(Math.min(16, Math.max(4, key.length-8)))}${key.slice(-4)}${R}` : `${D}(no key)${R}`);
-    const testDisp  = sTestRes[pk] ? `  ${D}[${sTestRes[pk]}]${R}` : '';
+    let keyDisp;
+    if (sEditing && isSel) {
+      keyDisp = `${CYAN}${'•'.repeat(sKeyBuf.length)}_${R}`;
+    } else if (key) {
+      keyDisp = maskKey(key);
+    } else {
+      keyDisp = `${D}(no key)${R}`;
+    }
+    const testDisp = sTestRes[pk] ? `  ${D}[${sTestRes[pk]}]${R}` : '';
 
     const prefix = isSel ? `${B} ❯ ${R}` : '   ';
     out += `${prefix}${toggleStr} ${pad(meta.name, 14)} ${keyDisp}${testDisp}\n`;
-  });
+  }
 
   out += `\n${INVERT} ↑↓:navigate  Enter:edit key  Space:toggle  T:test  D:delete key  ESC:back ${R}\n`;
   if (sEditing) out += `\n${D} Type key  •  Enter:save  •  ESC:cancel${R}\n`;
@@ -319,12 +336,13 @@ function renderTarget() {
   out += `${BG_HDR}${WHITE}${B} Configure: ${name} ${R}\n`;
   out += `${D}  ${fullId}${R}\n\n`;
 
-  TARGETS.forEach((t, i) => {
+  for (let i = 0; i < TARGETS.length; i++) {
+    const t      = TARGETS[i];
     const isSel  = i === tCursor;
     const prefix = isSel ? `${B} ❯ ${R}` : '   ';
     const status = t.enabled ? `${GREEN}[enabled]${R}` : `${YELLOW}[disabled]${R}`;
     out += `${prefix}${pad(t.label, 12)} ${status}  ${D}${t.path}${R}\n`;
-  });
+  }
 
   const target = TARGETS[tCursor];
   if (target && !target.enabled) {
@@ -351,7 +369,7 @@ function render() {
 function applyFilters() {
   // Remember which model the cursor is on
   if (filtered[cursor]) {
-    trackedId = `${filtered[cursor].providerKey}|${filtered[cursor].id}`;
+    trackedId = modelKey(filtered[cursor]);
   }
 
   let r = models;
@@ -362,7 +380,7 @@ function applyFilters() {
 
   // Restore cursor to the same model if it still exists
   if (trackedId) {
-    const idx = filtered.findIndex(m => `${m.providerKey}|${m.id}` === trackedId);
+    const idx = filtered.findIndex(m => modelKey(m) === trackedId);
     if (idx !== -1) cursor = idx;
   }
   if (cursor >= filtered.length) cursor = Math.max(0, filtered.length - 1);
@@ -384,6 +402,21 @@ function maxCursorIndex() {
 
 function clampCursor(next) {
   return Math.max(0, Math.min(maxCursorIndex(), next));
+}
+
+function resetSearchState() {
+  searchMode = false;
+  searchQuery = '';
+  cursor = 0;
+  scrollOff = 0;
+  trackedId = null;
+}
+
+function resetSettingsState() {
+  sEditing = false;
+  sKeyBuf = '';
+  sNotice = '';
+  sTestRes = {};
 }
 
 function enterTargetPickerFromSelection() {
@@ -451,9 +484,10 @@ async function promptInstallOpenCode() {
   }
 
   w(`\n${B}   Available installers:${R}\n`);
-  installers.forEach((inst, i) => {
+  for (let i = 0; i < installers.length; i++) {
+    const inst = installers[i];
     w(`   ${B}${i + 1}${R}) ${inst.label}  ${D}(${inst.command})${R}\n`);
-  });
+  }
 
   const answer = await promptMasked(`\n   Install opencode? (1-${installers.length} to install, ESC to skip): `);
   if (!answer) return false;
@@ -536,10 +570,8 @@ function resolveQuickApiKeyProviderIndex() {
 function openApiKeyEditorFromMain() {
   stopPingLoop(pingRef);
   sCursor = resolveQuickApiKeyProviderIndex();
+  resetSettingsState();
   sEditing = true;
-  sKeyBuf = '';
-  sNotice = '';
-  sTestRes = {};
   searchMode = false;
   screen = 'settings';
 }
@@ -549,11 +581,7 @@ function handleMain(ch) {
   if (searchMode) {
     let needsRefilter = false;
     if      (ch === '\x1b')  {
-      searchMode = false;
-      searchQuery = '';
-      cursor = 0;
-      scrollOff = 0;
-      trackedId = null;
+      resetSearchState();
       needsRefilter = true;
     }
     else if (ch === '\r')    {
@@ -572,7 +600,7 @@ function handleMain(ch) {
     }
 
     if (needsRefilter) applyFilters();
-    render();
+    scheduleRender();
     return;
   }
 
@@ -586,18 +614,15 @@ function handleMain(ch) {
 
   // Actions
   else if (ch === '/')               {
+    resetSearchState();
     searchMode = true;
-    searchQuery = '';
-    cursor = 0;
-    scrollOff = 0;
-    trackedId = null;
     applyFilters();
   }
   else if (ch === '\r') {
     enterTargetPickerFromSelection();
   }
   else if (ch === 'p' || ch === 'P') {
-    stopPingLoop(pingRef); sCursor = 0; sEditing = false; screen = 'settings';
+    stopPingLoop(pingRef); sCursor = 0; resetSettingsState(); screen = 'settings';
   }
   else if (ch === 'a' || ch === 'A') {
     openApiKeyEditorFromMain();
@@ -617,7 +642,7 @@ function handleMain(ch) {
     if (sortDef) toggleSort(sortDef.col);
   }
 
-  render();
+  scheduleRender();
 }
 
 function toggleSort(col) {
@@ -628,25 +653,25 @@ function toggleSort(col) {
 
 function handleSettings(ch) {
   const pks = Object.keys(PROVIDERS_META);
+  const currentPk = pks[sCursor];
+  const currentMeta = PROVIDERS_META[currentPk];
 
   if (sEditing) {
     if      (ch === '\x1b')  { sEditing = false; sKeyBuf = ''; }
     else if (ch === '\r')    {
-      const pk = pks[sCursor];
-      // Empty buffer = clear the key; non-empty = set the key
       config.apiKeys ??= {};
       if (sKeyBuf) {
-        const checked = validateProviderApiKey(pk, sKeyBuf);
+        const checked = validateProviderApiKey(currentPk, sKeyBuf);
         if (!checked.ok) {
-          sNotice = `${RED}Invalid key for ${PROVIDERS_META[pk].name}: ${checked.reason}${R}`;
+          sNotice = `${RED}Invalid key for ${currentMeta.name}: ${checked.reason}${R}`;
           render();
           return;
         }
-        config.apiKeys[pk] = checked.key;
-        sNotice = `${GREEN}Saved ${PROVIDERS_META[pk].name} key${R}`;
+        config.apiKeys[currentPk] = checked.key;
+        sNotice = `${GREEN}Saved ${currentMeta.name} key${R}`;
       } else {
-        delete config.apiKeys[pk];
-        sNotice = `${YELLOW}Removed ${PROVIDERS_META[pk].name} key${R}`;
+        delete config.apiKeys[currentPk];
+        sNotice = `${YELLOW}Removed ${currentMeta.name} key${R}`;
       }
       saveConfig(config);
       sEditing = false; sKeyBuf = '';
@@ -658,38 +683,33 @@ function handleSettings(ch) {
 
   if      (ch === '\x1b' || ch === 'q')  {
     screen = 'main';
-    render(); // show main immediately
+    render();
     void refreshModels().then(() => { restartLoop(); render(); });
     return;
   }
   else if (ch === UP)   { sCursor = Math.max(0, sCursor - 1); }
   else if (ch === DOWN) { sCursor = Math.min(pks.length - 1, sCursor + 1); }
   else if (ch === ' ')  {
-    const pk = pks[sCursor];
     config.providers ??= {};
-    config.providers[pk] ??= {};
-    config.providers[pk].enabled = !(config.providers[pk].enabled !== false);
+    config.providers[currentPk] ??= {};
+    config.providers[currentPk].enabled = !(config.providers[currentPk].enabled !== false);
     saveConfig(config);
     sNotice = '';
   }
   else if (ch === '\r') { sEditing = true; sKeyBuf = ''; sNotice = ''; }
   else if (ch === 'd' || ch === 'D') {
-    // Delete key for current provider
-    const pk = pks[sCursor];
-    if (config.apiKeys?.[pk]) {
-      delete config.apiKeys[pk];
+    if (config.apiKeys?.[currentPk]) {
+      delete config.apiKeys[currentPk];
       saveConfig(config);
-      sNotice = `${YELLOW}Removed ${PROVIDERS_META[pk].name} key${R}`;
+      sNotice = `${YELLOW}Removed ${currentMeta.name} key${R}`;
     }
   }
   else if (ch === 't' || ch === 'T') {
-    const pk = pks[sCursor];
-    const meta = PROVIDERS_META[pk];
-    const key  = getApiKey(config, pk);
-    sTestRes[pk] = 'testing…';
+    const key = getApiKey(config, currentPk);
+    sTestRes[currentPk] = 'testing…';
     render();
-    void ping(key, meta.testModel, meta.chatUrl).then(r => {
-      sTestRes[pk] = r.code === '200' ? `${r.ms}ms ✓` : `${r.code} ✗`;
+    void ping(key, currentMeta.testModel, currentMeta.chatUrl).then(r => {
+      sTestRes[currentPk] = r.code === '200' ? `${r.ms}ms ✓` : `${r.code} ✗`;
       render();
     });
     return;
@@ -766,6 +786,40 @@ async function handleTarget(ch) {
 // Buffer escape sequences: if \x1b arrives alone, wait 50ms to see if [ follows.
 let escBuf = '';
 let escTimer = null;
+let renderPending = false;
+
+function scheduleRender() {
+  if (!renderPending) {
+    renderPending = true;
+    setImmediate(() => { renderPending = false; render(); });
+  }
+}
+
+// Split a multi-byte chunk into individual escape sequences and plain chars.
+// E.g. "\x1b[B\x1b[B\x1b[Bx" → ["\x1b[B", "\x1b[B", "\x1b[B", "x"]
+function splitEscapeSequences(s: string): string[] {
+  const result: string[] = [];
+  let i = 0;
+  while (i < s.length) {
+    if (s[i] === '\x1b' && i + 1 < s.length && s[i + 1] === '[') {
+      // CSI sequence: \x1b[ followed by parameter bytes (0-9;) then a final byte (@-~)
+      let j = i + 2;
+      while (j < s.length && s[j] >= '0' && s[j] <= '9') j++;
+      if (j < s.length && s[j] === ';') { j++; while (j < s.length && s[j] >= '0' && s[j] <= '9') j++; }
+      if (j < s.length) j++; // consume final byte (A, B, ~, H, F, etc.)
+      result.push(s.slice(i, j));
+      i = j;
+    } else if (s[i] === '\x1b') {
+      // Bare escape — take just the ESC
+      result.push('\x1b');
+      i++;
+    } else {
+      result.push(s[i]);
+      i++;
+    }
+  }
+  return result;
+}
 
 function flushEsc() {
   const buf = escBuf;
@@ -778,7 +832,8 @@ function onData(raw) {
   const ch = String(raw);
   if (ch.length > 1) {
     if (escTimer) { clearTimeout(escTimer); escBuf = ''; escTimer = null; }
-    dispatch(ch);
+    const seqs = splitEscapeSequences(ch);
+    for (const seq of seqs) dispatch(seq);
     return;
   }
   if (ch === '\x1b') {
@@ -815,19 +870,21 @@ function dispatch(ch) {
 }
 
 // ─── Model management ──────────────────────────────────────────────────────────
+const PING_STATE_KEYS = ['pings', 'status', 'httpCode', '_consecutiveFails', '_skipUntilRound'];
+
+function modelKey(m) {
+  return `${m.providerKey}|${m.id}`;
+}
+
 async function refreshModels() {
   const fresh = await getAllModels(config);
-  const byKey = new Map(models.map(m => [`${m.providerKey}|${m.id}`, m]));
+  const byKey = new Map(models.map(m => [modelKey(m), m]));
   models = fresh.map(m => {
-    const existing = byKey.get(`${m.providerKey}|${m.id}`);
-    return existing ? {
-      ...m,
-      pings: existing.pings,
-      status: existing.status,
-      httpCode: existing.httpCode,
-      _consecutiveFails: existing._consecutiveFails,
-      _skipUntilRound: existing._skipUntilRound,
-    } : m;
+    const existing = byKey.get(modelKey(m));
+    if (!existing) return m;
+    const preserved = {};
+    for (const k of PING_STATE_KEYS) preserved[k] = existing[k];
+    return { ...m, ...preserved };
   });
   applyFilters();
 }
@@ -901,8 +958,9 @@ async function main() {
   process.stdin.setEncoding('utf8');
   process.stdin.on('data', onData);
 
-  process.on('SIGINT',  () => { cleanup(); process.exit(0); });
-  process.on('SIGTERM', () => { cleanup(); process.exit(0); });
+  const onSignal = () => { cleanup(); process.exit(0); };
+  process.on('SIGINT', onSignal);
+  process.on('SIGTERM', onSignal);
   process.stdout.on('resize', render);
 
   render(); // show loading state immediately

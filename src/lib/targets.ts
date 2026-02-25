@@ -7,11 +7,15 @@ import { PROVIDERS_META, validateProviderApiKey } from './config.js';
 
 const OPENCODE_PATH = join(homedir(), '.config', 'opencode', 'opencode.json');
 const OPENCLAW_PATH = join(homedir(), '.openclaw', 'openclaw.json');
+const IS_WIN = platform() === 'win32';
 
 function readJson(path) {
   if (!existsSync(path)) return {};
-  try { return JSON.parse(readFileSync(path, 'utf8')); }
-  catch { return {}; }
+  try {
+    return JSON.parse(readFileSync(path, 'utf8'));
+  } catch {
+    return {};
+  }
 }
 
 function backupAndWriteJson(path, data) {
@@ -44,33 +48,29 @@ function resolvePersistedApiKey(providerKey: string, apiKey: string | null, opti
   return checked.key;
 }
 
-// ─── OpenCode installation detection ─────────────────────────────────────────
-
-const IS_WIN = platform() === 'win32';
-
-export function isOpenCodeInstalled() {
+/** Check whether a binary is available on PATH. */
+function hasBinary(bin: string) {
   try {
-    execSync(IS_WIN ? 'where opencode' : 'which opencode', { stdio: 'ignore' });
+    execSync(IS_WIN ? `where ${bin}` : `which ${bin}`, { stdio: 'ignore' });
     return true;
   } catch {
     return false;
   }
 }
 
-export function detectAvailableInstallers() {
-  const whichCmd = (bin) => {
-    try {
-      execSync(IS_WIN ? `where ${bin}` : `which ${bin}`, { stdio: 'ignore' });
-      return true;
-    } catch { return false; }
-  };
+// ─── OpenCode installation detection ─────────────────────────────────────────
 
+export function isOpenCodeInstalled() {
+  return hasBinary('opencode');
+}
+
+export function detectAvailableInstallers() {
   const installers = [];
-  if (whichCmd('npm'))  installers.push({ id: 'npm',  label: 'npm',  command: 'npm install -g opencode' });
-  if (!IS_WIN && platform() === 'darwin' && whichCmd('brew')) {
+  if (hasBinary('npm'))  installers.push({ id: 'npm',  label: 'npm',  command: 'npm install -g opencode' });
+  if (platform() === 'darwin' && hasBinary('brew')) {
     installers.push({ id: 'brew', label: 'Homebrew', command: 'brew install opencode' });
   }
-  if (whichCmd('go'))   installers.push({ id: 'go',   label: 'Go',   command: 'go install github.com/opencode-ai/opencode@latest' });
+  if (hasBinary('go'))   installers.push({ id: 'go',   label: 'Go',   command: 'go install github.com/opencode-ai/opencode@latest' });
   return installers;
 }
 
@@ -90,15 +90,18 @@ export function installOpenCode(installer: { command: string }) {
 
 // ─── Provider config blocks ───────────────────────────────────────────────────
 
+function getBaseUrl(meta) {
+  return meta.chatUrl.replace('/chat/completions', '');
+}
+
 function openCodeProviderBlock(providerKey, apiKey) {
   const meta = getProviderMeta(providerKey);
-  const baseURL = meta.chatUrl.replace('/chat/completions', '');
   return {
     npm:     '@ai-sdk/openai-compatible',
     name:    meta.name,
     options: {
-      baseURL,
-      apiKey: apiKey || `{env:${meta.envVar}}`,
+      baseURL: getBaseUrl(meta),
+      apiKey:  apiKey || `{env:${meta.envVar}}`,
     },
   };
 }
@@ -112,12 +115,8 @@ function openCodeProviderBlock(providerKey, apiKey) {
 export function writeOpenCode(model, providerKey, apiKey = null, options = {}) {
   const persistedApiKey = resolvePersistedApiKey(providerKey, apiKey, options);
   const cfg = readJson(OPENCODE_PATH);
-  if (!cfg.provider) cfg.provider = {};
-
-  // Add/replace frouter's provider block
+  cfg.provider ??= {};
   cfg.provider[providerKey] = openCodeProviderBlock(providerKey, persistedApiKey);
-
-  // Set active model: "providerKey/modelId"
   cfg.model = `${providerKey}/${model.id}`;
 
   backupAndWriteJson(OPENCODE_PATH, cfg);
@@ -166,14 +165,12 @@ export function writeOpenClaw(model, providerKey, apiKey = null, options = {}) {
   const persistedApiKey = resolvePersistedApiKey(providerKey, apiKey, options);
   const meta = getProviderMeta(providerKey);
   const cfg  = readJson(OPENCLAW_PATH);
-  const baseUrl = meta.chatUrl.replace('/chat/completions', '');
+  const qid  = `${providerKey}/${model.id}`;
 
-  // models.providers
   cfg.models ??= {};
   cfg.models.providers ??= {};
-  cfg.models.providers[providerKey] = { baseUrl, api: 'openai-completions' };
+  cfg.models.providers[providerKey] = { baseUrl: getBaseUrl(meta), api: 'openai-completions' };
 
-  // env
   if (persistedApiKey) {
     cfg.env ??= {};
     cfg.env[meta.envVar] = persistedApiKey;
@@ -182,10 +179,6 @@ export function writeOpenClaw(model, providerKey, apiKey = null, options = {}) {
     if (Object.keys(cfg.env).length === 0) delete cfg.env;
   }
 
-  // qualified model id
-  const qid = `${providerKey}/${model.id}`;
-
-  // agents.defaults
   cfg.agents ??= {};
   cfg.agents.defaults ??= {};
   cfg.agents.defaults.model ??= {};

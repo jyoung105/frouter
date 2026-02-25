@@ -6,11 +6,11 @@ import { join, dirname } from 'node:path';
 import { getApiKey } from './config.js';
 
 // ─── model-rankings.json lookup ────────────────────────────────────────────────
-// Populated lazily on first call to lookupRankings().
-let _byId   = null;   // Map<model_id, entry>
-let _bySlug = null;   // Map<aa_slug,  entry>
 
-function loadRankings() {
+let _byId: Map<string, any> | null = null;
+let _bySlug: Map<string, any> | null = null;
+
+function loadRankings(): void {
   if (_byId) return;
   _byId   = new Map();
   _bySlug = new Map();
@@ -18,41 +18,44 @@ function loadRankings() {
     const __dir = dirname(fileURLToPath(import.meta.url));
     const raw   = readFileSync(join(__dir, '..', 'model-rankings.json'), 'utf8');
     for (const m of JSON.parse(raw).models) {
+      const bare = m.model_id.replace(':free', '');
       _byId.set(m.model_id, m);
-      _byId.set(m.model_id.replace(':free', ''), m);   // bare ID without :free
+      _byId.set(bare, m);
       if (m.aa_slug) _bySlug.set(m.aa_slug, m);
-      // Also index by slug derived from model_id for cross-namespace matching
-      // e.g. "meta/llama-3.3-70b-instruct" → "llama-3-3-70b" catches "meta-llama/llama-3.3-70b-instruct:free"
-      const derivedSlug = toSlugKey(m.model_id.replace(':free', ''));
+      const derivedSlug = toSlugKey(bare);
       if (derivedSlug && !_bySlug.has(derivedSlug)) _bySlug.set(derivedSlug, m);
     }
   } catch { /* rankings file missing or malformed — degrade gracefully */ }
 }
 
-// Derive a slug-like key from a raw model ID for fuzzy matching.
-// e.g. "google/gemma-3-27b-it" → "gemma-3-27b"
-function toSlugKey(id) {
-  return id.split('/').pop()
+/** Derive a slug-like key from a model ID for fuzzy matching. */
+function toSlugKey(id: string): string {
+  return id.split('/').pop()!
     .toLowerCase()
     .replace(/[._]/g, '-')
     .replace(/-(instruct|it|fp8|preview|turbo|versatile|2507|2512|2506|v\d+[\d.]*|a\d+b).*$/, '');
 }
 
-function lookupRankings(id) {
+function lookupRankings(id: string) {
   loadRankings();
-  if (_byId.has(id))  return _byId.get(id);
   const bare = id.replace(':free', '');
-  if (_byId.has(bare)) return _byId.get(bare);
   const slug = toSlugKey(bare);
-  if (_bySlug.has(slug)) return _bySlug.get(slug);
-  // Partial slug match — rankings slug starts with derived slug or vice-versa
-  for (const [s, entry] of _bySlug) {
-    if (slug.length >= 6 && (slug.startsWith(s) || s.startsWith(slug))) return entry;
+  return _byId!.get(id)
+    ?? _byId!.get(bare)
+    ?? _bySlug!.get(slug)
+    ?? partialSlugMatch(slug);
+}
+
+/** Partial slug match — rankings slug starts with derived slug or vice-versa. */
+function partialSlugMatch(slug: string) {
+  if (slug.length < 6) return null;
+  for (const [s, entry] of _bySlug!) {
+    if (slug.startsWith(s) || s.startsWith(slug)) return entry;
   }
   return null;
 }
 
-function scoreTier(s) {
+function scoreTier(s: number | null): string {
   if (s == null) return '?';
   if (s >= 70) return 'S+';
   if (s >= 60) return 'S';
@@ -64,7 +67,7 @@ function scoreTier(s) {
   return 'C';
 }
 
-function makeModel(id, displayName, context, providerKey) {
+function makeModel(id: string, displayName: string, context: number, providerKey: string) {
   const ranking   = lookupRankings(id);
   const sweScore  = ranking?.swe_bench ? parseFloat(ranking.swe_bench) : null;
   const tier      = ranking?.tier || scoreTier(sweScore);
@@ -185,12 +188,6 @@ const NIM_MODELS = [
   makeModel('nvidia/cosmos-reason2-8b',                          'Cosmos Reason2 8B',         131072, 'nvidia'),
   makeModel('nvidia/nemotron-nano-12b-v2-vl',                    'Nemotron Nano 12B VL',      131072, 'nvidia'),
   makeModel('nvidia/nvidia-nemotron-nano-9b-v2',                 'Nemotron Nano 9B v2',       131072, 'nvidia'),
-  makeModel('deepseek-ai/deepseek-r1',                           'DeepSeek R1',               131072, 'nvidia'),
-  makeModel('qwen/qwen2.5-72b-instruct',                         'Qwen2.5 72B',               131072, 'nvidia'),
-  makeModel('microsoft/phi-4',                                   'Phi-4',                     16384,  'nvidia'),
-  makeModel('qwen/qwen3-235b-a22b-instruct-fp8',                 'Qwen3 235B A22B FP8',       32768,  'nvidia'),
-  makeModel('qwen/qwen3-32b-instruct',                           'Qwen3 32B',                 32768,  'nvidia'),
-  makeModel('qwen/qwen3-30b-a3b-instruct',                       'Qwen3 30B A3B',             32768,  'nvidia'),
   makeModel('ibm/granite-3.3-8b-instruct',                       'Granite 3.3 8B',            131072, 'nvidia'),
 
   // ── C tier ─────────────────────────────────────────────────────────────────
@@ -220,6 +217,7 @@ const NIM_MODELS = [
   makeModel('google/codegemma-1.1-7b',                           'CodeGemma 7B',              8192,   'nvidia'),
   makeModel('nvidia/llama-3.1-nemotron-nano-4b-v1.1',            'Nemotron Nano 4B',          131072, 'nvidia'),
   makeModel('nvidia/llama-3.1-nemotron-nano-8b-v1',              'Nemotron Nano 8B',          131072, 'nvidia'),
+  makeModel('nvidia/llama-3.1-nemotron-nano-vl-8b-v1',           'Nemotron Nano VL 8B',       131072, 'nvidia'),
   makeModel('nvidia/llama3-chatqa-1.5-8b',                       'ChatQA 1.5 8B',             8192,   'nvidia'),
   makeModel('nvidia/mistral-nemo-minitron-8b-8k-instruct',       'Minitron 8B',               8192,   'nvidia'),
   makeModel('nvidia/nemotron-mini-4b-instruct',                  'Nemotron Mini 4B',          4096,   'nvidia'),
@@ -250,90 +248,63 @@ const NIM_MODELS = [
   makeModel('zyphra/zamba2-7b-instruct',                          'Zamba2 7B',                 8192,   'nvidia'),
 ];
 
-// ─── NVIDIA NIM dynamic fetch ─────────────────────────────────────────────────
+// ─── Shared HTTPS JSON fetcher ───────────────────────────────────────────────
 
-function fetchNimModels(apiKey: string | null): Promise<any[] | null> {
+/** Fetch JSON from an HTTPS endpoint. Returns parsed data array or fallback on failure. */
+function fetchJsonArray<T>(hostname: string, path: string, apiKey: string | null, fallback: T): Promise<any[] | T> {
   return new Promise((resolve) => {
-    const opts = {
-      hostname: 'integrate.api.nvidia.com',
-      port:     443,
-      path:     '/v1/models',
-      method:   'GET',
-      headers:  { 'User-Agent': 'frouter/1.0' },
-    };
-    if (apiKey) opts.headers['Authorization'] = `Bearer ${apiKey}`;
+    const headers: Record<string, string> = { 'User-Agent': 'frouter/1.0' };
+    if (apiKey) headers['Authorization'] = `Bearer ${apiKey}`;
 
-    const req = https.request(opts, (res) => {
+    const req = https.request({ hostname, port: 443, path, method: 'GET', headers }, (res) => {
       let body = '';
-      res.on('data', c => { body += c; });
+      res.on('data', (c) => { body += c; });
       res.on('end', () => {
         try {
           const json = JSON.parse(body);
-          const data = Array.isArray(json.data) ? json.data : (Array.isArray(json) ? json : []);
-          const chatModels = data.filter(m => {
-            const id = m.id || '';
-            // Keep chat/instruct models, skip embedding/rerank/vlm-only
-            if (/embed|rerank|reward/i.test(id)) return false;
-            return true;
-          });
-          const result = chatModels.map(m => makeModel(
-            m.id,
-            m.id.split('/').pop().replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
-            m.context_length || 32768,
-            'nvidia'
-          ));
-          resolve(result.length > 0 ? result : null); // null = fall back to hardcoded
+          const data = Array.isArray(json.data) ? json.data : Array.isArray(json) ? json : [];
+          resolve(data);
         } catch {
-          resolve(null);
+          resolve(fallback);
         }
       });
     });
 
-    req.on('error', () => resolve(null));
-    req.setTimeout(15_000, () => { req.destroy(); resolve(null); });
+    req.on('error', () => resolve(fallback));
+    req.setTimeout(15_000, () => { req.destroy(); resolve(fallback); });
     req.end();
   });
 }
 
+// ─── NVIDIA NIM dynamic fetch ─────────────────────────────────────────────────
+
+async function fetchNimModels(apiKey: string | null): Promise<any[] | null> {
+  const data = await fetchJsonArray('integrate.api.nvidia.com', '/v1/models', apiKey, null);
+  if (!data) return null;
+
+  const result = data
+    .filter(m => !/embed|rerank|reward/i.test(m.id || ''))
+    .map(m => makeModel(
+      m.id,
+      m.id.split('/').pop().replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
+      m.context_length || 32768,
+      'nvidia'
+    ));
+  return result.length > 0 ? result : null;
+}
+
 // ─── OpenRouter dynamic fetch ─────────────────────────────────────────────────
 
-function fetchOpenRouterModels(apiKey: string | null): Promise<any[]> {
-  return new Promise((resolve) => {
-    const opts = {
-      hostname: 'openrouter.ai',
-      port:     443,
-      path:     '/api/v1/models',
-      method:   'GET',
-      headers:  { 'User-Agent': 'frouter/1.0' },
-    };
-    if (apiKey) opts.headers['Authorization'] = `Bearer ${apiKey}`;
-
-    const req = https.request(opts, (res) => {
-      let body = '';
-      res.on('data', c => { body += c; });
-      res.on('end', () => {
-        try {
-          const json = JSON.parse(body);
-          const data = Array.isArray(json.data) ? json.data : (Array.isArray(json) ? json : []);
-          const free = data
-            .filter(m => m?.pricing?.prompt === '0' && m?.pricing?.completion === '0')
-            .map(m => makeModel(
-              m.id,
-              m.name || m.id,
-              m.context_length || 32768,
-              'openrouter'
-            ));
-          resolve(free);
-        } catch {
-          resolve([]);
-        }
-      });
-    });
-
-    req.on('error', () => resolve([]));
-    req.setTimeout(15_000, () => { req.destroy(); resolve([]); });
-    req.end();
-  });
+async function fetchOpenRouterModels(apiKey: string | null): Promise<any[]> {
+  const data = await fetchJsonArray('openrouter.ai', '/api/v1/models', apiKey, []);
+  return data
+    .filter(m => m?.pricing?.prompt === '0' && m?.pricing?.completion === '0')
+    .map(m => makeModel(
+      m.id,
+      m.name || m.id,
+      m.context_length || 32768,
+      'openrouter'
+    ));
 }
 
 // ─── Public API ───────────────────────────────────────────────────────────────

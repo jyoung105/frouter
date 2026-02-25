@@ -3,6 +3,7 @@ import { readFileSync, writeFileSync, existsSync, chmodSync, copyFileSync } from
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { execSync } from 'node:child_process';
+import { R, B, D, RED, GREEN, CYAN } from './utils.js';
 
 export const CONFIG_PATH = join(homedir(), '.frouter.json');
 
@@ -90,11 +91,12 @@ export function validateProviderApiKey(providerKey, rawValue) {
 // ─── Browser helper ───────────────────────────────────────────────────────────
 
 export function openBrowser(url) {
-  try {
-    if      (process.platform === 'darwin') execSync(`open "${url}"`,           { stdio: 'ignore' });
-    else if (process.platform === 'win32')  execSync(`start "" "${url}"`,       { stdio: 'ignore' });
-    else                                    execSync(`xdg-open "${url}"`,        { stdio: 'ignore' });
-  } catch { /* best-effort */ }
+  const commands = {
+    darwin: `open "${url}"`,
+    win32:  `start "" "${url}"`,
+  };
+  const cmd = commands[process.platform] ?? `xdg-open "${url}"`;
+  try { execSync(cmd, { stdio: 'ignore' }); } catch { /* best-effort */ }
 }
 
 // ─── Masked single-line key input ─────────────────────────────────────────────
@@ -108,32 +110,29 @@ export function promptMasked(promptText: string): Promise<string> {
     process.stdin.resume();
     process.stdin.setEncoding('utf8');
 
-    const cleanup = () => {
+    function finish(val: string) {
       process.stdin.removeListener('data', handler);
       try { process.stdin.setRawMode(wasRaw || false); } catch { /* best-effort */ }
-    };
+      process.stdout.write('\n');
+      resolve(val);
+    }
 
-    const handler = (ch: string) => {
+    function handler(ch: string) {
       if (ch === '\r' || ch === '\n') {
-        done(buf);
+        finish(buf);
       } else if (ch === '\x03') {   // Ctrl+C
         process.stdout.write('\n');
-        cleanup();
+        process.stdin.removeListener('data', handler);
+        try { process.stdin.setRawMode(wasRaw || false); } catch { /* best-effort */ }
         process.exit(0);
       } else if (ch === '\x1b') {   // ESC = skip
-        done('');
+        finish('');
       } else if (ch === '\x7f') {   // backspace
         if (buf.length) { buf = buf.slice(0, -1); process.stdout.write('\b \b'); }
       } else if (ch >= ' ') {
         buf += ch;
         process.stdout.write('\u2022'); // bullet mask
       }
-    };
-
-    function done(val: string) {
-      cleanup();
-      process.stdout.write('\n');
-      resolve(val);
     }
 
     process.stdin.on('data', handler);
@@ -148,44 +147,46 @@ export function promptMasked(promptText: string): Promise<string> {
  * Returns updated config.
  */
 export async function runFirstRunWizard(config: any) {
-  process.stdout.write('\x1b[2J\x1b[H');
-  process.stdout.write('\x1b[1m  frouter — Free Model Router\x1b[0m\n');
-  process.stdout.write('\x1b[2m  Let\'s set up your API keys (ESC to skip any provider)\x1b[0m\n\n');
+  const w = (s: string) => process.stdout.write(s);
+
+  w('\x1b[2J\x1b[H');
+  w(`${B}  frouter — Free Model Router${R}\n`);
+  w(`${D}  Let's set up your API keys (ESC to skip any provider)${R}\n\n`);
 
   for (const [pk, meta] of Object.entries(PROVIDERS_META)) {
-    process.stdout.write(`\x1b[1m  ● ${meta.name}\x1b[0m\n`);
-    process.stdout.write(`\x1b[2m    Free key at: \x1b[36m${meta.signupUrl}\x1b[0m\n`);
+    w(`${B}  ● ${meta.name}${R}\n`);
+    w(`${D}    Free key at: ${CYAN}${meta.signupUrl}${R}\n`);
 
     const wantKey = await promptMasked(`  Open browser for ${meta.name} key? (y/ESC to skip): `);
     if (wantKey && wantKey.toLowerCase().startsWith('y')) {
       openBrowser(meta.signupUrl);
-      process.stdout.write(`\x1b[2m    (browser opened — copy your key, then come back)\x1b[0m\n`);
+      w(`${D}    (browser opened — copy your key, then come back)${R}\n`);
     }
-    if (!wantKey) { process.stdout.write(`\x1b[2m  Skipped\x1b[0m\n\n`); continue; }
+    if (!wantKey) { w(`${D}  Skipped${R}\n\n`); continue; }
 
     // Keep prompting until a valid key is entered or user presses ESC to skip.
     while (true) {
       const key = await promptMasked(`  Paste ${meta.name} key (ESC to skip): `);
       if (!key) {
-        process.stdout.write(`\x1b[2m  Skipped\x1b[0m\n\n`);
+        w(`${D}  Skipped${R}\n\n`);
         break;
       }
 
       const checked = validateProviderApiKey(pk, key);
       if (!checked.ok) {
-        process.stdout.write(`\x1b[31m  ✗ ${checked.reason}. Try again or press ESC to skip.\x1b[0m\n`);
+        w(`${RED}  ✗ ${checked.reason}. Try again or press ESC to skip.${R}\n`);
         continue;
       }
 
       config.apiKeys[pk] = checked.key;
-      process.stdout.write(`\x1b[32m  ✓ Key saved\x1b[0m\n\n`);
+      w(`${GREEN}  ✓ Key saved${R}\n\n`);
       break;
     }
   }
 
   saveConfig(config);
   const n = Object.keys(config.apiKeys).length;
-  process.stdout.write(`\x1b[32m  ${n} key(s) saved → ~/.frouter.json\x1b[0m\n`);
+  w(`${GREEN}  ${n} key(s) saved → ~/.frouter.json${R}\n`);
   await new Promise(r => setTimeout(r, 1200));
   return config;
 }

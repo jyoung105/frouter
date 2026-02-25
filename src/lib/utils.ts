@@ -25,7 +25,7 @@ export function getAvg(model) {
   return ok.reduce((s, p) => s + p.ms, 0) / ok.length;
 }
 
-/** Uptime % = HTTP 200 pings / total pings × 100. */
+/** Uptime % = HTTP 200 pings / total pings x 100. */
 export function getUptime(model) {
   if (!model.pings.length) return 0;
   return Math.round(model.pings.filter(p => p.code === '200').length / model.pings.length * 100);
@@ -89,6 +89,21 @@ export function filterBySearch(models, query) {
 
 // ─── Sorting ───────────────────────────────────────────────────────────────────
 
+/** Return the first non-zero value from a list of comparator results. */
+function firstNonZero(...values) {
+  for (const v of values) {
+    if (v !== 0) return v;
+  }
+  return 0;
+}
+
+/** Compare two values where Infinity means "no data" and sorts last. */
+function cmpWithInfinity(a, b) {
+  if (a === Infinity) return b === Infinity ? 0 : 1;
+  if (b === Infinity) return -1;
+  return a - b;
+}
+
 export function sortModels(models, col, asc = true) {
   const dir = asc ? 1 : -1;
   return [...models].sort((a, b) => {
@@ -112,47 +127,26 @@ export function sortModels(models, col, asc = true) {
 }
 
 function cmpAvg(a, b) {
-  const aa = getAvg(a), ba = getAvg(b);
-  if (aa === Infinity && ba === Infinity) return 0;
-  if (aa === Infinity) return 1;
-  if (ba === Infinity) return -1;
-  return aa - ba;
+  return cmpWithInfinity(getAvg(a), getAvg(b));
 }
 
 function cmpLatest(a, b) {
   const al = a.pings.at(-1), bl = b.pings.at(-1);
   const am = al?.code === '200' ? al.ms : Infinity;
   const bm = bl?.code === '200' ? bl.ms : Infinity;
-  if (am === Infinity && bm === Infinity) return 0;
-  if (am === Infinity) return 1;
-  if (bm === Infinity) return -1;
-  return am - bm;
+  return cmpWithInfinity(am, bm);
 }
 
 function cmpPriority(a, b) {
-  const availCmp = availabilityRank(a) - availabilityRank(b);
-  if (availCmp !== 0) return availCmp;
-
-  const tierCmp = (TIER_ORDER[a.tier] ?? 99) - (TIER_ORDER[b.tier] ?? 99);
-  if (tierCmp !== 0) return tierCmp;
-
-  const avgCmp = cmpAvg(a, b);
-  if (avgCmp !== 0) return avgCmp;
-
-  const uptimeCmp = getUptime(b) - getUptime(a);
-  if (uptimeCmp !== 0) return uptimeCmp;
-
-  const providerCmp = (a.providerKey || '').localeCompare(b.providerKey || '');
-  if (providerCmp !== 0) return providerCmp;
-
-  const nameCmp = (a.displayName || a.id || '').localeCompare(b.displayName || b.id || '');
-  if (nameCmp !== 0) return nameCmp;
-
-  return (a.id || '').localeCompare(b.id || '');
-}
-
-function availabilityRank(model) {
-  return model.status === 'up' ? 0 : 1;
+  return firstNonZero(
+    (a.status === 'up' ? 0 : 1) - (b.status === 'up' ? 0 : 1),
+    (TIER_ORDER[a.tier] ?? 99) - (TIER_ORDER[b.tier] ?? 99),
+    cmpAvg(a, b),
+    getUptime(b) - getUptime(a),
+    (a.providerKey || '').localeCompare(b.providerKey || ''),
+    (a.displayName || a.id || '').localeCompare(b.displayName || b.id || ''),
+    (a.id || '').localeCompare(b.id || ''),
+  );
 }
 
 const VERDICT_RANK = {
@@ -165,31 +159,27 @@ function verdictRank(v) { return VERDICT_RANK[v] ?? 9; }
 // ─── Best model (--best mode) ──────────────────────────────────────────────────
 
 export function findBestModel(models) {
-  const c = models.filter(m => m.pings.length > 0);
-  if (!c.length) return null;
-  return [...c].sort(cmpPriority)[0];
+  const candidates = models.filter(m => m.pings.length > 0);
+  if (!candidates.length) return null;
+  return [...candidates].sort(cmpPriority)[0];
 }
 
 // ─── String width (strips ANSI, counts emoji as 2 columns) ─────────────────────
 
 const ANSI_RE = /\x1b\[[0-9;]*m/g;
-// Matches most emoji: emoticons, dingbats, symbols, supplemental, flags, skin tones, ZWJ sequences
-const EMOJI_RE = /[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{FE00}-\u{FE0F}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FA6F}\u{1FA70}-\u{1FAFF}\u{200D}\u{20E3}\u{E0020}-\u{E007F}]/gu;
+const EMOJI_RE = /[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{FE00}-\u{FE0F}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FA6F}\u{1FA70}-\u{1FAFF}\u{200D}\u{20E3}\u{E0020}-\u{E007F}]/u;
 
 export function visLen(s) {
   const stripped = String(s).replace(ANSI_RE, '');
-  // Count emoji: each emoji match is 2 columns wide, but String.length counts it as 1-2 chars
   let width = 0;
   for (const ch of stripped) {
-    if (ch.match(EMOJI_RE)) width += 2;
-    else width += 1;
+    width += EMOJI_RE.test(ch) ? 2 : 1;
   }
   return width;
 }
 
 export function pad(s, n, right = false) {
   const str = String(s);
-  const vl  = visLen(str);
-  const spaces = Math.max(0, n - vl);
+  const spaces = Math.max(0, n - visLen(str));
   return right ? ' '.repeat(spaces) + str : str + ' '.repeat(spaces);
 }

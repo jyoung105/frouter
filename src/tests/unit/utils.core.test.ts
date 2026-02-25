@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {
   getAvg, getUptime, getVerdict,
   tierColor, latColor, uptimeColor,
-  filterByTier, sortModels, findBestModel,
+  filterByTier, sortModels,
   visLen, pad,
   R, B, D, RED, GREEN, YELLOW, CYAN, WHITE, ORANGE, BG_SEL,
   TIER_CYCLE,

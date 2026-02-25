@@ -30,7 +30,7 @@ function loadRankings(): void {
 
 /** Derive a slug-like key from a model ID for fuzzy matching. */
 function toSlugKey(id: string): string {
-  return id.split('/').pop()!
+  return (id.split('/').pop() ?? '')
     .toLowerCase()
     .replace(/[._]/g, '-')
     .replace(/-(instruct|it|fp8|preview|turbo|versatile|2507|2512|2506|v\d+[\d.]*|a\d+b).*$/, '');
@@ -40,16 +40,16 @@ function lookupRankings(id: string) {
   loadRankings();
   const bare = id.replace(':free', '');
   const slug = toSlugKey(bare);
-  return _byId!.get(id)
-    ?? _byId!.get(bare)
-    ?? _bySlug!.get(slug)
+  return _byId?.get(id)
+    ?? _byId?.get(bare)
+    ?? _bySlug?.get(slug)
     ?? partialSlugMatch(slug);
 }
 
 /** Partial slug match — rankings slug starts with derived slug or vice-versa. */
 function partialSlugMatch(slug: string) {
   if (slug.length < 6) return null;
-  for (const [s, entry] of _bySlug!) {
+  for (const [s, entry] of _bySlug ?? []) {
     if (slug.startsWith(s) || s.startsWith(slug)) return entry;
   }
   return null;

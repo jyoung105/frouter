@@ -106,7 +106,7 @@ test('validateProviderApiKey trims input before validation', async () => {
 
 test('PROVIDERS_META contains required fields for each provider', async () => {
   await withFreshModule(async ({ PROVIDERS_META }) => {
-    for (const [pk, meta] of Object.entries(PROVIDERS_META) as [string, any][]) {
+    for (const [pk, meta] of Object.entries(PROVIDERS_META)) {
       assert.ok(meta.name, `${pk} missing name`);
       assert.ok(meta.envVar, `${pk} missing envVar`);
       assert.ok(meta.keyPrefix, `${pk} missing keyPrefix`);

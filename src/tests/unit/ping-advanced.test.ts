@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createHttpServer } from '../helpers/mock-http.js';
-import { ping, pingAllOnce } from '../../lib/ping.js';
+import { ping } from '../../lib/ping.js';
 
 // ─── ping() returning 404 → status = 'notfound' ──────────────────────────────
 
@@ -37,7 +37,6 @@ test('pingAllOnce sets status notfound for 404 responses', async () => {
       id: 'fake/model', providerKey: 'testprov',
       pings: [], status: 'pending', httpCode: null,
     }];
-    const config = { providers: {}, apiKeys: {} };
     // Patch PROVIDERS_META temporarily via a direct call approach:
     // We'll test via ping directly since pingAllOnce needs PROVIDERS_META.
     // Instead, verify the status mapping logic by calling ping + applying status.
@@ -79,7 +78,6 @@ test('pooled helper limits concurrency', async () => {
     let maxConcurrent = 0;
     let current = 0;
 
-    const results = [];
     // Manual concurrency test with the same pattern as pooled()
     async function pooled(items, limit, fn) {
       const res = [];

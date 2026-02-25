@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync, statSync, writeFileSync } from 'node:fs';
+import { readFileSync, statSync, writeFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { importFresh } from '../helpers/import-fresh.js';
 import { ROOT_DIR } from '../helpers/test-paths.js';
@@ -67,6 +67,17 @@ test('loadConfig falls back to defaults for malformed JSON', async () => {
     assert.deepEqual(cfg.apiKeys, {});
     assert.equal(cfg.providers.nvidia.enabled, true);
     assert.equal(cfg.providers.openrouter.enabled, true);
+  });
+});
+
+test('loadConfig preserves malformed config via a timestamped backup', async () => {
+  await withTempConfigModule(async ({ loadConfig, CONFIG_PATH, home }) => {
+    writeFileSync(CONFIG_PATH, '{ broken json', 'utf8');
+    loadConfig();
+
+    const backups = readdirSync(home).filter((name) => name.startsWith('.frouter.json.corrupt-'));
+    assert.equal(backups.length, 1);
+    assert.equal(readFileSync(join(home, backups[0]), 'utf8'), '{ broken json');
   });
 });
 

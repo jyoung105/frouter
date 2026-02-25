@@ -45,6 +45,33 @@ test('CLI --best exits with code 1 when no API keys are configured', async () =>
   }
 });
 
+test('CLI --best accepts env-var keys and skips the "no keys" error', async () => {
+  const home = makeTempHome();
+  try {
+    writeHomeConfig(home, defaultConfig({
+      providers: {
+        nvidia: { enabled: false },
+        openrouter: { enabled: false },
+      },
+    }));
+
+    const result = await runNode([BIN_PATH, '--best'], {
+      cwd: ROOT_DIR,
+      env: {
+        HOME: home,
+        NVIDIA_API_KEY: 'nvapi-env-only',
+      },
+      timeoutMs: 15_000,
+    });
+
+    assert.equal(result.code, 1);
+    assert.doesNotMatch(result.stderr, /No API keys configured/);
+    assert.match(result.stderr, /No enabled models available to test/);
+  } finally {
+    cleanupTempHome(home);
+  }
+});
+
 test('CLI (interactive mode) fails fast without a TTY', async () => {
   const home = makeTempHome();
   try {

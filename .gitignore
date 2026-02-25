@@ -30,4 +30,8 @@ test-results/
 *.log
 
 # Test code
-tests/
+/tests/
+
+
+# Claude code settings
+.claude/

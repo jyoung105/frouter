@@ -298,7 +298,10 @@ async function fetchNimModels(apiKey: string | null): Promise<any[] | null> {
 async function fetchOpenRouterModels(apiKey: string | null): Promise<any[]> {
   const data = await fetchJsonArray('openrouter.ai', '/api/v1/models', apiKey, []);
   return data
-    .filter(m => m?.pricing?.prompt === '0' && m?.pricing?.completion === '0')
+    .filter(m =>
+      m?.pricing?.prompt === '0' && m?.pricing?.completion === '0' &&
+      Array.isArray(m?.supported_parameters) && m.supported_parameters.includes('tools')
+    )
     .map(m => makeModel(
       m.id,
       m.name || m.id,

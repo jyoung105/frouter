@@ -160,14 +160,22 @@ test('getAllModels happy path: merges fetched NVIDIA chat models and free OpenRo
                   name: 'Llama Free',
                   context_length: 128000,
                   pricing: { prompt: '0', completion: '0' },
+                  supported_parameters: ['tools', 'max_tokens', 'temperature'],
                 },
                 {
                   id: 'meta-llama/llama-3.1-8b-instruct:paid',
                   pricing: { prompt: '0', completion: '0.001' },
+                  supported_parameters: ['tools', 'max_tokens'],
                 },
                 {
                   id: 'qwen/qwen2.5-coder-32b-instruct:free',
                   pricing: { prompt: '0', completion: '0' },
+                  supported_parameters: ['tools', 'max_tokens'],
+                },
+                {
+                  id: 'liquid/lfm-no-tools:free',
+                  pricing: { prompt: '0', completion: '0' },
+                  supported_parameters: ['max_tokens', 'temperature'],
                 },
               ],
             }),

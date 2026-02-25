@@ -2,44 +2,84 @@
 // src/bin/frouter.ts — frouter main entry: TUI + --best mode
 // Zero dependencies — pure Node.js built-ins
 
-import { loadConfig, saveConfig, getApiKey, runFirstRunWizard, promptMasked, PROVIDERS_META, validateProviderApiKey } from '../lib/config.js';
-import { getAllModels } from '../lib/models.js';
-import { ping, pingAllOnce, startPingLoop, stopPingLoop, destroyAgents } from '../lib/ping.js';
-import { writeOpenCode, isOpenCodeInstalled, detectAvailableInstallers, installOpenCode } from '../lib/targets.js';
 import {
-  getAvg, getUptime, getVerdict, findBestModel,
-  sortModels, filterByTier, filterBySearch,
-  tierColor, latColor, uptimeColor,
-  TIER_CYCLE, pad, visLen,
-  R, B, D, RED, GREEN, YELLOW, CYAN, WHITE, ORANGE, BG_SEL,
-} from '../lib/utils.js';
-import { spawnSync, execSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
-import { dirname, resolve } from 'node:path';
-import { get as httpsGet } from 'node:https';
-import { get as httpGet } from 'node:http';
+  loadConfig,
+  saveConfig,
+  getApiKey,
+  runFirstRunWizard,
+  promptMasked,
+  PROVIDERS_META,
+  validateProviderApiKey,
+} from "../lib/config.js";
+import { getAllModels } from "../lib/models.js";
+import {
+  ping,
+  pingAllOnce,
+  startPingLoop,
+  stopPingLoop,
+  destroyAgents,
+} from "../lib/ping.js";
+import {
+  writeOpenCode,
+  isOpenCodeInstalled,
+  detectAvailableInstallers,
+  installOpenCode,
+} from "../lib/targets.js";
+import {
+  getAvg,
+  getUptime,
+  getVerdict,
+  findBestModel,
+  sortModels,
+  filterByTier,
+  filterBySearch,
+  tierColor,
+  latColor,
+  uptimeColor,
+  TIER_CYCLE,
+  pad,
+  visLen,
+  R,
+  B,
+  D,
+  RED,
+  GREEN,
+  YELLOW,
+  CYAN,
+  WHITE,
+  ORANGE,
+  BG_SEL,
+} from "../lib/utils.js";
+import { spawnSync, execSync } from "node:child_process";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { dirname, resolve } from "node:path";
+import { get as httpsGet } from "node:https";
+import { get as httpGet } from "node:http";
 
 // ─── Version ─────────────────────────────────────────────────────────────────
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const PKG_VERSION = JSON.parse(readFileSync(resolve(__dirname, '../../package.json'), 'utf8')).version;
+const PKG_VERSION = JSON.parse(
+  readFileSync(resolve(__dirname, "../../package.json"), "utf8"),
+).version;
 
 // ─── ANSI shortcuts ────────────────────────────────────────────────────────────
-const w      = (s) => process.stdout.write(String(s));
-const CLEAR  = '\x1b[2J\x1b[H';
-const HIDEC  = '\x1b[?25l';
-const SHOWC  = '\x1b[?25h';
-const INVERT = '\x1b[7m';
-const BG_HDR = '\x1b[48;5;17m';
-const ALT_ON  = '\x1b[?1049h';
-const ALT_OFF = '\x1b[?1049l';
-const ALLOW_PLAINTEXT_KEY_EXPORT = process.env.FROUTER_EXPORT_PLAINTEXT_KEYS === '1';
+const w = (s) => process.stdout.write(String(s));
+const CLEAR = "\x1b[2J\x1b[H";
+const HIDEC = "\x1b[?25l";
+const SHOWC = "\x1b[?25h";
+const INVERT = "\x1b[7m";
+const BG_HDR = "\x1b[48;5;17m";
+const ALT_ON = "\x1b[?1049h";
+const ALT_OFF = "\x1b[?1049l";
+const ALLOW_PLAINTEXT_KEY_EXPORT =
+  process.env.FROUTER_EXPORT_PLAINTEXT_KEYS === "1";
 
 // ─── Parse CLI args ────────────────────────────────────────────────────────────
 const argv = process.argv.slice(2);
-const BEST = argv.includes('--best');
-const HELP = argv.includes('--help') || argv.includes('-h');
-const VERSION = argv.includes('--version') || argv.includes('-v');
+const BEST = argv.includes("--best");
+const HELP = argv.includes("--help") || argv.includes("-h");
+const VERSION = argv.includes("--version") || argv.includes("-v");
 
 if (VERSION) {
   console.log(`frouter ${PKG_VERSION}`);
@@ -79,54 +119,54 @@ if (HELP) {
 }
 
 // ─── State ─────────────────────────────────────────────────────────────────────
-let config         = null;
-let models         = [];
-let filtered       = [];
-let cursor         = 0;
-let scrollOff      = 0;
-let sortCol        = 'priority';
-let sortAsc        = true;
-let searchMode     = false;
-let searchQuery    = '';
-let tierFilter     = 'All';
-let pingMs         = 2000;
-let screen         = 'main'; // 'main' | 'settings' | 'target' | 'help'
-let sCursor        = 0;
-let tCursor        = 0;
-let selModel       = null;
-let sEditing       = false;
-let sKeyBuf        = '';
-let sTestRes       = {};
-let sNotice        = '';
-let tNotice        = '';
-let pingRef        = null;
-let trackedId      = null;   // model id to track cursor across re-sorts
-let userNavigated  = false;  // true once user actively moves cursor
+let config = null;
+let models = [];
+let filtered = [];
+let cursor = 0;
+let scrollOff = 0;
+let sortCol = "priority";
+let sortAsc = true;
+let searchMode = false;
+let searchQuery = "";
+let tierFilter = "All";
+let pingMs = 2000;
+let screen = "main"; // 'main' | 'settings' | 'target' | 'help'
+let sCursor = 0;
+let tCursor = 0;
+let selModel = null;
+let sEditing = false;
+let sKeyBuf = "";
+let sTestRes = {};
+let sNotice = "";
+let tNotice = "";
+let pingRef = null;
+let trackedId = null; // model id to track cursor across re-sorts
+let userNavigated = false; // true once user actively moves cursor
 
 // ─── Geometry ──────────────────────────────────────────────────────────────────
-const cols  = () => process.stdout.columns || 120;
-const rows  = () => process.stdout.rows    || 40;
+const cols = () => process.stdout.columns || 120;
+const rows = () => process.stdout.rows || 40;
 // All lines are truncated to terminal width so nothing wraps.
 // Chrome: header(1) + search(1) + colhdr(1) + detail(1) + footer(1) = 5 lines
 const tRows = () => Math.max(0, rows() - 5);
 
 // ─── Sort column metadata ──────────────────────────────────────────────────────
 const SORT_COLS = [
-  { key: '0', col: 'priority', label: 'Priority' },
-  { key: '1', col: 'tier',     label: 'Tier' },
-  { key: '2', col: 'provider', label: 'Provider' },
-  { key: '3', col: 'model',    label: 'Model' },
-  { key: '4', col: 'avg',      label: 'Avg' },
-  { key: '5', col: 'latest',   label: 'Lat' },
-  { key: '6', col: 'uptime',   label: 'Up%' },
-  { key: '7', col: 'context',  label: 'Ctx' },
-  { key: '8', col: 'verdict',  label: 'Verdict' },
-  { key: '9', col: 'intel',    label: 'AA' },
+  { key: "0", col: "priority", label: "Priority" },
+  { key: "1", col: "tier", label: "Tier" },
+  { key: "2", col: "provider", label: "Provider" },
+  { key: "3", col: "model", label: "Model" },
+  { key: "4", col: "avg", label: "Avg" },
+  { key: "5", col: "latest", label: "Lat" },
+  { key: "6", col: "uptime", label: "Up%" },
+  { key: "7", col: "context", label: "Ctx" },
+  { key: "8", col: "verdict", label: "Verdict" },
+  { key: "9", col: "intel", label: "AA" },
 ];
 
 function sortArrow(colName) {
-  if (sortCol !== colName) return '';
-  return sortAsc ? '▲' : '▼';
+  if (sortCol !== colName) return "";
+  return sortAsc ? "▲" : "▼";
 }
 
 function colHdr(label, colName, width, rightAlign = false) {
@@ -137,18 +177,18 @@ function colHdr(label, colName, width, rightAlign = false) {
 
 // ─── Render helpers ────────────────────────────────────────────────────────────
 function fmtCtx(n) {
-  if (!n) return '  —  ';
+  if (!n) return "  —  ";
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`.padStart(5);
   return `${Math.round(n / 1000)}k`.padStart(5);
 }
 
 function fmtMs(ms) {
-  if (ms === Infinity || ms == null) return '   — ';
+  if (ms === Infinity || ms == null) return "   — ";
   return `${Math.round(ms)}ms`.padStart(6);
 }
 
 function fmtUp(pct, hasPings) {
-  if (!hasPings) return '  — ';
+  if (!hasPings) return "  — ";
   return `${pct}%`.padStart(4);
 }
 
@@ -163,23 +203,23 @@ function fullWidthBar(content, style = INVERT, lastLine = false) {
   // many terminals (Ghostty, iTerm2, etc.).  Use c-1 to avoid this.
   const maxW = lastLine ? Math.max(0, c - 1) : c;
   const truncated = truncAnsi(content, maxW);
-  return `${style}${truncated}${' '.repeat(Math.max(0, maxW - visLen(truncated)))}${R}`;
+  return `${style}${truncated}${" ".repeat(Math.max(0, maxW - visLen(truncated)))}${R}`;
 }
 
 // Truncate a string with ANSI codes to at most `maxVis` visible columns.
 // Preserves escape sequences but stops emitting visible chars once the limit is reached.
 function truncAnsi(s: string, maxVis: number): string {
   let vis = 0;
-  let out = '';
+  let out = "";
   let i = 0;
   while (i < s.length) {
-    if (s[i] === '\x1b') {
+    if (s[i] === "\x1b") {
       // Copy the entire escape sequence verbatim (zero visible width)
       const start = i;
       i++; // skip ESC
-      if (i < s.length && s[i] === '[') {
+      if (i < s.length && s[i] === "[") {
         i++; // skip [
-        while (i < s.length && s[i] >= '\x20' && s[i] <= '\x3f') i++; // params
+        while (i < s.length && s[i] >= "\x20" && s[i] <= "\x3f") i++; // params
         if (i < s.length) i++; // final byte
       }
       out += s.slice(start, i);
@@ -195,34 +235,46 @@ function truncAnsi(s: string, maxVis: number): string {
 
 function statusDot(model) {
   switch (model.status) {
-    case 'up':          return `${GREEN}*${R}`;
-    case 'noauth':      return `${YELLOW}!${R}`;
-    case 'ratelimit':   return `${ORANGE}~${R}`;
-    case 'unavailable': return `${RED}#${R}`;
-    case 'notfound':    return `${RED}?${R}`;
-    case 'timeout':     return `${RED}o${R}`;
-    case 'down':        return `${RED}x${R}`;
-    default:            return `${D}.${R}`;
+    case "up":
+      return `${GREEN}*${R}`;
+    case "noauth":
+      return `${YELLOW}!${R}`;
+    case "ratelimit":
+      return `${ORANGE}~${R}`;
+    case "unavailable":
+      return `${RED}#${R}`;
+    case "notfound":
+      return `${RED}?${R}`;
+    case "timeout":
+      return `${RED}o${R}`;
+    case "down":
+      return `${RED}x${R}`;
+    default:
+      return `${D}.${R}`;
   }
 }
 
 // ─── Main TUI ──────────────────────────────────────────────────────────────────
 function renderMain() {
-  const c = cols(), tr = tRows();
-  if (cursor < scrollOff)           scrollOff = cursor;
-  if (cursor >= scrollOff + tr)     scrollOff = cursor - tr + 1;
+  const c = cols(),
+    tr = tRows();
+  if (cursor < scrollOff) scrollOff = cursor;
+  if (cursor >= scrollOff + tr) scrollOff = cursor - tr + 1;
 
-  const provStatus = Object.entries(PROVIDERS_META).map(([pk, m]) => {
-    const on = config.providers?.[pk]?.enabled !== false;
-    return on ? `${GREEN}${m.name}${R}` : `${D}${m.name} off${R}`;
-  }).join('  ');
+  const provStatus = Object.entries(PROVIDERS_META)
+    .map(([pk, m]) => {
+      const on = config.providers?.[pk]?.enabled !== false;
+      return on ? `${GREEN}${m.name}${R}` : `${D}${m.name} off${R}`;
+    })
+    .join("  ");
 
   const searchBar = searchMode
     ? `${CYAN}/${searchQuery}_${R}`
     : `${D}/ search${R}`;
 
-  const tierBar = tierFilter !== 'All' ? `${YELLOW}tier:${tierFilter}${R}  ` : '';
-  const stats   = `${D}${filtered.length}/${models.length} models  ${pingMs / 1000}s${R}`;
+  const tierBar =
+    tierFilter !== "All" ? `${YELLOW}tier:${tierFilter}${R}  ` : "";
+  const stats = `${D}${filtered.length}/${models.length} models  ${pingMs / 1000}s${R}`;
 
   let out = CLEAR + HIDEC;
 
@@ -230,63 +282,73 @@ function renderMain() {
   const hdrRaw = `${BG_HDR}${WHITE}${B} frouter ${R}  ${provStatus}`;
   const hdrTrunc = truncAnsi(hdrRaw, c);
   const hdrPad = Math.max(0, c - visLen(hdrTrunc));
-  out += `${hdrTrunc}${' '.repeat(hdrPad)}${R}\n`;
+  out += `${hdrTrunc}${" ".repeat(hdrPad)}${R}\n`;
 
   // Search + stats bar
-  out += truncAnsi(` ${searchBar}   ${tierBar}${stats}`, c) + '\n';
+  out += truncAnsi(` ${searchBar}   ${tierBar}${stats}`, c) + "\n";
 
   // Column headers with sort indicators
-  const hdr = `  ${'#'.padStart(3)}  ${colHdr('Tier', 'tier', 4)}  ${colHdr('Provider', 'provider', 11)}  ${colHdr('Model', 'model', 32)}  ${colHdr('Ctx', 'context', 5, true)}  ${colHdr('AA', 'intel', 3, true)}  ${colHdr('Avg', 'avg', 6, true)}  ${colHdr('Lat', 'latest', 6, true)}  ${colHdr('Up%', 'uptime', 4, true)}  ${colHdr('Verdict', 'verdict', 7)}`;
-  out += fullWidthBar(hdr) + '\n';
+  const hdr = `  ${"#".padStart(3)}  ${colHdr("Tier", "tier", 4)}  ${colHdr("Provider", "provider", 11)}  ${colHdr("Model", "model", 32)}  ${colHdr("Ctx", "context", 5, true)}  ${colHdr("AA", "intel", 3, true)}  ${colHdr("Avg", "avg", 6, true)}  ${colHdr("Lat", "latest", 6, true)}  ${colHdr("Up%", "uptime", 4, true)}  ${colHdr("Verdict", "verdict", 7)}`;
+  out += fullWidthBar(hdr) + "\n";
 
   // Model rows (skip if terminal too small)
-  if (tr === 0) { w(out); return; }
+  if (tr === 0) {
+    w(out);
+    return;
+  }
   const isLoading = filtered.length === 0 && models.length === 0;
   if (isLoading) {
     out += `\n${D}    Loading models…${R}\n`;
-    for (let i = 2; i < tr; i++) out += '\n';
+    for (let i = 2; i < tr; i++) out += "\n";
   }
   if (!isLoading) {
-  const slice = filtered.slice(scrollOff, scrollOff + tr);
-  for (let i = 0; i < tr; i++) {
-    const m = slice[i];
-    if (!m) { out += '\n'; continue; }
+    const slice = filtered.slice(scrollOff, scrollOff + tr);
+    for (let i = 0; i < tr; i++) {
+      const m = slice[i];
+      if (!m) {
+        out += "\n";
+        continue;
+      }
 
-    const idx     = scrollOff + i;
-    const isSel   = idx === cursor;
-    const rank    = String(idx + 1).padStart(3);
-    const tier    = pad(tierColor(m.tier) + (m.tier || '?') + R, 4);
-    const prov    = pad(m.providerKey === 'nvidia' ? 'NIM' : 'OpenRouter', 11);
-    const name    = pad(m.displayName || m.id, 32);
-    const ctx     = fmtCtx(m.context);
-    const avg     = getAvg(m);
-    const avgStr  = fmtLatency(avg !== Infinity ? avg : null);
-    const last    = m.pings.at(-1);
-    const latMs   = last?.code === '200' ? last.ms : null;
-    const latStr  = fmtLatency(latMs);
-    const up      = getUptime(m);
-    const upStr   = uptimeColor(up) + fmtUp(up, m.pings.length > 0) + R;
-    const dot     = statusDot(m);
-    const verdict = `${D}${getVerdict(m)}${R}`;
-    const aaStr   = m.aaIntelligence != null
-      ? String(Math.round(m.aaIntelligence)).padStart(3)
-      : `${D}  —${R}`;
+      const idx = scrollOff + i;
+      const isSel = idx === cursor;
+      const rank = String(idx + 1).padStart(3);
+      const tier = pad(tierColor(m.tier) + (m.tier || "?") + R, 4);
+      const prov = pad(m.providerKey === "nvidia" ? "NIM" : "OpenRouter", 11);
+      const name = pad(m.displayName || m.id, 32);
+      const ctx = fmtCtx(m.context);
+      const avg = getAvg(m);
+      const avgStr = fmtLatency(avg !== Infinity ? avg : null);
+      const last = m.pings.at(-1);
+      const latMs = last?.code === "200" ? last.ms : null;
+      const latStr = fmtLatency(latMs);
+      const up = getUptime(m);
+      const upStr = uptimeColor(up) + fmtUp(up, m.pings.length > 0) + R;
+      const dot = statusDot(m);
+      const verdict = `${D}${getVerdict(m)}${R}`;
+      const aaStr =
+        m.aaIntelligence != null
+          ? String(Math.round(m.aaIntelligence)).padStart(3)
+          : `${D}  —${R}`;
 
-    const row = truncAnsi(`  ${rank}  ${tier}  ${prov}  ${name}  ${ctx}  ${aaStr}  ${avgStr}  ${latStr}  ${upStr}  ${dot} ${verdict}`, c);
-    if (isSel) out += `${BG_SEL}${B}${row}${R}\n`;
-    else       out += `${row}${R}\n`;
-  }
+      const row = truncAnsi(
+        `  ${rank}  ${tier}  ${prov}  ${name}  ${ctx}  ${aaStr}  ${avgStr}  ${latStr}  ${upStr}  ${dot} ${verdict}`,
+        c,
+      );
+      if (isSel) out += `${BG_SEL}${B}${row}${R}\n`;
+      else out += `${row}${R}\n`;
+    }
   } // end if (!isLoading)
 
   // Detail bar — full model ID of highlighted model
   const sel = filtered[cursor];
   if (sel) {
     const fullId = `${sel.providerKey}/${sel.id}`;
-    const sweStr = sel.sweScore != null ? `  SWE:${sel.sweScore}%` : '';
-    const ctxStr = sel.context ? `  ctx:${fmtCtx(sel.context).trim()}` : '';
-    out += truncAnsi(`${D} ${fullId}${sweStr}${ctxStr}${R}`, c) + '\n';
+    const sweStr = sel.sweScore != null ? `  SWE:${sel.sweScore}%` : "";
+    const ctxStr = sel.context ? `  ctx:${fmtCtx(sel.context).trim()}` : "";
+    out += truncAnsi(`${D} ${fullId}${sweStr}${ctxStr}${R}`, c) + "\n";
   } else {
-    out += '\n';
+    out += "\n";
   }
 
   // Footer
@@ -297,41 +359,45 @@ function renderMain() {
 
 // ─── Help overlay ──────────────────────────────────────────────────────────────
 function renderHelp() {
-  const sortLines = SORT_COLS.map(s => {
-    const active = sortCol === s.col ? ` ${CYAN}← active${R}` : '';
+  const sortLines = SORT_COLS.map((s) => {
+    const active = sortCol === s.col ? ` ${CYAN}← active${R}` : "";
     return `  ${s.key}           ${s.label}${active}`;
-  }).join('\n');
+  }).join("\n");
 
-  w(CLEAR + HIDEC
-    + `${BG_HDR}${WHITE}${B} frouter — Keyboard Reference ${R}\n\n`
-    + `${B}  Navigation${R}\n`
-    + `  ↑ / k       Move up\n`
-    + `  ↓ / j       Move down\n`
-    + `  PgUp        Page up\n`
-    + `  PgDn        Page down\n`
-    + `  g           Jump to top\n`
-    + `  G           Jump to bottom\n\n`
-    + `${B}  Actions${R}\n`
-    + `  Enter       Select model → target picker (OpenCode / OpenClaw disabled)\n`
-    + `  /           Search / filter models (Enter applies to OpenCode only)\n`
-    + `  A           Quick API key add/change (opens key editor)\n`
-    + `  T           Cycle tier filter (All → S+ → S → …)\n`
-    + `  P           Settings (API keys, toggle providers)\n`
-    + `  W / X       Faster / slower ping interval\n`
-    + `  q           Quit\n\n`
-    + `${B}  Sort (press key to sort, press again to reverse)${R}\n`
-    + sortLines + '\n'
-    + `\n${B}  Target Picker${R}\n`
-    + `  Enter       Save config + open selected target (OpenCode only)\n`
-    + `  G           Same as Enter\n`
-    + `  S           Save config only\n`
-    + `  ESC         Cancel\n`
-    + `\n${INVERT} Press any key to close ${R}\n`);
+  w(
+    CLEAR +
+      HIDEC +
+      `${BG_HDR}${WHITE}${B} frouter — Keyboard Reference ${R}\n\n` +
+      `${B}  Navigation${R}\n` +
+      `  ↑ / k       Move up\n` +
+      `  ↓ / j       Move down\n` +
+      `  PgUp        Page up\n` +
+      `  PgDn        Page down\n` +
+      `  g           Jump to top\n` +
+      `  G           Jump to bottom\n\n` +
+      `${B}  Actions${R}\n` +
+      `  Enter       Select model → target picker (OpenCode / OpenClaw disabled)\n` +
+      `  /           Search / filter models (Enter applies to OpenCode only)\n` +
+      `  A           Quick API key add/change (opens key editor)\n` +
+      `  T           Cycle tier filter (All → S+ → S → …)\n` +
+      `  P           Settings (API keys, toggle providers)\n` +
+      `  W / X       Faster / slower ping interval\n` +
+      `  q           Quit\n\n` +
+      `${B}  Sort (press key to sort, press again to reverse)${R}\n` +
+      sortLines +
+      "\n" +
+      `\n${B}  Target Picker${R}\n` +
+      `  Enter       Save config + open selected target (OpenCode only)\n` +
+      `  G           Same as Enter\n` +
+      `  S           Save config only\n` +
+      `  ESC         Cancel\n` +
+      `\n${INVERT} Press any key to close ${R}\n`,
+  );
 }
 
 // ─── Settings screen ───────────────────────────────────────────────────────────
 function maskKey(key) {
-  const masked = '•'.repeat(Math.min(16, Math.max(4, key.length - 8)));
+  const masked = "•".repeat(Math.min(16, Math.max(4, key.length - 8)));
   return `${D}${key.slice(0, 4)}${masked}${key.slice(-4)}${R}`;
 }
 
@@ -341,24 +407,24 @@ function renderSettings() {
 
   const pks = Object.keys(PROVIDERS_META);
   for (let i = 0; i < pks.length; i++) {
-    const pk      = pks[i];
-    const meta    = PROVIDERS_META[pk];
+    const pk = pks[i];
+    const meta = PROVIDERS_META[pk];
     const enabled = config.providers?.[pk]?.enabled !== false;
-    const key     = getApiKey(config, pk);
-    const isSel   = i === sCursor;
+    const key = getApiKey(config, pk);
+    const isSel = i === sCursor;
 
     const toggleStr = enabled ? `${GREEN}[ ON  ]${R}` : `${RED}[ OFF ]${R}`;
     let keyDisp;
     if (sEditing && isSel) {
-      keyDisp = `${CYAN}${'•'.repeat(sKeyBuf.length)}_${R}`;
+      keyDisp = `${CYAN}${"•".repeat(sKeyBuf.length)}_${R}`;
     } else if (key) {
       keyDisp = maskKey(key);
     } else {
       keyDisp = `${D}(no key)${R}`;
     }
-    const testDisp = sTestRes[pk] ? `  ${D}[${sTestRes[pk]}]${R}` : '';
+    const testDisp = sTestRes[pk] ? `  ${D}[${sTestRes[pk]}]${R}` : "";
 
-    const prefix = isSel ? `${B} ❯ ${R}` : '   ';
+    const prefix = isSel ? `${B} ❯ ${R}` : "   ";
     out += `${prefix}${toggleStr} ${pad(meta.name, 14)} ${keyDisp}${testDisp}\n`;
   }
 
@@ -370,22 +436,34 @@ function renderSettings() {
 
 // ─── Target picker ─────────────────────────────────────────────────────────────
 const TARGETS = [
-  { id: 'opencode', label: 'OpenCode CLI',  path: '~/.config/opencode/opencode.json', enabled: true },
-  { id: 'openclaw', label: 'OpenClaw',      path: '~/.openclaw/openclaw.json', enabled: false },
+  {
+    id: "opencode",
+    label: "OpenCode CLI",
+    path: "~/.config/opencode/opencode.json",
+    enabled: true,
+  },
+  {
+    id: "openclaw",
+    label: "OpenClaw",
+    path: "~/.openclaw/openclaw.json",
+    enabled: false,
+  },
 ];
 
 function renderTarget() {
-  const name = selModel?.displayName || selModel?.id || '?';
-  const fullId = selModel ? `${selModel.providerKey}/${selModel.id}` : '';
+  const name = selModel?.displayName || selModel?.id || "?";
+  const fullId = selModel ? `${selModel.providerKey}/${selModel.id}` : "";
   let out = CLEAR + HIDEC;
   out += `${BG_HDR}${WHITE}${B} Configure: ${name} ${R}\n`;
   out += `${D}  ${fullId}${R}\n\n`;
 
   for (let i = 0; i < TARGETS.length; i++) {
-    const t      = TARGETS[i];
-    const isSel  = i === tCursor;
-    const prefix = isSel ? `${B} ❯ ${R}` : '   ';
-    const status = t.enabled ? `${GREEN}[enabled]${R}` : `${YELLOW}[disabled]${R}`;
+    const t = TARGETS[i];
+    const isSel = i === tCursor;
+    const prefix = isSel ? `${B} ❯ ${R}` : "   ";
+    const status = t.enabled
+      ? `${GREEN}[enabled]${R}`
+      : `${YELLOW}[disabled]${R}`;
     out += `${prefix}${pad(t.label, 12)} ${status}  ${D}${t.path}${R}\n`;
   }
 
@@ -403,10 +481,18 @@ function renderTarget() {
 // ─── Render dispatcher ─────────────────────────────────────────────────────────
 function render() {
   switch (screen) {
-    case 'main':     renderMain();     break;
-    case 'settings': renderSettings(); break;
-    case 'target':   renderTarget();   break;
-    case 'help':     renderHelp();     break;
+    case "main":
+      renderMain();
+      break;
+    case "settings":
+      renderSettings();
+      break;
+    case "target":
+      renderTarget();
+      break;
+    case "help":
+      renderHelp();
+      break;
   }
 }
 
@@ -418,30 +504,36 @@ function applyFilters() {
   }
 
   let r = models;
-  if (tierFilter !== 'All')  r = filterByTier(r, tierFilter);
-  if (searchQuery)           r = filterBySearch(r, searchQuery);
+  if (tierFilter !== "All") r = filterByTier(r, tierFilter);
+  if (searchQuery) r = filterBySearch(r, searchQuery);
   r = sortModels(r, sortCol, sortAsc);
   filtered = r;
 
   // Restore cursor to the same model if it still exists
   if (userNavigated && trackedId) {
-    const idx = filtered.findIndex(m => modelKey(m) === trackedId);
+    const idx = filtered.findIndex((m) => modelKey(m) === trackedId);
     if (idx !== -1) cursor = idx;
   }
   if (cursor >= filtered.length) cursor = Math.max(0, filtered.length - 1);
   if (cursor < 0) cursor = 0;
   // Keep scrollOff pinned to 0 until the user actively navigates
-  if (!userNavigated) { scrollOff = 0; }
-  else { scrollOff = Math.max(0, Math.min(scrollOff, Math.max(0, filtered.length - tRows()))); }
+  if (!userNavigated) {
+    scrollOff = 0;
+  } else {
+    scrollOff = Math.max(
+      0,
+      Math.min(scrollOff, Math.max(0, filtered.length - tRows())),
+    );
+  }
 }
 
 // ─── Key handlers ──────────────────────────────────────────────────────────────
-const UP   = '\x1b[A';
-const DOWN = '\x1b[B';
-const PGUP = '\x1b[5~';
-const PGDN = '\x1b[6~';
-const HOME = '\x1b[H';
-const END  = '\x1b[F';
+const UP = "\x1b[A";
+const DOWN = "\x1b[B";
+const PGUP = "\x1b[5~";
+const PGDN = "\x1b[6~";
+const HOME = "\x1b[H";
+const END = "\x1b[F";
 
 function maxCursorIndex() {
   return Math.max(0, filtered.length - 1);
@@ -453,7 +545,7 @@ function clampCursor(next) {
 
 function resetSearchState() {
   searchMode = false;
-  searchQuery = '';
+  searchQuery = "";
   cursor = 0;
   scrollOff = 0;
   trackedId = null;
@@ -461,8 +553,8 @@ function resetSearchState() {
 
 function resetSettingsState() {
   sEditing = false;
-  sKeyBuf = '';
-  sNotice = '';
+  sKeyBuf = "";
+  sNotice = "";
   sTestRes = {};
 }
 
@@ -470,9 +562,9 @@ function enterTargetPickerFromSelection() {
   if (!filtered.length) return false;
   selModel = filtered[cursor];
   tCursor = 0;
-  tNotice = '';
+  tNotice = "";
   searchMode = false;
-  screen = 'target';
+  screen = "target";
   return true;
 }
 
@@ -483,14 +575,14 @@ function resolveOpenCodeApplySelection(selectedModel) {
     openCodeModel: selectedModel,
     openCodePk: pk,
     openCodeApiKey: apiKey,
-    notice: '',
+    notice: "",
   };
 }
 
 function getOpenCodeAuthHint(providerKey, apiKey, { launch = false } = {}) {
-  if (launch || !apiKey || ALLOW_PLAINTEXT_KEY_EXPORT) return '';
+  if (launch || !apiKey || ALLOW_PLAINTEXT_KEY_EXPORT) return "";
   const envVar = PROVIDERS_META[providerKey]?.envVar;
-  if (!envVar || process.env[envVar]) return '';
+  if (!envVar || process.env[envVar]) return "";
   return `${YELLOW} ! OpenCode auth uses ${envVar}. Export it before launching opencode outside frouter.${R}`;
 }
 
@@ -508,7 +600,9 @@ async function promptInstallOpenCode() {
   const installers = detectAvailableInstallers();
   if (!installers.length) {
     w(`${D}   No supported package manager found (npm, brew, go).${R}\n`);
-    w(`${D}   Install manually: ${CYAN}https://github.com/opencode-ai/opencode${R}\n`);
+    w(
+      `${D}   Install manually: ${CYAN}https://github.com/opencode-ai/opencode${R}\n`,
+    );
     return false;
   }
 
@@ -518,7 +612,9 @@ async function promptInstallOpenCode() {
     w(`   ${B}${i + 1}${R}) ${inst.label}  ${D}(${inst.command})${R}\n`);
   }
 
-  const answer = await promptMasked(`\n   Install opencode? (1-${installers.length} to install, ESC to skip): `);
+  const answer = await promptMasked(
+    `\n   Install opencode? (1-${installers.length} to install, ESC to skip): `,
+  );
   if (!answer) return false;
 
   const idx = parseInt(answer, 10) - 1;
@@ -538,7 +634,9 @@ async function promptInstallOpenCode() {
 
   if (!isOpenCodeInstalled()) {
     w(`\n${YELLOW} ! opencode was installed but is not on your PATH.${R}\n`);
-    w(`${D}   You may need to restart your shell or add its location to PATH.${R}\n`);
+    w(
+      `${D}   You may need to restart your shell or add its location to PATH.${R}\n`,
+    );
     return false;
   }
 
@@ -551,12 +649,8 @@ function quickApplySelectionToTargets() {
   selModel = filtered[cursor];
   searchMode = false;
 
-  const {
-    openCodeModel,
-    openCodePk,
-    openCodeApiKey,
-    notice,
-  } = resolveOpenCodeApplySelection(selModel);
+  const { openCodeModel, openCodePk, openCodeApiKey, notice } =
+    resolveOpenCodeApplySelection(selModel);
 
   let ok = true;
 
@@ -565,18 +659,28 @@ function quickApplySelectionToTargets() {
     const ocPath = writeOpenCode(openCodeModel, openCodePk, openCodeApiKey, {
       persistApiKey: ALLOW_PLAINTEXT_KEY_EXPORT,
     });
-    w(`\n${GREEN} ✓ OpenCode model set → ${openCodePk}/${openCodeModel.id}${R}\n${D}   ${ocPath}${R}\n`);
+    w(
+      `\n${GREEN} ✓ OpenCode model set → ${openCodePk}/${openCodeModel.id}${R}\n${D}   ${ocPath}${R}\n`,
+    );
     const authHint = getOpenCodeAuthHint(openCodePk, openCodeApiKey);
     if (authHint) w(`${authHint}\n`);
     if (!isOpenCodeInstalled()) {
-      w(`${YELLOW} ! opencode CLI is not installed. Install it to use this config.${R}\n`);
+      w(
+        `${YELLOW} ! opencode CLI is not installed. Install it to use this config.${R}\n`,
+      );
     }
   } catch (err) {
     ok = false;
     w(`\n${RED} ✗ OpenCode write failed: ${err.message}${R}\n`);
   }
 
-  setTimeout(() => { screen = 'main'; render(); }, ok ? 1400 : 2000);
+  setTimeout(
+    () => {
+      screen = "main";
+      render();
+    },
+    ok ? 1400 : 2000,
+  );
   return true;
 }
 
@@ -602,28 +706,31 @@ function openApiKeyEditorFromMain() {
   resetSettingsState();
   sEditing = true;
   searchMode = false;
-  screen = 'settings';
+  screen = "settings";
 }
 
 function handleMain(ch) {
   // Search mode: intercept all input
   if (searchMode) {
     let needsRefilter = false;
-    if      (ch === '\x1b')  {
+    if (ch === "\x1b") {
       resetSearchState();
       needsRefilter = true;
-    }
-    else if (ch === '\r')    {
-      if (quickApplySelectionToTargets()) { return; }
+    } else if (ch === "\r") {
+      if (quickApplySelectionToTargets()) {
+        return;
+      }
       searchMode = false;
-    }
-    else if (ch === '\x7f')  {
+    } else if (ch === "\x7f") {
       searchQuery = searchQuery.slice(0, -1);
       needsRefilter = true;
-    }
-    else if (ch === UP)   { userNavigated = true; cursor = Math.max(0, cursor - 1); }
-    else if (ch === DOWN) { userNavigated = true; cursor = clampCursor(cursor + 1); }
-    else if (ch.length === 1 && ch >= ' ') {
+    } else if (ch === UP) {
+      userNavigated = true;
+      cursor = Math.max(0, cursor - 1);
+    } else if (ch === DOWN) {
+      userNavigated = true;
+      cursor = clampCursor(cursor + 1);
+    } else if (ch.length === 1 && ch >= " ") {
       searchQuery += ch;
       needsRefilter = true;
     }
@@ -634,40 +741,60 @@ function handleMain(ch) {
   }
 
   // Navigation
-  if      (ch === UP   || ch === 'k') { userNavigated = true; cursor = Math.max(0, cursor - 1); }
-  else if (ch === DOWN || ch === 'j') { userNavigated = true; cursor = clampCursor(cursor + 1); }
-  else if (ch === PGUP)               { userNavigated = true; cursor = Math.max(0, cursor - tRows()); }
-  else if (ch === PGDN)               { userNavigated = true; cursor = clampCursor(cursor + tRows()); }
-  else if (ch === 'g' || ch === HOME) { userNavigated = true; cursor = 0; }
-  else if (ch === 'G' || ch === END)  { userNavigated = true; cursor = maxCursorIndex(); }
+  if (ch === UP || ch === "k") {
+    userNavigated = true;
+    cursor = Math.max(0, cursor - 1);
+  } else if (ch === DOWN || ch === "j") {
+    userNavigated = true;
+    cursor = clampCursor(cursor + 1);
+  } else if (ch === PGUP) {
+    userNavigated = true;
+    cursor = Math.max(0, cursor - tRows());
+  } else if (ch === PGDN) {
+    userNavigated = true;
+    cursor = clampCursor(cursor + tRows());
+  } else if (ch === "g" || ch === HOME) {
+    userNavigated = true;
+    cursor = 0;
+  } else if (ch === "G" || ch === END) {
+    userNavigated = true;
+    cursor = maxCursorIndex();
+  }
 
   // Actions
-  else if (ch === '/')               {
+  else if (ch === "/") {
     resetSearchState();
     searchMode = true;
     applyFilters();
-  }
-  else if (ch === '\r') {
+  } else if (ch === "\r") {
     enterTargetPickerFromSelection();
-  }
-  else if (ch === 'p' || ch === 'P') {
-    stopPingLoop(pingRef); sCursor = 0; resetSettingsState(); screen = 'settings';
-  }
-  else if (ch === 'a' || ch === 'A') {
+  } else if (ch === "p" || ch === "P") {
+    stopPingLoop(pingRef);
+    sCursor = 0;
+    resetSettingsState();
+    screen = "settings";
+  } else if (ch === "a" || ch === "A") {
     openApiKeyEditorFromMain();
-  }
-  else if (ch === '?')               { screen = 'help'; }
-  else if (ch === 'q')               { cleanup(); process.exit(0); }
-  else if (ch === 't' || ch === 'T') {
-    tierFilter = TIER_CYCLE[(TIER_CYCLE.indexOf(tierFilter) + 1) % TIER_CYCLE.length];
+  } else if (ch === "?") {
+    screen = "help";
+  } else if (ch === "q") {
+    cleanup();
+    process.exit(0);
+  } else if (ch === "t" || ch === "T") {
+    tierFilter =
+      TIER_CYCLE[(TIER_CYCLE.indexOf(tierFilter) + 1) % TIER_CYCLE.length];
     applyFilters();
+  } else if (ch === "w" || ch === "W") {
+    pingMs = Math.max(1000, pingMs - 1000);
+    restartLoop();
+  } else if (ch === "x" || ch === "X") {
+    pingMs = Math.min(30000, pingMs + 1000);
+    restartLoop();
   }
-  else if (ch === 'w' || ch === 'W') { pingMs = Math.max(1000, pingMs - 1000); restartLoop(); }
-  else if (ch === 'x' || ch === 'X') { pingMs = Math.min(30000, pingMs + 1000); restartLoop(); }
 
   // Number-key sorting (0-9)
   else {
-    const sortDef = SORT_COLS.find(s => s.key === ch);
+    const sortDef = SORT_COLS.find((s) => s.key === ch);
     if (sortDef) toggleSort(sortDef.col);
   }
 
@@ -676,7 +803,10 @@ function handleMain(ch) {
 
 function toggleSort(col) {
   if (sortCol === col) sortAsc = !sortAsc;
-  else { sortCol = col; sortAsc = true; }
+  else {
+    sortCol = col;
+    sortAsc = true;
+  }
   applyFilters();
 }
 
@@ -686,8 +816,10 @@ function handleSettings(ch) {
   const currentMeta = PROVIDERS_META[currentPk];
 
   if (sEditing) {
-    if      (ch === '\x1b')  { sEditing = false; sKeyBuf = ''; }
-    else if (ch === '\r')    {
+    if (ch === "\x1b") {
+      sEditing = false;
+      sKeyBuf = "";
+    } else if (ch === "\r") {
       config.apiKeys ??= {};
       if (sKeyBuf) {
         const checked = validateProviderApiKey(currentPk, sKeyBuf);
@@ -703,42 +835,53 @@ function handleSettings(ch) {
         sNotice = `${YELLOW}Removed ${currentMeta.name} key${R}`;
       }
       saveConfig(config);
-      sEditing = false; sKeyBuf = '';
+      sEditing = false;
+      sKeyBuf = "";
+    } else if (ch === "\x7f") {
+      sKeyBuf = sKeyBuf.slice(0, -1);
+    } else if (ch.length === 1 && ch >= " ") {
+      sKeyBuf += ch;
     }
-    else if (ch === '\x7f')  { sKeyBuf = sKeyBuf.slice(0, -1); }
-    else if (ch.length === 1 && ch >= ' ') { sKeyBuf += ch; }
-    render(); return;
-  }
-
-  if      (ch === '\x1b' || ch === 'q')  {
-    screen = 'main';
     render();
-    void refreshModels().then(() => { restartLoop(); render(); });
     return;
   }
-  else if (ch === UP)   { sCursor = Math.max(0, sCursor - 1); }
-  else if (ch === DOWN) { sCursor = Math.min(pks.length - 1, sCursor + 1); }
-  else if (ch === ' ')  {
+
+  if (ch === "\x1b" || ch === "q") {
+    screen = "main";
+    render();
+    void refreshModels().then(() => {
+      restartLoop();
+      render();
+    });
+    return;
+  } else if (ch === UP) {
+    sCursor = Math.max(0, sCursor - 1);
+  } else if (ch === DOWN) {
+    sCursor = Math.min(pks.length - 1, sCursor + 1);
+  } else if (ch === " ") {
     config.providers ??= {};
     config.providers[currentPk] ??= {};
-    config.providers[currentPk].enabled = !(config.providers[currentPk].enabled !== false);
+    config.providers[currentPk].enabled = !(
+      config.providers[currentPk].enabled !== false
+    );
     saveConfig(config);
-    sNotice = '';
-  }
-  else if (ch === '\r') { sEditing = true; sKeyBuf = ''; sNotice = ''; }
-  else if (ch === 'd' || ch === 'D') {
+    sNotice = "";
+  } else if (ch === "\r") {
+    sEditing = true;
+    sKeyBuf = "";
+    sNotice = "";
+  } else if (ch === "d" || ch === "D") {
     if (config.apiKeys?.[currentPk]) {
       delete config.apiKeys[currentPk];
       saveConfig(config);
       sNotice = `${YELLOW}Removed ${currentMeta.name} key${R}`;
     }
-  }
-  else if (ch === 't' || ch === 'T') {
+  } else if (ch === "t" || ch === "T") {
     const key = getApiKey(config, currentPk);
-    sTestRes[currentPk] = 'testing…';
+    sTestRes[currentPk] = "testing…";
     render();
-    void ping(key, currentMeta.testModel, currentMeta.chatUrl).then(r => {
-      sTestRes[currentPk] = r.code === '200' ? `${r.ms}ms ✓` : `${r.code} ✗`;
+    void ping(key, currentMeta.testModel, currentMeta.chatUrl).then((r) => {
+      sTestRes[currentPk] = r.code === "200" ? `${r.ms}ms ✓` : `${r.code} ✗`;
       render();
     });
     return;
@@ -748,20 +891,29 @@ function handleSettings(ch) {
 }
 
 async function handleTarget(ch) {
-  if      (ch === '\x1b' || ch === 'q') { screen = 'main'; tNotice = ''; render(); return; }
-  else if (ch === UP)     { tCursor = Math.max(0, tCursor - 1); tNotice = ''; }
-  else if (ch === DOWN)   { tCursor = Math.min(TARGETS.length - 1, tCursor + 1); tNotice = ''; }
+  if (ch === "\x1b" || ch === "q") {
+    screen = "main";
+    tNotice = "";
+    render();
+    return;
+  } else if (ch === UP) {
+    tCursor = Math.max(0, tCursor - 1);
+    tNotice = "";
+  } else if (ch === DOWN) {
+    tCursor = Math.min(TARGETS.length - 1, tCursor + 1);
+    tNotice = "";
+  }
 
   // Enter/G = write config + open target; S = write config only
-  if (ch === '\r' || ch === 'g' || ch === 'G' || ch === 's' || ch === 'S') {
+  if (ch === "\r" || ch === "g" || ch === "G" || ch === "s" || ch === "S") {
     const target = TARGETS[tCursor];
     if (!target?.enabled) {
-      tNotice = `${YELLOW} ${target?.label || 'This target'} is currently disabled.${R}`;
+      tNotice = `${YELLOW} ${target?.label || "This target"} is currently disabled.${R}`;
       render();
       return;
     }
 
-    const launch = !(ch === 's' || ch === 'S');
+    const launch = !(ch === "s" || ch === "S");
 
     if (launch && !isOpenCodeInstalled()) {
       cleanup();
@@ -771,40 +923,51 @@ async function handleTarget(ch) {
       }
     }
 
-    const {
-      openCodeModel,
-      openCodePk,
-      openCodeApiKey,
-      notice,
-    } = resolveOpenCodeApplySelection(selModel);
+    const { openCodeModel, openCodePk, openCodeApiKey, notice } =
+      resolveOpenCodeApplySelection(selModel);
 
     try {
       if (notice) w(`\n${notice}\n`);
-      const writtenPath = writeOpenCode(openCodeModel, openCodePk, openCodeApiKey, {
-        persistApiKey: ALLOW_PLAINTEXT_KEY_EXPORT,
-      });
+      const writtenPath = writeOpenCode(
+        openCodeModel,
+        openCodePk,
+        openCodeApiKey,
+        {
+          persistApiKey: ALLOW_PLAINTEXT_KEY_EXPORT,
+        },
+      );
       w(`\n${GREEN} ✓ OpenCode config written → ${writtenPath}${R}\n`);
       if (launch) {
         cleanup();
         const launchEnv = buildOpenCodeLaunchEnv(openCodePk, openCodeApiKey);
-        const result = spawnSync('opencode', [], {
-          stdio: 'inherit',
+        const result = spawnSync("opencode", [], {
+          stdio: "inherit",
           shell: true,
           env: launchEnv,
         });
         const code = Number.isInteger(result.status) ? result.status : 1;
         process.exit(code);
       }
-      const authHint = getOpenCodeAuthHint(openCodePk, openCodeApiKey, { launch });
+      const authHint = getOpenCodeAuthHint(openCodePk, openCodeApiKey, {
+        launch,
+      });
       if (authHint) w(`${authHint}\n`);
       if (!launch && !isOpenCodeInstalled()) {
-        w(`${YELLOW} ! opencode CLI is not installed. Install it to use this config.${R}\n`);
+        w(
+          `${YELLOW} ! opencode CLI is not installed. Install it to use this config.${R}\n`,
+        );
       }
     } catch (err) {
       w(`\n${RED} ✗ ${err.message}${R}\n`);
     }
 
-    setTimeout(() => { screen = 'main'; render(); }, launch ? 2000 : 1400);
+    setTimeout(
+      () => {
+        screen = "main";
+        render();
+      },
+      launch ? 2000 : 1400,
+    );
     return;
   }
 
@@ -813,7 +976,7 @@ async function handleTarget(ch) {
 
 // ─── Raw input dispatcher ──────────────────────────────────────────────────────
 // Buffer escape sequences: if \x1b arrives alone, wait 50ms to see if [ follows.
-let escBuf = '';
+let escBuf = "";
 let escTimer = null;
 // Throttled rendering: cap at ~30fps to prevent terminal overwhelm during rapid input.
 // Ensures smooth scrolling instead of freeze-then-jump when holding arrow keys.
@@ -825,16 +988,22 @@ function throttledRender() {
   const now = Date.now();
   if (now - _lastRenderTime >= RENDER_INTERVAL_MS) {
     // Enough time has passed — render immediately
-    if (_renderTimer) { clearTimeout(_renderTimer); _renderTimer = null; }
+    if (_renderTimer) {
+      clearTimeout(_renderTimer);
+      _renderTimer = null;
+    }
     _lastRenderTime = now;
     render();
   } else if (!_renderTimer) {
     // Schedule a trailing render so the final cursor position is always shown
-    _renderTimer = setTimeout(() => {
-      _renderTimer = null;
-      _lastRenderTime = Date.now();
-      render();
-    }, RENDER_INTERVAL_MS - (now - _lastRenderTime));
+    _renderTimer = setTimeout(
+      () => {
+        _renderTimer = null;
+        _lastRenderTime = Date.now();
+        render();
+      },
+      RENDER_INTERVAL_MS - (now - _lastRenderTime),
+    );
   }
 }
 
@@ -844,17 +1013,18 @@ function splitEscapeSequences(s: string): string[] {
   const result: string[] = [];
   let i = 0;
   while (i < s.length) {
-    if (s[i] === '\x1b' && i + 1 < s.length && s[i + 1] === '[') {
+    if (s[i] === "\x1b" && i + 1 < s.length && s[i + 1] === "[") {
       // CSI sequence: \x1b[ followed by parameter bytes (0-9;) then a final byte (@-~)
       let j = i + 2;
       // Parameter bytes: digits and semicolons (handles multi-param like \x1b[38;5;214m)
-      while (j < s.length && (s[j] >= '0' && s[j] <= '9' || s[j] === ';')) j++;
+      while (j < s.length && ((s[j] >= "0" && s[j] <= "9") || s[j] === ";"))
+        j++;
       if (j < s.length) j++; // consume final byte (A, B, ~, H, F, m, M, etc.)
       result.push(s.slice(i, j));
       i = j;
-    } else if (s[i] === '\x1b') {
+    } else if (s[i] === "\x1b") {
       // Bare escape — take just the ESC
-      result.push('\x1b');
+      result.push("\x1b");
       i++;
     } else {
       result.push(s[i]);
@@ -866,7 +1036,7 @@ function splitEscapeSequences(s: string): string[] {
 
 function flushEsc() {
   const buf = escBuf;
-  escBuf = '';
+  escBuf = "";
   escTimer = null;
   dispatch(buf);
 }
@@ -874,27 +1044,40 @@ function flushEsc() {
 function onData(raw) {
   const ch = String(raw);
   if (ch.length > 1) {
-    if (escTimer) { clearTimeout(escTimer); escBuf = ''; escTimer = null; }
+    if (escTimer) {
+      clearTimeout(escTimer);
+      escBuf = "";
+      escTimer = null;
+    }
     const seqs = splitEscapeSequences(ch);
     for (const seq of seqs) dispatch(seq);
     return;
   }
-  if (ch === '\x1b') {
-    if (escTimer) { clearTimeout(escTimer); dispatch('\x1b'); }
-    escBuf = '\x1b';
+  if (ch === "\x1b") {
+    if (escTimer) {
+      clearTimeout(escTimer);
+      dispatch("\x1b");
+    }
+    escBuf = "\x1b";
     escTimer = setTimeout(flushEsc, 50);
     return;
   }
   if (escBuf) {
     escBuf += ch;
     // Complete sequences: \x1b[A (3 chars), \x1b[5~ (4 chars)
-    if (escBuf.length >= 3 && (escBuf.at(-1) !== '[' && !escBuf.endsWith('\x1b['))) {
+    if (
+      escBuf.length >= 3 &&
+      escBuf.at(-1) !== "[" &&
+      !escBuf.endsWith("\x1b[")
+    ) {
       // Check if we need more chars (e.g. \x1b[5 needs the trailing ~)
-      if (escBuf.length === 3 && escBuf[2] >= '0' && escBuf[2] <= '9') {
+      if (escBuf.length === 3 && escBuf[2] >= "0" && escBuf[2] <= "9") {
         return; // wait for one more char
       }
       clearTimeout(escTimer);
-      const buf = escBuf; escBuf = ''; escTimer = null;
+      const buf = escBuf;
+      escBuf = "";
+      escTimer = null;
       dispatch(buf);
     }
     return;
@@ -903,17 +1086,30 @@ function onData(raw) {
 }
 
 function dispatch(ch) {
-  if (ch === '\x03') { cleanup(); process.exit(0); }
+  if (ch === "\x03") {
+    cleanup();
+    process.exit(0);
+  }
 
-  if (screen === 'help') { screen = 'main'; render(); return; }
+  if (screen === "help") {
+    screen = "main";
+    render();
+    return;
+  }
 
-  if      (screen === 'main')     handleMain(ch);
-  else if (screen === 'settings') handleSettings(ch);
-  else if (screen === 'target')   handleTarget(ch).catch(() => {});
+  if (screen === "main") handleMain(ch);
+  else if (screen === "settings") handleSettings(ch);
+  else if (screen === "target") handleTarget(ch).catch(() => {});
 }
 
 // ─── Model management ──────────────────────────────────────────────────────────
-const PING_STATE_KEYS = ['pings', 'status', 'httpCode', '_consecutiveFails', '_skipUntilRound'];
+const PING_STATE_KEYS = [
+  "pings",
+  "status",
+  "httpCode",
+  "_consecutiveFails",
+  "_skipUntilRound",
+];
 
 function modelKey(m) {
   return `${m.providerKey}|${m.id}`;
@@ -921,8 +1117,8 @@ function modelKey(m) {
 
 async function refreshModels() {
   const fresh = await getAllModels(config);
-  const byKey = new Map(models.map(m => [modelKey(m), m]));
-  models = fresh.map(m => {
+  const byKey = new Map(models.map((m) => [modelKey(m), m]));
+  models = fresh.map((m) => {
     const existing = byKey.get(modelKey(m));
     if (!existing) return m;
     const preserved = {};
@@ -939,7 +1135,7 @@ const PING_RENDER_THROTTLE_MS = 300;
 function onPingTick() {
   // Don't re-sort mid-round — just throttle-render current positions
   // so status dots / latency update in-place without row jumping.
-  if (screen !== 'main') return;
+  if (screen !== "main") return;
   const now = performance.now();
   if (now - _lastPingRender < PING_RENDER_THROTTLE_MS) return;
   _lastPingRender = now;
@@ -948,29 +1144,50 @@ function onPingTick() {
 
 function restartLoop() {
   stopPingLoop(pingRef);
-  pingRef = startPingLoop(models, config, pingMs, () => {
-    // End-of-round: re-sort + full render
-    applyFilters();
-    if (screen === 'main') render();
-  }, onPingTick);
+  pingRef = startPingLoop(
+    models,
+    config,
+    pingMs,
+    () => {
+      // End-of-round: re-sort + full render
+      applyFilters();
+      if (screen === "main") render();
+    },
+    onPingTick,
+  );
 }
 
 // ─── Update check ────────────────────────────────────────────────────────────
-const REGISTRY_URL = process.env.FROUTER_REGISTRY_URL || 'https://registry.npmjs.org/frouter-cli/latest';
+const REGISTRY_URL =
+  process.env.FROUTER_REGISTRY_URL ||
+  "https://registry.npmjs.org/frouter-cli/latest";
 
 function fetchLatestVersion(): Promise<string | null> {
   return new Promise((resolve) => {
     const timeout = setTimeout(() => resolve(null), 3000);
-    const getter = REGISTRY_URL.startsWith('http://') ? httpGet : httpsGet;
-    const req = getter(REGISTRY_URL, { headers: { 'Accept': 'application/json' } }, (res) => {
-      let data = '';
-      res.on('data', (chunk) => { data += chunk; });
-      res.on('end', () => {
-        clearTimeout(timeout);
-        try { resolve(JSON.parse(data).version || null); } catch { resolve(null); }
-      });
+    const getter = REGISTRY_URL.startsWith("http://") ? httpGet : httpsGet;
+    const req = getter(
+      REGISTRY_URL,
+      { headers: { Accept: "application/json" } },
+      (res) => {
+        let data = "";
+        res.on("data", (chunk) => {
+          data += chunk;
+        });
+        res.on("end", () => {
+          clearTimeout(timeout);
+          try {
+            resolve(JSON.parse(data).version || null);
+          } catch {
+            resolve(null);
+          }
+        });
+      },
+    );
+    req.on("error", () => {
+      clearTimeout(timeout);
+      resolve(null);
     });
-    req.on('error', () => { clearTimeout(timeout); resolve(null); });
   });
 }
 
@@ -981,16 +1198,22 @@ function promptYesNo(question: string): Promise<boolean> {
     const wasRaw = process.stdin.isRaw;
     process.stdin.setRawMode(true);
     process.stdin.resume();
-    process.stdin.setEncoding('utf8');
+    process.stdin.setEncoding("utf8");
 
     function handler(ch: string) {
-      process.stdin.removeListener('data', handler);
-      try { process.stdin.setRawMode(wasRaw || false); } catch { /* best-effort */ }
-      process.stdout.write(ch + '\n');
-      if (ch === '\x03') { process.exit(0); } // Ctrl+C
-      resolve(ch.toLowerCase() === 'y');
+      process.stdin.removeListener("data", handler);
+      try {
+        process.stdin.setRawMode(wasRaw || false);
+      } catch {
+        /* best-effort */
+      }
+      process.stdout.write(ch + "\n");
+      if (ch === "\x03") {
+        process.exit(0);
+      } // Ctrl+C
+      resolve(ch.toLowerCase() === "y");
     }
-    process.stdin.on('data', handler);
+    process.stdin.on("data", handler);
   });
 }
 
@@ -998,7 +1221,9 @@ async function checkForUpdate(): Promise<void> {
   const latest = await fetchLatestVersion();
   if (!latest || latest === PKG_VERSION) return;
 
-  process.stdout.write(`\n${YELLOW}  Update available: ${D}${PKG_VERSION}${R} → ${GREEN}${latest}${R}\n`);
+  process.stdout.write(
+    `\n${YELLOW}  Update available: ${D}${PKG_VERSION}${R} → ${GREEN}${latest}${R}\n`,
+  );
 
   const yes = await promptYesNo(`${D}  Update now? (y/N): ${R}`);
   if (!yes) {
@@ -1009,13 +1234,22 @@ async function checkForUpdate(): Promise<void> {
   process.stdout.write(`${D}  Updating frouter-cli…${R}\n`);
   try {
     // Detect package manager: prefer bun if available, else npm
-    let cmd = 'npm install -g frouter-cli';
-    try { execSync('bun --version', { stdio: 'ignore' }); cmd = 'bun install -g frouter-cli'; } catch { /* npm fallback */ }
-    execSync(cmd, { stdio: 'inherit' });
-    process.stdout.write(`${GREEN}  ✓ Updated to ${latest}. Please re-run frouter.${R}\n`);
+    let cmd = "npm install -g frouter-cli";
+    try {
+      execSync("bun --version", { stdio: "ignore" });
+      cmd = "bun install -g frouter-cli";
+    } catch {
+      /* npm fallback */
+    }
+    execSync(cmd, { stdio: "inherit" });
+    process.stdout.write(
+      `${GREEN}  ✓ Updated to ${latest}. Please re-run frouter.${R}\n`,
+    );
     process.exit(0);
   } catch {
-    process.stdout.write(`${RED}  ✗ Update failed. Run manually: npm install -g frouter-cli${R}\n\n`);
+    process.stdout.write(
+      `${RED}  ✗ Update failed. Run manually: npm install -g frouter-cli${R}\n\n`,
+    );
   }
 }
 
@@ -1024,30 +1258,40 @@ function cleanup() {
   stopPingLoop(pingRef);
   destroyAgents();
   w(SHOWC + ALT_OFF);
-  try { if (process.stdin.isTTY) process.stdin.setRawMode(false); } catch { /* best-effort */ }
+  try {
+    if (process.stdin.isTTY) process.stdin.setRawMode(false);
+  } catch {
+    /* best-effort */
+  }
 }
 
-process.on('exit', () => w(SHOWC + ALT_OFF));
+process.on("exit", () => w(SHOWC + ALT_OFF));
 
 // ─── --best mode ───────────────────────────────────────────────────────────────
 async function runBest() {
   config = loadConfig();
-  const hasKeys = Object.keys(PROVIDERS_META).some((providerKey) => Boolean(getApiKey(config, providerKey)));
+  const hasKeys = Object.keys(PROVIDERS_META).some((providerKey) =>
+    Boolean(getApiKey(config, providerKey)),
+  );
   if (!hasKeys) {
-    process.stderr.write('No API keys configured. Run `frouter` to set up keys.\n');
+    process.stderr.write(
+      "No API keys configured. Run `frouter` to set up keys.\n",
+    );
     process.exit(1);
   }
 
   models = await getAllModels(config);
   if (!models.length) {
-    process.stderr.write('No enabled models available to test.\n');
+    process.stderr.write("No enabled models available to test.\n");
     process.exit(1);
   }
 
   const MAX_ROUNDS = 4;
   for (let i = 0; i < MAX_ROUNDS; i++) {
-    const upCount = models.filter(m => m.status === 'up').length;
-    process.stderr.write(`  Round ${i + 1}/${MAX_ROUNDS}… ${upCount} up of ${models.length}\n`);
+    const upCount = models.filter((m) => m.status === "up").length;
+    process.stderr.write(
+      `  Round ${i + 1}/${MAX_ROUNDS}… ${upCount} up of ${models.length}\n`,
+    );
     await pingAllOnce(models, config);
 
     // Phase 3I: stop early if we have a clear winner after 2+ rounds
@@ -1060,19 +1304,25 @@ async function runBest() {
     }
   }
 
-  const upFinal = models.filter(m => m.status === 'up').length;
+  const upFinal = models.filter((m) => m.status === "up").length;
   process.stderr.write(`  Done. ${upFinal} models responding.\n`);
 
   destroyAgents();
   const best = findBestModel(models);
-  if (!best) { process.stderr.write('No models responded.\n'); process.exit(1); }
+  if (!best) {
+    process.stderr.write("No models responded.\n");
+    process.exit(1);
+  }
   process.stdout.write(`${best.providerKey}/${best.id}\n`);
   process.exit(0);
 }
 
 // ─── Main ──────────────────────────────────────────────────────────────────────
 async function main() {
-  if (BEST) { await runBest(); return; }
+  if (BEST) {
+    await runBest();
+    return;
+  }
 
   config = loadConfig();
 
@@ -1083,20 +1333,23 @@ async function main() {
   await checkForUpdate();
 
   if (!process.stdin.isTTY) {
-    process.stderr.write('frouter requires an interactive terminal.\n');
+    process.stderr.write("frouter requires an interactive terminal.\n");
     process.exit(1);
   }
 
   w(ALT_ON);
   process.stdin.setRawMode(true);
   process.stdin.resume();
-  process.stdin.setEncoding('utf8');
-  process.stdin.on('data', onData);
+  process.stdin.setEncoding("utf8");
+  process.stdin.on("data", onData);
 
-  const onSignal = () => { cleanup(); process.exit(0); };
-  process.on('SIGINT', onSignal);
-  process.on('SIGTERM', onSignal);
-  process.stdout.on('resize', render);
+  const onSignal = () => {
+    cleanup();
+    process.exit(0);
+  };
+  process.on("SIGINT", onSignal);
+  process.on("SIGTERM", onSignal);
+  process.stdout.on("resize", render);
 
   render(); // show loading state immediately
   await refreshModels();
@@ -1104,4 +1357,8 @@ async function main() {
   render();
 }
 
-main().catch(err => { cleanup(); console.error('Fatal:', err); process.exit(1); });
+main().catch((err) => {
+  cleanup();
+  console.error("Fatal:", err);
+  process.exit(1);
+});

@@ -3,28 +3,51 @@ import http  from 'node:http';
 import https from 'node:https';
 import { getApiKey, PROVIDERS_META } from './config.js';
 
-const TIMEOUT_MS       = 15_000;
-const MAX_PINGS        = 100; // cap history per model
+const TIMEOUT_MS       = 6_000;   // Phase 1B: lowered from 15s — anything >6s is unusable
+const MAX_PINGS        = 100;     // cap history per model
 const PING_CONCURRENCY = 20;
-const BACKOFF_THRESHOLD = 5;
+const BACKOFF_THRESHOLD = 3;      // Phase 2F: lowered from 5 — stop wasting slots sooner
 
-type PingResult = { code: string; ms: number };
+export type PingResult = { code: string; ms: number; detail?: string };
 
 const STATUS_MAP: Record<string, string> = {
   '200': 'up',
   '401': 'noauth',
   '404': 'notfound',
+  '429': 'ratelimit',   // Phase 2E: distinguish rate-limited (alive but busy)
   '000': 'timeout',
+  '503': 'unavailable', // Phase 2E: service unavailable
 };
 
-// ─── Concurrency limiter ──────────────────────────────────────────────────────
-async function pooled<T, R>(items: T[], limit: number, fn: (item: T) => Promise<R>): Promise<R[]> {
+// ─── Keep-alive agents per hostname (Phase 2D) ──────────────────────────────
+const _agents = new Map<string, http.Agent | https.Agent>();
+
+function getKeepAliveAgent(url: URL): http.Agent | https.Agent {
+  const key = `${url.protocol}//${url.hostname}:${url.port || (url.protocol === 'http:' ? 80 : 443)}`;
+  let agent = _agents.get(key);
+  if (!agent) {
+    const Ctor = url.protocol === 'http:' ? http.Agent : https.Agent;
+    agent = new Ctor({ keepAlive: true, maxSockets: PING_CONCURRENCY, timeout: TIMEOUT_MS });
+    _agents.set(key, agent);
+  }
+  return agent;
+}
+
+// ─── Concurrency limiter with per-item callback (Phase 3G) ──────────────────
+export async function pooled<T, R>(
+  items: T[],
+  limit: number,
+  fn: (item: T) => Promise<R>,
+  onEach?: (item: T, result: R, index: number) => void,
+): Promise<R[]> {
   const results: R[] = [];
   let i = 0;
   async function next(): Promise<void> {
     const idx = i++;
     if (idx >= items.length) return;
-    results[idx] = await fn(items[idx]).catch(e => e);
+    const result = await fn(items[idx]).catch(e => e);
+    results[idx] = result;
+    onEach?.(items[idx], result, idx);
     await next();
   }
   await Promise.allSettled(Array.from({ length: Math.min(limit, items.length) }, () => next()));
@@ -34,11 +57,16 @@ async function pooled<T, R>(items: T[], limit: number, fn: (item: T) => Promise<
 // ─── Progressive backoff for dead models ──────────────────────────────────────
 let _roundCounter = 0;
 
+// ─── Tier sort order for ping priority (Phase 3H) ────────────────────────────
+const TIER_PRIORITY: Record<string, number> = {
+  'S+': 0, 'S': 1, 'A+': 2, 'A': 3, 'A-': 4, 'B+': 5, 'B': 6, 'C': 7,
+};
+
 /**
- * Single minimal chat-completion request to measure round-trip latency.
- * Returns { code: '200'|'401'|'429'|'404'|'000'|'ERR', ms: number }
- *   '000' = timed out (AbortError)
- *   'ERR' = network error (DNS, refused, etc.)
+ * Single minimal chat-completion request to measure TTFB latency.
+ * Returns { code: '200'|'401'|'429'|'404'|'000'|'ERR', ms: number, detail?: string }
+ *   '000' = timed out
+ *   'ERR' = network error (DNS, refused, etc.) — detail has the error code
  */
 export function ping(apiKey: string | null | undefined, modelId: string, chatUrl: string): Promise<PingResult> {
   return new Promise((resolve) => {
@@ -60,11 +88,11 @@ export function ping(apiKey: string | null | undefined, modelId: string, chatUrl
     function elapsed(): number { return Math.round(performance.now() - t0); }
 
     let settled = false;
-    function settle(code: string): void {
+    function settle(code: string, detail?: string): void {
       if (settled) return;
       settled = true;
       clearTimeout(timer);
-      resolve({ code, ms: elapsed() });
+      resolve({ code, ms: elapsed(), ...(detail ? { detail } : {}) });
     }
 
     const timer = setTimeout(() => { settle('000'); req.destroy(); }, TIMEOUT_MS);
@@ -75,12 +103,15 @@ export function ping(apiKey: string | null | undefined, modelId: string, chatUrl
       path:     url.pathname,
       method:   'POST',
       headers,
+      agent:    getKeepAliveAgent(url),  // Phase 2D: reuse connections
     }, (res) => {
-      res.on('data', () => {});  // drain to free socket
-      res.on('end', () => settle(String(res.statusCode)));
+      // Phase 1A: settle on TTFB — status code is available immediately
+      settle(String(res.statusCode));
+      res.resume(); // drain remaining data to free the socket back to the agent pool
     });
 
-    req.on('error', () => settle('ERR'));
+    // Phase 4J: capture error code for diagnostics
+    req.on('error', (err: NodeJS.ErrnoException) => settle('ERR', err.code || err.message));
 
     req.write(body);
     req.end();
@@ -88,10 +119,11 @@ export function ping(apiKey: string | null | undefined, modelId: string, chatUrl
 }
 
 /**
- * Ping all models with concurrency limiting and progressive backoff.
+ * Ping all models with concurrency limiting, progressive backoff,
+ * and per-ping callback for progressive rendering.
  * Mutates each model: .pings[], .status, .httpCode, ._consecutiveFails, ._skipUntilRound
  */
-export async function pingAllOnce(models: any[], config: any) {
+export async function pingAllOnce(models: any[], config: any, onEachPing?: () => void) {
   _roundCounter++;
 
   const toPing = models.filter(m => {
@@ -103,6 +135,11 @@ export async function pingAllOnce(models: any[], config: any) {
     }
     return true;
   });
+
+  // Phase 3H: sort by tier priority — S+ models get pinged first
+  toPing.sort((a, b) =>
+    (TIER_PRIORITY[a.tier] ?? 99) - (TIER_PRIORITY[b.tier] ?? 99)
+  );
 
   await pooled(toPing, PING_CONCURRENCY, async (m) => {
     const meta   = PROVIDERS_META[m.providerKey];
@@ -125,20 +162,29 @@ export async function pingAllOnce(models: any[], config: any) {
         m._skipUntilRound = _roundCounter + delay;
       }
     }
+  }, () => {
+    // Phase 3G: fire callback after each individual ping completes
+    onEachPing?.();
   });
 }
 
 /**
  * Start continuous ping loop. Returns a ref object for stopPingLoop().
  * Fires first round immediately, then repeats every intervalMs.
- * Calls onUpdate() after each completed round.
+ * Calls onUpdate() after each completed round, and onEachPing() after each individual ping.
  */
-export function startPingLoop(models: any[], config: any, intervalMs: number, onUpdate?: () => void) {
+export function startPingLoop(
+  models: any[],
+  config: any,
+  intervalMs: number,
+  onUpdate?: () => void,
+  onEachPing?: () => void,
+) {
   const ref = { running: true, timer: null };
 
   async function tick() {
     if (!ref.running) return;
-    await pingAllOnce(models, config);
+    await pingAllOnce(models, config, onEachPing);
     onUpdate?.();
     if (ref.running) ref.timer = setTimeout(tick, intervalMs);
   }
@@ -151,4 +197,10 @@ export function stopPingLoop(ref: { running: boolean; timer: NodeJS.Timeout | nu
   if (!ref) return;
   ref.running = false;
   if (ref.timer) clearTimeout(ref.timer);
+}
+
+/** Destroy all keep-alive agents (for clean shutdown / tests). */
+export function destroyAgents(): void {
+  for (const agent of _agents.values()) agent.destroy();
+  _agents.clear();
 }

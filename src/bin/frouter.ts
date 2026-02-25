@@ -4,14 +4,14 @@
 
 import { loadConfig, saveConfig, getApiKey, runFirstRunWizard, promptMasked, PROVIDERS_META, validateProviderApiKey } from '../lib/config.js';
 import { getAllModels } from '../lib/models.js';
-import { ping, pingAllOnce, startPingLoop, stopPingLoop } from '../lib/ping.js';
+import { ping, pingAllOnce, startPingLoop, stopPingLoop, destroyAgents } from '../lib/ping.js';
 import { writeOpenCode, resolveOpenCodeSelection, isOpenCodeInstalled, detectAvailableInstallers, installOpenCode } from '../lib/targets.js';
 import {
   getAvg, getUptime, getVerdict, findBestModel,
   sortModels, filterByTier, filterBySearch,
   tierColor, latColor, uptimeColor,
   TIER_CYCLE, pad, visLen,
-  R, B, D, RED, GREEN, YELLOW, CYAN, WHITE, BG_SEL,
+  R, B, D, RED, GREEN, YELLOW, CYAN, WHITE, ORANGE, BG_SEL,
 } from '../lib/utils.js';
 import { spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
@@ -99,11 +99,14 @@ let sNotice        = '';
 let tNotice        = '';
 let pingRef        = null;
 let trackedId      = null;   // model id to track cursor across re-sorts
+let userNavigated  = false;  // true once user actively moves cursor
 
 // ─── Geometry ──────────────────────────────────────────────────────────────────
 const cols  = () => process.stdout.columns || 120;
 const rows  = () => process.stdout.rows    || 40;
-const tRows = () => Math.max(1, rows() - 9); // header(3) + detail(1) + footer(1) + margins
+// All lines are truncated to terminal width so nothing wraps.
+// Chrome: header(1) + search(1) + colhdr(1) + detail(1) + footer(1) = 5 lines
+const tRows = () => Math.max(0, rows() - 5);
 
 // ─── Sort column metadata ──────────────────────────────────────────────────────
 const SORT_COLS = [
@@ -152,18 +155,52 @@ function fmtLatency(ms) {
   return `${D}${fmtMs(null)}${R}`;
 }
 
-function fullWidthBar(content, style = INVERT) {
-  return `${style}${content}${' '.repeat(Math.max(0, cols() - visLen(content)))}${R}`;
+function fullWidthBar(content, style = INVERT, lastLine = false) {
+  const c = cols();
+  // On the last terminal row, writing exactly `c` chars triggers auto-scroll in
+  // many terminals (Ghostty, iTerm2, etc.).  Use c-1 to avoid this.
+  const maxW = lastLine ? Math.max(0, c - 1) : c;
+  const truncated = truncAnsi(content, maxW);
+  return `${style}${truncated}${' '.repeat(Math.max(0, maxW - visLen(truncated)))}${R}`;
+}
+
+// Truncate a string with ANSI codes to at most `maxVis` visible columns.
+// Preserves escape sequences but stops emitting visible chars once the limit is reached.
+function truncAnsi(s: string, maxVis: number): string {
+  let vis = 0;
+  let out = '';
+  let i = 0;
+  while (i < s.length) {
+    if (s[i] === '\x1b') {
+      // Copy the entire escape sequence verbatim (zero visible width)
+      const start = i;
+      i++; // skip ESC
+      if (i < s.length && s[i] === '[') {
+        i++; // skip [
+        while (i < s.length && s[i] >= '\x20' && s[i] <= '\x3f') i++; // params
+        if (i < s.length) i++; // final byte
+      }
+      out += s.slice(start, i);
+    } else {
+      if (vis >= maxVis) break;
+      out += s[i];
+      vis++;
+      i++;
+    }
+  }
+  return out;
 }
 
 function statusDot(model) {
   switch (model.status) {
-    case 'up':       return `${GREEN}*${R}`;
-    case 'noauth':   return `${YELLOW}!${R}`;
-    case 'notfound': return `${RED}?${R}`;
-    case 'timeout':  return `${RED}o${R}`;
-    case 'down':     return `${RED}x${R}`;
-    default:        return `${D}.${R}`;
+    case 'up':          return `${GREEN}*${R}`;
+    case 'noauth':      return `${YELLOW}!${R}`;
+    case 'ratelimit':   return `${ORANGE}~${R}`;
+    case 'unavailable': return `${RED}#${R}`;
+    case 'notfound':    return `${RED}?${R}`;
+    case 'timeout':     return `${RED}o${R}`;
+    case 'down':        return `${RED}x${R}`;
+    default:            return `${D}.${R}`;
   }
 }
 
@@ -188,21 +225,26 @@ function renderMain() {
   let out = CLEAR + HIDEC;
 
   // Header
-  out += `${BG_HDR}${WHITE}${B} frouter ${R}  ${provStatus}`;
-  out += `${' '.repeat(Math.max(1, c - visLen(` frouter  ${provStatus}`) - 2))}\n`;
+  const hdrRaw = `${BG_HDR}${WHITE}${B} frouter ${R}  ${provStatus}`;
+  const hdrTrunc = truncAnsi(hdrRaw, c);
+  const hdrPad = Math.max(0, c - visLen(hdrTrunc));
+  out += `${hdrTrunc}${' '.repeat(hdrPad)}${R}\n`;
 
   // Search + stats bar
-  out += ` ${searchBar}   ${tierBar}${stats}\n`;
+  out += truncAnsi(` ${searchBar}   ${tierBar}${stats}`, c) + '\n';
 
   // Column headers with sort indicators
   const hdr = `  ${'#'.padStart(3)}  ${colHdr('Tier', 'tier', 4)}  ${colHdr('Provider', 'provider', 11)}  ${colHdr('Model', 'model', 32)}  ${colHdr('Ctx', 'context', 5, true)}  ${colHdr('AA', 'intel', 3, true)}  ${colHdr('Avg', 'avg', 6, true)}  ${colHdr('Lat', 'latest', 6, true)}  ${colHdr('Up%', 'uptime', 4, true)}  ${colHdr('Verdict', 'verdict', 7)}`;
   out += fullWidthBar(hdr) + '\n';
 
-  // Model rows
-  if (filtered.length === 0 && models.length === 0) {
+  // Model rows (skip if terminal too small)
+  if (tr === 0) { w(out); return; }
+  const isLoading = filtered.length === 0 && models.length === 0;
+  if (isLoading) {
     out += `\n${D}    Loading models…${R}\n`;
-    for (let i = 1; i < tr; i++) out += '\n';
+    for (let i = 2; i < tr; i++) out += '\n';
   }
+  if (!isLoading) {
   const slice = filtered.slice(scrollOff, scrollOff + tr);
   for (let i = 0; i < tr; i++) {
     const m = slice[i];
@@ -228,10 +270,11 @@ function renderMain() {
       ? String(Math.round(m.aaIntelligence)).padStart(3)
       : `${D}  —${R}`;
 
-    const row = `  ${rank}  ${tier}  ${prov}  ${name}  ${ctx}  ${aaStr}  ${avgStr}  ${latStr}  ${upStr}  ${dot} ${verdict}`;
+    const row = truncAnsi(`  ${rank}  ${tier}  ${prov}  ${name}  ${ctx}  ${aaStr}  ${avgStr}  ${latStr}  ${upStr}  ${dot} ${verdict}`, c);
     if (isSel) out += `${BG_SEL}${B}${row}${R}\n`;
     else       out += `${row}${R}\n`;
   }
+  } // end if (!isLoading)
 
   // Detail bar — full model ID of highlighted model
   const sel = filtered[cursor];
@@ -239,14 +282,14 @@ function renderMain() {
     const fullId = `${sel.providerKey}/${sel.id}`;
     const sweStr = sel.sweScore != null ? `  SWE:${sel.sweScore}%` : '';
     const ctxStr = sel.context ? `  ctx:${fmtCtx(sel.context).trim()}` : '';
-    out += `${D} ${fullId}${sweStr}${ctxStr}${R}\n`;
+    out += truncAnsi(`${D} ${fullId}${sweStr}${ctxStr}${R}`, c) + '\n';
   } else {
     out += '\n';
   }
 
   // Footer
   const footer = ` ↑↓/jk:nav  Enter:target  /:search (Enter=apply OpenCode)  A:api key  P:settings  T:tier  ?:help  0-9:sort  q:quit `;
-  out += fullWidthBar(footer);
+  out += fullWidthBar(footer, INVERT, true);
   w(out);
 }
 
@@ -367,8 +410,8 @@ function render() {
 
 // ─── Filter + sort (with cursor tracking) ──────────────────────────────────────
 function applyFilters() {
-  // Remember which model the cursor is on
-  if (filtered[cursor]) {
+  // Remember which model the cursor is on (only if user actively navigated)
+  if (userNavigated && filtered[cursor]) {
     trackedId = modelKey(filtered[cursor]);
   }
 
@@ -379,13 +422,15 @@ function applyFilters() {
   filtered = r;
 
   // Restore cursor to the same model if it still exists
-  if (trackedId) {
+  if (userNavigated && trackedId) {
     const idx = filtered.findIndex(m => modelKey(m) === trackedId);
     if (idx !== -1) cursor = idx;
   }
   if (cursor >= filtered.length) cursor = Math.max(0, filtered.length - 1);
   if (cursor < 0) cursor = 0;
-  scrollOff = Math.max(0, Math.min(scrollOff, Math.max(0, filtered.length - tRows())));
+  // Keep scrollOff pinned to 0 until the user actively navigates
+  if (!userNavigated) { scrollOff = 0; }
+  else { scrollOff = Math.max(0, Math.min(scrollOff, Math.max(0, filtered.length - tRows()))); }
 }
 
 // ─── Key handlers ──────────────────────────────────────────────────────────────
@@ -592,25 +637,25 @@ function handleMain(ch) {
       searchQuery = searchQuery.slice(0, -1);
       needsRefilter = true;
     }
-    else if (ch === UP)   { cursor = Math.max(0, cursor - 1); }
-    else if (ch === DOWN) { cursor = clampCursor(cursor + 1); }
+    else if (ch === UP)   { userNavigated = true; cursor = Math.max(0, cursor - 1); }
+    else if (ch === DOWN) { userNavigated = true; cursor = clampCursor(cursor + 1); }
     else if (ch.length === 1 && ch >= ' ') {
       searchQuery += ch;
       needsRefilter = true;
     }
 
     if (needsRefilter) applyFilters();
-    scheduleRender();
+    throttledRender();
     return;
   }
 
   // Navigation
-  if      (ch === UP   || ch === 'k') { cursor = Math.max(0, cursor - 1); }
-  else if (ch === DOWN || ch === 'j') { cursor = clampCursor(cursor + 1); }
-  else if (ch === PGUP)               { cursor = Math.max(0, cursor - tRows()); }
-  else if (ch === PGDN)               { cursor = clampCursor(cursor + tRows()); }
-  else if (ch === 'g' || ch === HOME) { cursor = 0; }
-  else if (ch === 'G' || ch === END)  { cursor = maxCursorIndex(); }
+  if      (ch === UP   || ch === 'k') { userNavigated = true; cursor = Math.max(0, cursor - 1); }
+  else if (ch === DOWN || ch === 'j') { userNavigated = true; cursor = clampCursor(cursor + 1); }
+  else if (ch === PGUP)               { userNavigated = true; cursor = Math.max(0, cursor - tRows()); }
+  else if (ch === PGDN)               { userNavigated = true; cursor = clampCursor(cursor + tRows()); }
+  else if (ch === 'g' || ch === HOME) { userNavigated = true; cursor = 0; }
+  else if (ch === 'G' || ch === END)  { userNavigated = true; cursor = maxCursorIndex(); }
 
   // Actions
   else if (ch === '/')               {
@@ -642,7 +687,7 @@ function handleMain(ch) {
     if (sortDef) toggleSort(sortDef.col);
   }
 
-  scheduleRender();
+  throttledRender();
 }
 
 function toggleSort(col) {
@@ -786,12 +831,26 @@ async function handleTarget(ch) {
 // Buffer escape sequences: if \x1b arrives alone, wait 50ms to see if [ follows.
 let escBuf = '';
 let escTimer = null;
-let renderPending = false;
+// Throttled rendering: cap at ~30fps to prevent terminal overwhelm during rapid input.
+// Ensures smooth scrolling instead of freeze-then-jump when holding arrow keys.
+let _lastRenderTime = 0;
+let _renderTimer = null;
+const RENDER_INTERVAL_MS = 33; // ~30fps
 
-function scheduleRender() {
-  if (!renderPending) {
-    renderPending = true;
-    setImmediate(() => { renderPending = false; render(); });
+function throttledRender() {
+  const now = Date.now();
+  if (now - _lastRenderTime >= RENDER_INTERVAL_MS) {
+    // Enough time has passed — render immediately
+    if (_renderTimer) { clearTimeout(_renderTimer); _renderTimer = null; }
+    _lastRenderTime = now;
+    render();
+  } else if (!_renderTimer) {
+    // Schedule a trailing render so the final cursor position is always shown
+    _renderTimer = setTimeout(() => {
+      _renderTimer = null;
+      _lastRenderTime = Date.now();
+      render();
+    }, RENDER_INTERVAL_MS - (now - _lastRenderTime));
   }
 }
 
@@ -804,9 +863,9 @@ function splitEscapeSequences(s: string): string[] {
     if (s[i] === '\x1b' && i + 1 < s.length && s[i + 1] === '[') {
       // CSI sequence: \x1b[ followed by parameter bytes (0-9;) then a final byte (@-~)
       let j = i + 2;
-      while (j < s.length && s[j] >= '0' && s[j] <= '9') j++;
-      if (j < s.length && s[j] === ';') { j++; while (j < s.length && s[j] >= '0' && s[j] <= '9') j++; }
-      if (j < s.length) j++; // consume final byte (A, B, ~, H, F, etc.)
+      // Parameter bytes: digits and semicolons (handles multi-param like \x1b[38;5;214m)
+      while (j < s.length && (s[j] >= '0' && s[j] <= '9' || s[j] === ';')) j++;
+      if (j < s.length) j++; // consume final byte (A, B, ~, H, F, m, M, etc.)
       result.push(s.slice(i, j));
       i = j;
     } else if (s[i] === '\x1b') {
@@ -889,17 +948,33 @@ async function refreshModels() {
   applyFilters();
 }
 
+// ─── Throttled per-ping render (no re-sort, just refresh visible data) ───────
+let _lastPingRender = 0;
+const PING_RENDER_THROTTLE_MS = 300;
+
+function onPingTick() {
+  // Don't re-sort mid-round — just throttle-render current positions
+  // so status dots / latency update in-place without row jumping.
+  if (screen !== 'main') return;
+  const now = performance.now();
+  if (now - _lastPingRender < PING_RENDER_THROTTLE_MS) return;
+  _lastPingRender = now;
+  render();
+}
+
 function restartLoop() {
   stopPingLoop(pingRef);
   pingRef = startPingLoop(models, config, pingMs, () => {
+    // End-of-round: re-sort + full render
     applyFilters();
     if (screen === 'main') render();
-  });
+  }, onPingTick);
 }
 
 // ─── Cleanup ───────────────────────────────────────────────────────────────────
 function cleanup() {
   stopPingLoop(pingRef);
+  destroyAgents();
   w(SHOWC + ALT_OFF);
   try { if (process.stdin.isTTY) process.stdin.setRawMode(false); } catch { /* best-effort */ }
 }
@@ -921,16 +996,26 @@ async function runBest() {
     process.exit(1);
   }
 
-  for (let i = 0; i < 4; i++) {
+  const MAX_ROUNDS = 4;
+  for (let i = 0; i < MAX_ROUNDS; i++) {
     const upCount = models.filter(m => m.status === 'up').length;
-    process.stderr.write(`  Round ${i + 1}/4… ${upCount} up of ${models.length}\n`);
+    process.stderr.write(`  Round ${i + 1}/${MAX_ROUNDS}… ${upCount} up of ${models.length}\n`);
     await pingAllOnce(models, config);
-    if (i < 3) await new Promise(r => setTimeout(r, 2500));
+
+    // Phase 3I: stop early if we have a clear winner after 2+ rounds
+    if (i >= 1) {
+      const candidate = findBestModel(models);
+      if (candidate && candidate.pings.length >= 2 && getAvg(candidate) < 500) {
+        process.stderr.write(`  Early stop — clear winner found.\n`);
+        break;
+      }
+    }
   }
 
   const upFinal = models.filter(m => m.status === 'up').length;
   process.stderr.write(`  Done. ${upFinal} models responding.\n`);
 
+  destroyAgents();
   const best = findBestModel(models);
   if (!best) { process.stderr.write('No models responded.\n'); process.exit(1); }
   process.stdout.write(`${best.providerKey}/${best.id}\n`);

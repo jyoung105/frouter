@@ -319,21 +319,25 @@ export async function getAllModels(config: any): Promise<any[]> {
   const noFetch = process.env.FROUTER_NO_FETCH === '1';
   const results: any[] = [];
 
-  if (config.providers?.nvidia?.enabled !== false) {
-    const nvidiaKey = getApiKey(config, 'nvidia');
-    let nimModels = null;
-    if (nvidiaKey && !noFetch) {
-      nimModels = await fetchNimModels(nvidiaKey);
-    }
-    const source = nimModels || NIM_MODELS;
-    results.push(...source.map(m => ({ ...m, pings: [], status: 'pending', httpCode: null })));
-  }
+  // Phase 1C: fetch from both providers in parallel
+  const nvidiaEnabled = config.providers?.nvidia?.enabled !== false;
+  const orEnabled     = config.providers?.openrouter?.enabled !== false;
 
-  if (config.providers?.openrouter?.enabled !== false && !noFetch) {
-    const key = getApiKey(config, 'openrouter');
-    const orModels = await fetchOpenRouterModels(key);
-    results.push(...orModels);
-  }
+  const [nimResult, orResult] = await Promise.all([
+    nvidiaEnabled
+      ? (async () => {
+          const nvidiaKey = getApiKey(config, 'nvidia');
+          let nimModels = null;
+          if (nvidiaKey && !noFetch) nimModels = await fetchNimModels(nvidiaKey);
+          const source = nimModels || NIM_MODELS;
+          return source.map(m => ({ ...m, pings: [], status: 'pending', httpCode: null }));
+        })()
+      : Promise.resolve([]),
+    orEnabled && !noFetch
+      ? fetchOpenRouterModels(getApiKey(config, 'openrouter'))
+      : Promise.resolve([]),
+  ]);
 
+  results.push(...nimResult, ...orResult);
   return results;
 }

@@ -39,7 +39,8 @@ export function getVerdict(model) {
   const avg    = getAvg(model);
   const everUp = model.pings.some(p => p.code === '200');
 
-  if (last?.code === '429')                                              return '🔥 Overloaded';
+  if (model.status === 'ratelimit' || last?.code === '429')              return '🔥 Overloaded';
+  if (model.status === 'unavailable')                                    return '🛑 Unavailable';
   if (everUp && model.status !== 'up' && model.status !== 'noauth')     return '⚠️  Unstable';
   if (model.status === 'notfound')                                      return '🚫 Not Found';
   if (!everUp && model.pings.length > 0 && model.status !== 'pending')  return '👻 Not Active';
@@ -151,10 +152,10 @@ function cmpPriority(a, b) {
 
 const VERDICT_RANK = {
   '🚀 Perfect': 0, '✅ Normal': 1, '🐢 Slow': 2, '🐌 Very Slow': 3,
-  '💀 Unusable': 4, '🔥 Overloaded': 5, '⚠️  Unstable': 6,
-  '👻 Not Active': 7, '🚫 Not Found': 8, '⏳ Pending': 9,
+  '💀 Unusable': 4, '🔥 Overloaded': 5, '🛑 Unavailable': 6, '⚠️  Unstable': 7,
+  '👻 Not Active': 8, '🚫 Not Found': 9, '⏳ Pending': 10,
 };
-function verdictRank(v) { return VERDICT_RANK[v] ?? 9; }
+function verdictRank(v) { return VERDICT_RANK[v] ?? 11; }
 
 // ─── Best model (--best mode) ──────────────────────────────────────────────────
 

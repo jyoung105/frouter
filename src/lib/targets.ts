@@ -1,6 +1,6 @@
 // src/lib/targets.ts — write config to OpenCode and OpenClaw
 import { execSync, spawnSync } from 'node:child_process';
-import { readFileSync, writeFileSync, copyFileSync, mkdirSync, existsSync, chmodSync } from 'node:fs';
+import { readFileSync, writeFileSync, copyFileSync, mkdirSync, existsSync, chmodSync, statSync } from 'node:fs';
 import { homedir, platform } from 'node:os';
 import { join, dirname } from 'node:path';
 import { PROVIDERS_META, validateProviderApiKey } from './config.js';
@@ -8,6 +8,8 @@ import { PROVIDERS_META, validateProviderApiKey } from './config.js';
 const OPENCODE_PATH = join(homedir(), '.config', 'opencode', 'opencode.json');
 const OPENCLAW_PATH = join(homedir(), '.openclaw', 'openclaw.json');
 const IS_WIN = platform() === 'win32';
+let cachedOpenCodeConfig: Record<string, any> | null = null;
+let cachedOpenCodeConfigFingerprint: string | null = null;
 
 function readJson(path) {
   if (!existsSync(path)) return {};
@@ -16,6 +18,26 @@ function readJson(path) {
   } catch {
     return {};
   }
+}
+
+function readOpenCodeFingerprint() {
+  if (!existsSync(OPENCODE_PATH)) return 'missing';
+  try {
+    const stat = statSync(OPENCODE_PATH);
+    return `${stat.mtimeMs}:${stat.size}`;
+  } catch {
+    return 'missing';
+  }
+}
+
+function readOpenCodeConfig(force = false) {
+  const fingerprint = readOpenCodeFingerprint();
+  if (!force && cachedOpenCodeConfig && cachedOpenCodeConfigFingerprint === fingerprint) {
+    return cachedOpenCodeConfig;
+  }
+  cachedOpenCodeConfig = readJson(OPENCODE_PATH);
+  cachedOpenCodeConfigFingerprint = fingerprint;
+  return cachedOpenCodeConfig;
 }
 
 function backupAndWriteJson(path, data) {
@@ -27,10 +49,6 @@ function backupAndWriteJson(path, data) {
   }
   writeFileSync(path, JSON.stringify(data, null, 2) + '\n', { mode: 0o600 });
   chmodSync(path, 0o600);
-}
-
-function normalizeModelId(id) {
-  return String(id || '').toLowerCase().replace(/:free$/i, '');
 }
 
 function getProviderMeta(providerKey) {
@@ -114,42 +132,33 @@ function openCodeProviderBlock(providerKey, apiKey) {
  */
 export function writeOpenCode(model, providerKey, apiKey = null, options = {}) {
   const persistedApiKey = resolvePersistedApiKey(providerKey, apiKey, options);
-  const cfg = readJson(OPENCODE_PATH);
-  cfg.provider ??= {};
-  cfg.provider[providerKey] = openCodeProviderBlock(providerKey, persistedApiKey);
-  cfg.model = `${providerKey}/${model.id}`;
+  const currentCfg = readOpenCodeConfig();
+  const nextCfg = {
+    ...currentCfg,
+    provider: {
+      ...(currentCfg.provider ?? {}),
+      [providerKey]: openCodeProviderBlock(providerKey, persistedApiKey),
+    },
+    model: `${providerKey}/${model.id}`,
+  };
 
-  backupAndWriteJson(OPENCODE_PATH, cfg);
+  if (JSON.stringify(nextCfg) === JSON.stringify(currentCfg)) {
+    return OPENCODE_PATH;
+  }
+
+  backupAndWriteJson(OPENCODE_PATH, nextCfg);
+  cachedOpenCodeConfig = nextCfg;
+  cachedOpenCodeConfigFingerprint = readOpenCodeFingerprint();
   return OPENCODE_PATH;
 }
 
 /**
- * In Oh-My-OpenCode mode, many NVIDIA NIM models are not tool-call compatible.
- * If a free OpenRouter twin exists, prefer that twin for OpenCode only.
+ * Resolve model selection for OpenCode config.
+ * Always respects the user's explicit provider choice — if the user selected
+ * a model from NIM (or any provider), that exact provider/model is used.
  */
-export function resolveOpenCodeSelection(model, providerKey, allModels = []) {
-  const cfg = readJson(OPENCODE_PATH);
-  const hasOhMyOpenCode = Array.isArray(cfg.plugin)
-    && cfg.plugin.some((p) => String(p).startsWith('oh-my-opencode'));
-
-  if (!hasOhMyOpenCode || providerKey !== 'nvidia') {
-    return { model, providerKey, fallback: false };
-  }
-
-  const wanted = normalizeModelId(model?.id);
-  const twin = allModels.find((m) =>
-    m?.providerKey === 'openrouter'
-    && /:free$/i.test(String(m.id))
-    && normalizeModelId(m.id) === wanted
-  );
-
-  if (!twin) return { model, providerKey, fallback: false };
-  return {
-    model: twin,
-    providerKey: 'openrouter',
-    fallback: true,
-    reason: 'oh-my-opencode + nvidia compatibility',
-  };
+export function resolveOpenCodeSelection(model, providerKey, _allModels = []) {
+  return { model, providerKey, fallback: false };
 }
 
 // ─── OpenClaw ────────────────────────────────────────────────────────────────

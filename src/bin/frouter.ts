@@ -5,7 +5,7 @@
 import { loadConfig, saveConfig, getApiKey, runFirstRunWizard, promptMasked, PROVIDERS_META, validateProviderApiKey } from '../lib/config.js';
 import { getAllModels } from '../lib/models.js';
 import { ping, pingAllOnce, startPingLoop, stopPingLoop, destroyAgents } from '../lib/ping.js';
-import { writeOpenCode, resolveOpenCodeSelection, isOpenCodeInstalled, detectAvailableInstallers, installOpenCode } from '../lib/targets.js';
+import { writeOpenCode, isOpenCodeInstalled, detectAvailableInstallers, installOpenCode } from '../lib/targets.js';
 import {
   getAvg, getUptime, getVerdict, findBestModel,
   sortModels, filterByTier, filterBySearch,
@@ -477,29 +477,11 @@ function enterTargetPickerFromSelection() {
 function resolveOpenCodeApplySelection(selectedModel) {
   const pk = selectedModel.providerKey;
   const apiKey = getApiKey(config, pk);
-  const resolved = resolveOpenCodeSelection(selectedModel, pk, models);
-  let openCodeModel = selectedModel;
-  let openCodePk = pk;
-  let openCodeApiKey = apiKey;
-  let notice = '';
-
-  if (resolved.fallback) {
-    const fallbackKey = getApiKey(config, resolved.providerKey);
-    if (fallbackKey) {
-      openCodeModel = resolved.model;
-      openCodePk = resolved.providerKey;
-      openCodeApiKey = fallbackKey;
-      notice = `${YELLOW} ! OpenCode fallback: ${pk}/${selectedModel.id} -> ${openCodePk}/${openCodeModel.id} (${resolved.reason})${R}`;
-    } else {
-      notice = `${YELLOW} ! OpenCode fallback skipped: missing ${resolved.providerKey.toUpperCase()} API key${R}`;
-    }
-  }
-
   return {
-    openCodeModel,
-    openCodePk,
-    openCodeApiKey,
-    notice,
+    openCodeModel: selectedModel,
+    openCodePk: pk,
+    openCodeApiKey: apiKey,
+    notice: '',
   };
 }
 

@@ -71,7 +71,22 @@ test('writeOpenCode can persist provided API key only with explicit opt-in', asy
   });
 });
 
-test('resolveOpenCodeSelection falls back to OpenRouter twin when oh-my-opencode is active', async () => {
+test('writeOpenCode skips backup/write when resulting config is unchanged', async () => {
+  await withTempTargetsModule(async ({ writeOpenCode, home }) => {
+    const configPath = join(home, '.config', 'opencode', 'opencode.json');
+    const dir = dirname(configPath);
+
+    writeOpenCode({ id: 'meta/llama-3.1-8b-instruct' }, 'nvidia');
+    const backupsBefore = readdirSync(dir).filter((f) => f.startsWith('opencode.json.backup-'));
+    assert.equal(backupsBefore.length, 0);
+
+    writeOpenCode({ id: 'meta/llama-3.1-8b-instruct' }, 'nvidia');
+    const backupsAfter = readdirSync(dir).filter((f) => f.startsWith('opencode.json.backup-'));
+    assert.equal(backupsAfter.length, 0);
+  });
+});
+
+test('resolveOpenCodeSelection always respects user chosen provider (NIM with oh-my-opencode)', async () => {
   await withTempTargetsModule(async ({ resolveOpenCodeSelection, home }) => {
     const configPath = join(home, '.config', 'opencode', 'opencode.json');
     mkdirSync(dirname(configPath), { recursive: true });
@@ -89,9 +104,9 @@ test('resolveOpenCodeSelection falls back to OpenRouter twin when oh-my-opencode
     ];
 
     const resolved = resolveOpenCodeSelection(selected, 'nvidia', allModels);
-    assert.equal(resolved.fallback, true);
-    assert.equal(resolved.providerKey, 'openrouter');
-    assert.equal(resolved.model.id, 'qwen/qwen2.5-coder-32b-instruct:free');
+    assert.equal(resolved.fallback, false);
+    assert.equal(resolved.providerKey, 'nvidia');
+    assert.equal(resolved.model.id, 'qwen/qwen2.5-coder-32b-instruct');
   });
 });
 
@@ -110,6 +125,46 @@ test('resolveOpenCodeSelection keeps original model without oh-my-opencode plugi
     assert.equal(resolved.fallback, false);
     assert.equal(resolved.providerKey, 'nvidia');
     assert.equal(resolved.model.id, 'qwen/qwen2.5-coder-32b-instruct');
+  });
+});
+
+test('resolveOpenCodeSelection preserves NIM Stepfun model (no silent swap to OpenRouter)', async () => {
+  await withTempTargetsModule(async ({ resolveOpenCodeSelection, home }) => {
+    const configPath = join(home, '.config', 'opencode', 'opencode.json');
+    mkdirSync(dirname(configPath), { recursive: true });
+    writeFileSync(configPath, JSON.stringify({ plugin: ['oh-my-opencode'] }, null, 2));
+
+    const selected = {
+      id: 'stepfun-ai/step-3.5-flash',
+      providerKey: 'nvidia',
+    };
+    const allModels = [
+      selected,
+      { id: 'stepfun/step-3.5-flash:free', providerKey: 'openrouter' },
+    ];
+
+    const resolved = resolveOpenCodeSelection(selected, 'nvidia', allModels);
+    assert.equal(resolved.fallback, false);
+    assert.equal(resolved.providerKey, 'nvidia');
+    assert.equal(resolved.model.id, 'stepfun-ai/step-3.5-flash');
+  });
+});
+
+test('resolveOpenCodeSelection preserves OpenRouter selection as-is', async () => {
+  await withTempTargetsModule(async ({ resolveOpenCodeSelection, home }) => {
+    const configPath = join(home, '.config', 'opencode', 'opencode.json');
+    mkdirSync(dirname(configPath), { recursive: true });
+    writeFileSync(configPath, JSON.stringify({ plugin: { 'oh-my-opencode': {} } }, null, 2));
+
+    const selected = {
+      id: 'meta-llama/llama-3.2-3b-instruct:free',
+      providerKey: 'openrouter',
+    };
+
+    const resolved = resolveOpenCodeSelection(selected, 'openrouter', [selected]);
+    assert.equal(resolved.fallback, false);
+    assert.equal(resolved.providerKey, 'openrouter');
+    assert.equal(resolved.model.id, 'meta-llama/llama-3.2-3b-instruct:free');
   });
 });
 

@@ -145,11 +145,51 @@ let trackedId = null; // model id to track cursor across re-sorts
 let userNavigated = false; // true once user actively moves cursor
 
 // ─── Geometry ──────────────────────────────────────────────────────────────────
-const cols = () => process.stdout.columns || 120;
-const rows = () => process.stdout.rows || 40;
+const DEFAULT_COLS = 80;
+const DEFAULT_ROWS = 24;
+const MIN_COLS = 40;
+const MIN_ROWS = 8;
+const CHROME_ROWS = 5;
+
+function envSize(name: string): number | null {
+  const raw = process.env[name];
+  if (!raw) return null;
+  const n = Number.parseInt(raw, 10);
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
+function viewport() {
+  let c = Number(process.stdout.columns);
+  let r = Number(process.stdout.rows);
+
+  // Some PTYs report 0x0 until the first SIGWINCH.
+  if (
+    (c <= 0 || !Number.isFinite(c) || r <= 0 || !Number.isFinite(r)) &&
+    typeof process.stdout.getWindowSize === "function"
+  ) {
+    try {
+      const [wc, wr] = process.stdout.getWindowSize();
+      if ((c <= 0 || !Number.isFinite(c)) && wc > 0) c = wc;
+      if ((r <= 0 || !Number.isFinite(r)) && wr > 0) r = wr;
+    } catch {
+      /* best-effort */
+    }
+  }
+
+  if (c <= 0 || !Number.isFinite(c)) c = envSize("COLUMNS") ?? DEFAULT_COLS;
+  if (r <= 0 || !Number.isFinite(r)) r = envSize("LINES") ?? DEFAULT_ROWS;
+
+  return {
+    c: Math.max(MIN_COLS, Math.floor(c)),
+    r: Math.max(MIN_ROWS, Math.floor(r)),
+  };
+}
+
+const cols = () => viewport().c;
+const rows = () => viewport().r;
 // All lines are truncated to terminal width so nothing wraps.
 // Chrome: header(1) + search bar(1) + colhdr(1) + detail(1) + footer(1) = 5 lines
-const tRows = () => Math.max(0, rows() - 5);
+const tRows = () => Math.max(0, rows() - CHROME_ROWS);
 
 // ─── Sort column metadata ──────────────────────────────────────────────────────
 const SORT_COLS = [
@@ -257,8 +297,8 @@ function statusDot(model) {
 
 // ─── Main TUI ──────────────────────────────────────────────────────────────────
 function renderMain() {
-  const c = cols(),
-    tr = tRows();
+  const { c, r } = viewport();
+  const tr = Math.max(0, r - CHROME_ROWS);
   if (cursor < scrollOff) scrollOff = cursor;
   if (cursor >= scrollOff + tr) scrollOff = cursor - tr + 1;
 

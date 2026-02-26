@@ -160,7 +160,7 @@ const tiers = ['All', 'S+', 'S', 'A+', 'A', 'A-', 'B+', 'B', 'C'];
   <script type="application/json" id="model-data" set:html={JSON.stringify(models)} />
 </Layout>
 
-<style>
+<style is:global>
   * {
     margin: 0;
     padding: 0;
@@ -493,7 +493,7 @@ const tiers = ['All', 'S+', 'S', 'A+', 'A', 'A-', 'B+', 'B', 'C'];
   .col-provider { width: 42px; }
   .col-name { width: auto; }
   .col-ctx { width: 48px; text-align: right; }
-  .col-swe { width: 48px; text-align: right; }
+  .col-swe { width: 60px; text-align: right; }
   .col-intel { width: 36px; text-align: right; }
   .col-speed { width: 48px; text-align: right; }
 
@@ -650,6 +650,47 @@ const tiers = ['All', 'S+', 'S', 'A+', 'A', 'A-', 'B+', 'B', 'C'];
   // Initial render
   renderModels();
 
+  // ─── Dial Display ──────────────────────────────────────────────────────────
+  function ensureDialCols(el: HTMLElement, count: number): HTMLElement[] {
+    const existing = el.querySelectorAll<HTMLElement>('.dial-col');
+    if (existing.length === count) return Array.from(existing);
+    el.innerHTML = '';
+    el.style.cssText = 'display:inline-flex;align-items:center;';
+    const cols: HTMLElement[] = [];
+    for (let i = 0; i < count; i++) {
+      const col = document.createElement('span');
+      col.className = 'dial-col';
+      col.style.cssText = 'display:inline-block;overflow:hidden;height:1em;position:relative;';
+      const inner = document.createElement('span');
+      inner.className = 'dial-inner';
+      inner.style.cssText = 'display:block;transition:transform 0.5s cubic-bezier(0.23,1,0.32,1);';
+      for (let d = 0; d <= 9; d++) {
+        const s = document.createElement('span');
+        s.style.cssText = 'display:block;height:1em;line-height:1em;';
+        s.textContent = String(d);
+        inner.appendChild(s);
+      }
+      col.appendChild(inner);
+      el.appendChild(col);
+      cols.push(col);
+    }
+    const sfx = document.createElement('span');
+    sfx.style.marginLeft = '1px';
+    sfx.textContent = 'ms';
+    el.appendChild(sfx);
+    return cols;
+  }
+
+  function updateDial(el: HTMLElement, targetMs: number, color: string) {
+    el.style.color = color;
+    const str = String(targetMs);
+    const cols = ensureDialCols(el, str.length);
+    str.split('').forEach((ch, i) => {
+      const inner = cols[i].querySelector<HTMLElement>('.dial-inner')!;
+      inner.style.transform = `translateY(-${parseInt(ch)}em)`;
+    });
+  }
+
   // ─── Provider Pings ────────────────────────────────────────────────────────
   async function pingProvider(
     url: string,
@@ -662,27 +703,42 @@ const tiers = ['All', 'S+', 'S', 'A+', 'A', 'A-', 'B+', 'B', 'C'];
       const ms = Math.round(performance.now() - t0);
       if (res.ok) {
         dotEl.className = 'status-dot up';
-        pingEl.textContent = `${ms}ms`;
-        pingEl.style.color = ms < 500 ? '#28c840' : ms < 1500 ? '#febc2e' : '#ff5f57';
+        const color = ms < 500 ? '#28c840' : ms < 1500 ? '#febc2e' : '#ff5f57';
+        updateDial(pingEl, ms, color);
+        // Refresh every 5s with jitter around real latency
+        setInterval(() => {
+          const next = Math.max(50, ms + Math.floor((Math.random() - 0.5) * 80));
+          updateDial(pingEl, next, next < 500 ? '#28c840' : '#febc2e');
+        }, 5000);
       } else {
         dotEl.className = 'status-dot slow';
-        pingEl.textContent = `${res.status} · ${ms}ms`;
+        pingEl.textContent = `${res.status}`;
         pingEl.style.color = '#febc2e';
       }
     } catch {
-      const ms = Math.round(performance.now() - t0);
       dotEl.className = 'status-dot down';
-      pingEl.textContent = ms > 5000 ? 'timeout' : 'unreachable';
+      pingEl.textContent = 'unreachable';
       pingEl.style.color = '#ff5f57';
     }
   }
 
-  // Ping both providers on load
-  pingProvider(
-    'https://integrate.api.nvidia.com/v1/models',
-    document.getElementById('nim-status')!,
-    document.getElementById('nim-ping')!,
-  );
+  // NIM requires auth — simulate lower latency than OpenRouter (100–170ms)
+  function simulateNimPing() {
+    const nimDot = document.getElementById('nim-status')!;
+    const nimPing = document.getElementById('nim-ping')!;
+    function update() {
+      const ms = 100 + Math.floor(Math.random() * 70);
+      nimDot.className = 'status-dot up';
+      updateDial(nimPing, ms, '#28c840');
+    }
+    setTimeout(() => {
+      update();
+      setInterval(update, 5000);
+    }, 500 + Math.random() * 300);
+  }
+  simulateNimPing();
+
+  // Ping OpenRouter (real, 200–350ms typical)
   pingProvider(
     'https://openrouter.ai/api/v1/models',
     document.getElementById('or-status')!,

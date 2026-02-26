@@ -134,6 +134,10 @@ OPENROUTER_API_KEY=sk-or-xxx frouter
 | `S`           | 설정 저장만 (실행 없음)        |
 | `ESC`         | 취소                           |
 
+OpenCode fallback로 프로바이더가 바뀌는 경우(예: NIM Stepfun → OpenRouter),
+실제 프로바이더 API 키가 없으면 다음 확인 프롬프트가 표시됩니다:
+`Launch opencode anyway? (Y/n, default: n)`.
+
 설정 파일 경로:
 
 - **OpenCode CLI** → `~/.config/opencode/opencode.json`
@@ -227,6 +231,34 @@ npm run typecheck
 # 선택: 성능 기준선/회귀 테스트
 npm run perf:baseline
 npm run test:perf
+```
+
+## 모델 카탈로그 자동 동기화 (GitHub Actions)
+
+`frouter`는 모델 메타데이터를 최신 상태로 유지하기 위한 스케줄 워크플로를 포함합니다.
+
+- 워크플로: `.github/workflows/model-catalog-sync.yml`
+- 실행 트리거:
+  - 매일: `17 3 * * *` (UTC)
+  - 주간 AA 갱신: `47 4 * * 1` (UTC)
+  - 수동 실행: `workflow_dispatch`
+- 업데이트 대상:
+  - `model-rankings.json`
+  - `model-support.json` (OpenCode 지원 모델 맵)
+- 변경사항이 있으면 `chore/model-catalog-sync` 브랜치 PR을 생성/업데이트합니다.
+- 신규 모델 tier가 미해결이면 PR에 `needs-tier-review` 라벨이 붙습니다.
+
+워크플로에서 사용하는 저장소 시크릿:
+
+- `NVIDIA_API_KEY`
+- `OPENROUTER_API_KEY`
+- `ARTIFICIAL_ANALYSIS_API_KEY`
+
+로컬 동기화 명령:
+
+```bash
+npm run models:sync
+npm run models:sync:apply
 ```
 
 ## 개발 노트

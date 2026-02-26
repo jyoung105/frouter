@@ -135,6 +135,10 @@ After pressing `Enter` on a model:
 | `S`           | Write config only (no launch)      |
 | `ESC`         | Cancel                             |
 
+If OpenCode fallback remaps the provider (for example NIM Stepfun → OpenRouter)
+and the effective provider key is missing, frouter asks:
+`Launch opencode anyway? (Y/n, default: n)`.
+
 Configs written:
 
 - **OpenCode CLI** → `~/.config/opencode/opencode.json`
@@ -230,6 +234,34 @@ npm run typecheck
 # optional perf workflow
 npm run perf:baseline
 npm run test:perf
+```
+
+## Model catalog auto-sync (GitHub Actions)
+
+`frouter` includes a scheduled workflow to keep model metadata current:
+
+- Workflow: `.github/workflows/model-catalog-sync.yml`
+- Triggers:
+  - Daily: `17 3 * * *` (UTC)
+  - Weekly AA refresh: `47 4 * * 1` (UTC)
+  - Manual: `workflow_dispatch`
+- Updates:
+  - `model-rankings.json`
+  - `model-support.json` (OpenCode support map)
+- If changes exist, it opens/updates a PR on `chore/model-catalog-sync`.
+- If unresolved new-model tiers remain, PR gets `needs-tier-review`.
+
+Repository secrets used by this workflow:
+
+- `NVIDIA_API_KEY`
+- `OPENROUTER_API_KEY`
+- `ARTIFICIAL_ANALYSIS_API_KEY`
+
+Local sync commands:
+
+```bash
+npm run models:sync
+npm run models:sync:apply
 ```
 
 ## Development notes

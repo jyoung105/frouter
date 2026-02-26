@@ -8,7 +8,7 @@
   "type": "module",
   "packageManager": "bun@1.3.5",
   "scripts": {
-    "build": "tsc -p tsconfig.json && cp model-rankings.json dist/model-rankings.json",
+    "build": "tsc -p tsconfig.json && cp model-rankings.json model-support.json dist/",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint src --ext .ts --max-warnings=0",
     "lint:fix": "eslint src --ext .ts --fix",
@@ -16,6 +16,8 @@
     "test": "node --test dist/tests/unit/*.test.js dist/tests/integration/*.test.js dist/tests/security/*.test.js",
     "test:perf": "npm run build && node --test dist/tests/perf/*.perf.test.js",
     "perf:baseline": "npm run build && node dist/tests/perf/collect-baseline.js",
+    "models:sync": "npx tsx scripts/update-models.ts",
+    "models:sync:apply": "npx tsx scripts/update-models.ts --apply",
     "test:onboarding": "node --test dist/tests/integration/onboarding.test.js",
     "test:fresh-start": "npm run build && bash ./scripts/frouter-fresh-start.sh",
     "prepack": "npm run build"
@@ -27,6 +29,7 @@
     "dist/bin/",
     "dist/lib/",
     "dist/model-rankings.json",
+    "dist/model-support.json",
     "scripts/frouter-fresh-start.sh"
   ],
   "repository": {

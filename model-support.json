@@ -1,0 +1,8 @@
+{
+  "source": "https://models.dev/api.json",
+  "updated_at": "",
+  "providers": {
+    "nvidia": [],
+    "openrouter": []
+  }
+}

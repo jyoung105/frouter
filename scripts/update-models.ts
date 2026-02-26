@@ -103,7 +103,11 @@ function readFlagValue(flag: string): string | null {
 function fetchJson(
   hostname: string,
   path: string,
-  options: { apiKey?: string | null; headers?: Record<string, string>; raw?: boolean } = {},
+  options: {
+    apiKey?: string | null;
+    headers?: Record<string, string>;
+    raw?: boolean;
+  } = {},
 ): Promise<any> {
   return new Promise((resolve, reject) => {
     const headers: Record<string, string> = {
@@ -178,18 +182,20 @@ function normalizeModelId(id: string): string {
 }
 
 function toSlugKey(id: string): string {
-  return normalizeModelId(id)
-    .split("/")
-    .pop()
-    ?.toLowerCase()
-    .replace(/[._]/g, "-")
-    .replace(
-      /-(instruct|it|fp8|preview|turbo|versatile|2507|2512|2506|v\d+[\d.]*|a\d+b).*$/,
-      "",
-    )
-    .replace(/[^a-z0-9-]/g, "-")
-    .replace(/-+/g, "-")
-    .replace(/^-|-$/g, "") || "";
+  return (
+    normalizeModelId(id)
+      .split("/")
+      .pop()
+      ?.toLowerCase()
+      .replace(/[._]/g, "-")
+      .replace(
+        /-(instruct|it|fp8|preview|turbo|versatile|2507|2512|2506|v\d+[\d.]*|a\d+b).*$/,
+        "",
+      )
+      .replace(/[^a-z0-9-]/g, "-")
+      .replace(/-+/g, "-")
+      .replace(/^-|-$/g, "") || ""
+  );
 }
 
 function normalizeSearchKey(value: string): string {
@@ -203,11 +209,13 @@ function normalizeSearchKey(value: string): string {
 }
 
 function titleFromModelId(id: string): string {
-  return id
-    .split("/")
-    .pop()
-    ?.replace(/-/g, " ")
-    .replace(/\b\w/g, (c) => c.toUpperCase()) || id;
+  return (
+    id
+      .split("/")
+      .pop()
+      ?.replace(/-/g, " ")
+      .replace(/\b\w/g, (c) => c.toUpperCase()) || id
+  );
 }
 
 function formatContext(context: number | null | undefined): string {
@@ -267,9 +275,7 @@ function parseNumberOrNull(value: unknown): number | null {
 function normalizeTier(value: unknown): string | null {
   if (typeof value !== "string") return null;
   const v = value.toUpperCase().trim();
-  return ["S+", "S", "A+", "A", "A-", "B+", "B", "C"].includes(v)
-    ? v
-    : null;
+  return ["S+", "S", "A+", "A", "A-", "B+", "B", "C"].includes(v) ? v : null;
 }
 
 function deriveTier(meta: AAMeta | null, fallbackSwe: string | null): string {
@@ -450,7 +456,8 @@ function loadExistingSupportFile() {
 
   try {
     const parsed = JSON.parse(readFileSync(SUPPORT_PATH, "utf8"));
-    for (const id of parsed?.providers?.nvidia || []) addSupportId(out, "nvidia", id);
+    for (const id of parsed?.providers?.nvidia || [])
+      addSupportId(out, "nvidia", id);
     for (const id of parsed?.providers?.openrouter || [])
       addSupportId(out, "openrouter", id);
   } catch {
@@ -482,7 +489,10 @@ function isOpenCodeSupported(
   return false;
 }
 
-function writeSupportFile(support: ReturnType<typeof emptySupportSets>, fetchedFromGithub: boolean) {
+function writeSupportFile(
+  support: ReturnType<typeof emptySupportSets>,
+  fetchedFromGithub: boolean,
+) {
   const next = {
     source: fetchedFromGithub
       ? "https://github.com/opencode-ai/opencode/blob/main/internal/llm/models/"
@@ -522,7 +532,10 @@ function firstString(...values: unknown[]): string {
 function toAAMeta(row: any): AAMeta | null {
   const slug = firstString(row?.aa_slug, row?.slug, row?.model_slug, row?.id);
   const sweRawValue =
-    row?.swe_bench ?? row?.sweBench ?? row?.swe_bench_verified ?? row?.sweBenchVerified;
+    row?.swe_bench ??
+    row?.sweBench ??
+    row?.swe_bench_verified ??
+    row?.sweBenchVerified;
   const sweNum = parsePercentToNumber(sweRawValue);
   const swe = sweNum == null ? null : `${sweNum}%`;
 
@@ -730,7 +743,9 @@ async function main() {
   }
 
   if (!report.providers.artificial_analysis.fetched) {
-    console.log("  AA fetch unavailable; continuing with existing ranking metadata\n");
+    console.log(
+      "  AA fetch unavailable; continuing with existing ranking metadata\n",
+    );
   }
 
   // ── OpenCode support fetch (from OpenCode GitHub source) ─────────────────
@@ -765,7 +780,9 @@ async function main() {
       if (hasSupportData(parsed)) {
         support = parsed;
         supportFetched = true;
-        console.log("  (used models.dev fallback — may include non-OpenCode models)");
+        console.log(
+          "  (used models.dev fallback — may include non-OpenCode models)",
+        );
       }
     }
 
@@ -774,7 +791,9 @@ async function main() {
     );
   } catch (err: any) {
     console.log(`  Failed to fetch OpenCode source: ${err.message}`);
-    console.log("  Falling back to existing model-support.json (if present).\n");
+    console.log(
+      "  Falling back to existing model-support.json (if present).\n",
+    );
   }
 
   report.providers.opencode = {
@@ -994,7 +1013,11 @@ async function main() {
       if (entry.source !== "nim" && entry.source !== "openrouter") continue;
 
       const provider = entry.source === "nim" ? "nvidia" : "openrouter";
-      const supportState = isOpenCodeSupported(provider, entry.model_id, support);
+      const supportState = isOpenCodeSupported(
+        provider,
+        entry.model_id,
+        support,
+      );
       if (supportState !== null && entry.opencode_supported !== supportState) {
         entry.opencode_supported = supportState;
         changed = true;
@@ -1036,7 +1059,9 @@ async function main() {
       rankingsById.set(entry.model_id, entry);
       rankingsById.set(normalizeModelId(entry.model_id), entry);
 
-      console.log(`  Added NIM ranking: ${entry.model_id} [tier: ${entry.tier}]`);
+      console.log(
+        `  Added NIM ranking: ${entry.model_id} [tier: ${entry.tier}]`,
+      );
       changed = true;
       report.providers.nim.added_rankings += 1;
     }
@@ -1068,7 +1093,8 @@ async function main() {
         aa_intelligence:
           aaHit?.aa_intelligence ?? nimTwin?.aa_intelligence ?? null,
         aa_speed_tps: aaHit?.aa_speed_tps ?? nimTwin?.aa_speed_tps ?? null,
-        aa_price_input: aaHit?.aa_price_input ?? nimTwin?.aa_price_input ?? null,
+        aa_price_input:
+          aaHit?.aa_price_input ?? nimTwin?.aa_price_input ?? null,
         aa_price_output:
           aaHit?.aa_price_output ?? nimTwin?.aa_price_output ?? null,
         aa_context: aaHit?.aa_context || nimTwin?.aa_context || "",
@@ -1079,7 +1105,9 @@ async function main() {
       rankingsById.set(entry.model_id, entry);
       rankingsById.set(normalizeModelId(entry.model_id), entry);
 
-      console.log(`  Added OpenRouter ranking: ${entry.model_id} [tier: ${entry.tier}]`);
+      console.log(
+        `  Added OpenRouter ranking: ${entry.model_id} [tier: ${entry.tier}]`,
+      );
       changed = true;
       report.providers.openrouter.added_rankings += 1;
     }
@@ -1101,7 +1129,9 @@ async function main() {
     console.log("\n(dry run — pass --apply to write changes)");
   }
 
-  report.rankings.unresolved_tier_models = [...new Set(unresolvedTierModels)].sort();
+  report.rankings.unresolved_tier_models = [
+    ...new Set(unresolvedTierModels),
+  ].sort();
 
   if (REPORT_PATH) {
     writeFileSync(REPORT_PATH, JSON.stringify(report, null, 2) + "\n");

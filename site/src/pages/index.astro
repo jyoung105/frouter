@@ -1,5 +1,19 @@
 ---
 import Layout from '../layouts/Layout.astro';
+import rankings from '../../../model-rankings.json';
+
+const models = rankings.models.map((m: any) => ({
+  id: m.model_id,
+  name: m.name,
+  source: m.source,
+  tier: m.tier,
+  swe: m.swe_bench,
+  context: m.context,
+  intel: m.aa_intelligence,
+  speed: m.aa_speed_tps,
+}));
+
+const tiers = ['All', 'S+', 'S', 'A+', 'A', 'A-', 'B+', 'B', 'C'];
 ---
 
 <Layout title="frouter — free model router">
@@ -84,7 +98,66 @@ import Layout from '../layouts/Layout.astro';
         </div>
       </div>
     </div>
+
+    <div class="model-explorer">
+      <div class="explorer-header">
+        <div class="line prompt">
+          <span class="ps1">$</span> frouter --models
+        </div>
+        <div class="provider-status">
+          <span class="status-item">
+            <span class="status-dot" id="nim-status"></span>
+            <span class="status-label">NVIDIA NIM</span>
+            <span class="status-ping dim" id="nim-ping">pinging...</span>
+          </span>
+          <span class="status-item">
+            <span class="status-dot" id="or-status"></span>
+            <span class="status-label">OpenRouter</span>
+            <span class="status-ping dim" id="or-ping">pinging...</span>
+          </span>
+        </div>
+      </div>
+
+      <div class="search-bar">
+        <span class="search-icon">/</span>
+        <input
+          type="text"
+          id="model-search"
+          placeholder="Search models..."
+          autocomplete="off"
+          spellcheck="false"
+        />
+        <span class="model-count dim" id="model-count"></span>
+      </div>
+
+      <div class="tier-filters" id="tier-filters">
+        {tiers.map((t) => (
+          <button class={`tier-btn ${t === 'All' ? 'active' : ''}`} data-tier={t}>
+            {t}
+          </button>
+        ))}
+      </div>
+
+      <div class="model-table-wrap">
+        <table class="model-table">
+          <thead>
+            <tr>
+              <th class="col-tier">Tier</th>
+              <th class="col-provider">Src</th>
+              <th class="col-name">Model</th>
+              <th class="col-ctx">Ctx</th>
+              <th class="col-swe">SWE</th>
+              <th class="col-intel">IQ</th>
+              <th class="col-speed">TPS</th>
+            </tr>
+          </thead>
+          <tbody id="model-tbody">
+          </tbody>
+        </table>
+      </div>
+    </div>
   </main>
+  <script type="application/json" id="model-data" set:html={JSON.stringify(models)} />
 </Layout>
 
 <style>
@@ -259,6 +332,192 @@ import Layout from '../layouts/Layout.astro';
     50% { opacity: 0; }
   }
 
+  /* ─── Model Explorer ──────────────────────────────────────── */
+
+  .model-explorer {
+    margin-top: 1.5rem;
+    border: 1px solid #1a1a1a;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #0d0d0d;
+    box-shadow: 0 0 40px rgba(0, 255, 65, 0.05);
+  }
+
+  .explorer-header {
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid #1a1a1a;
+    background: #151515;
+  }
+
+  .provider-status {
+    display: flex;
+    gap: 1.5rem;
+    margin-top: 0.5rem;
+    padding-left: 1.5em;
+  }
+
+  .status-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5em;
+    font-size: 0.8rem;
+  }
+
+  .status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #555;
+    transition: background 0.3s;
+  }
+
+  .status-dot.up { background: #28c840; box-shadow: 0 0 6px #28c840; }
+  .status-dot.down { background: #ff5f57; box-shadow: 0 0 6px #ff5f57; }
+  .status-dot.slow { background: #febc2e; box-shadow: 0 0 6px #febc2e; }
+
+  .status-label { color: #e0e0e0; }
+  .status-ping { font-size: 0.75rem; }
+
+  .search-bar {
+    display: flex;
+    align-items: center;
+    padding: 0.6rem 1.5rem;
+    border-bottom: 1px solid #1a1a1a;
+    gap: 0.5em;
+  }
+
+  .search-icon {
+    color: #888;
+    font-weight: 700;
+  }
+
+  #model-search {
+    flex: 1;
+    background: none;
+    border: none;
+    color: #00ff41;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85rem;
+    outline: none;
+    caret-color: #00ff41;
+  }
+
+  #model-search::placeholder {
+    color: #333;
+  }
+
+  .model-count {
+    font-size: 0.75rem;
+    white-space: nowrap;
+  }
+
+  .tier-filters {
+    display: flex;
+    gap: 0.3rem;
+    padding: 0.5rem 1.5rem;
+    border-bottom: 1px solid #1a1a1a;
+    flex-wrap: wrap;
+  }
+
+  .tier-btn {
+    background: none;
+    border: 1px solid #222;
+    color: #555;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    padding: 0.15em 0.6em;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .tier-btn:hover {
+    color: #00ff41;
+    border-color: #00ff41;
+  }
+
+  .tier-btn.active {
+    color: #0a0a0a;
+    background: #00ff41;
+    border-color: #00ff41;
+    font-weight: 700;
+  }
+
+  .model-table-wrap {
+    max-height: 420px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: #1a1a1a #0d0d0d;
+  }
+
+  .model-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.78rem;
+    table-layout: fixed;
+  }
+
+  .model-table thead {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+  }
+
+  .model-table th {
+    background: #151515;
+    color: #888;
+    font-weight: 700;
+    text-align: left;
+    padding: 0.4rem 0.5rem;
+    border-bottom: 1px solid #1a1a1a;
+    white-space: nowrap;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .model-table td {
+    padding: 0.35rem 0.5rem;
+    border-bottom: 1px solid #111;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: #ccc;
+  }
+
+  .model-table tr:hover td {
+    background: #151515;
+  }
+
+  .col-tier { width: 40px; }
+  .col-provider { width: 42px; }
+  .col-name { width: auto; }
+  .col-ctx { width: 48px; text-align: right; }
+  .col-swe { width: 48px; text-align: right; }
+  .col-intel { width: 36px; text-align: right; }
+  .col-speed { width: 48px; text-align: right; }
+
+  .td-tier { font-weight: 700; }
+  .tier-sp { color: #ff6b6b; }
+  .tier-s { color: #ffa94d; }
+  .tier-ap { color: #ffd43b; }
+  .tier-a { color: #69db7c; }
+  .tier-am { color: #38d9a9; }
+  .tier-bp { color: #4dabf7; }
+  .tier-b { color: #748ffc; }
+  .tier-c { color: #555; }
+
+  .td-src { color: #888; font-size: 0.7rem; }
+  .td-name { color: #e0e0e0; }
+  .td-ctx, .td-swe, .td-intel, .td-speed { color: #888; text-align: right; }
+  .td-swe { color: #69db7c; }
+
+  .no-results {
+    text-align: center;
+    padding: 2rem;
+    color: #555;
+  }
+
   @media (max-width: 500px) {
     .body {
       padding: 1rem;
@@ -267,6 +526,30 @@ import Layout from '../layouts/Layout.astro';
 
     .provider {
       min-width: 110px;
+    }
+
+    .provider-status {
+      flex-direction: column;
+      gap: 0.3rem;
+    }
+
+    .explorer-header,
+    .search-bar,
+    .tier-filters {
+      padding-left: 1rem;
+      padding-right: 1rem;
+    }
+
+    .model-table {
+      font-size: 0.7rem;
+    }
+
+    .col-intel, .col-speed {
+      display: none;
+    }
+
+    .td-intel, .td-speed {
+      display: none;
     }
   }
 </style>
@@ -299,6 +582,114 @@ import Layout from '../layouts/Layout.astro';
 
   run();
 
+  // ─── Model Explorer ──────────────────────────────────────────────────────
+  const MODELS: Array<{
+    id: string; name: string; source: string; tier: string;
+    swe: string; context: string; intel: number | null; speed: number | null;
+  }> = JSON.parse(document.getElementById('model-data')!.textContent!);
+
+  const TIER_CLASS: Record<string, string> = {
+    'S+': 'tier-sp', S: 'tier-s', 'A+': 'tier-ap', A: 'tier-a',
+    'A-': 'tier-am', 'B+': 'tier-bp', B: 'tier-b', C: 'tier-c',
+  };
+
+  const tbody = document.getElementById('model-tbody')!;
+  const searchInput = document.getElementById('model-search') as HTMLInputElement;
+  const countEl = document.getElementById('model-count')!;
+  let activeTier = 'All';
+  let query = '';
+
+  function renderModels() {
+    const q = query.toLowerCase();
+    const filtered = MODELS.filter((m) => {
+      if (activeTier !== 'All' && m.tier !== activeTier) return false;
+      if (q && !m.id.toLowerCase().includes(q) &&
+          !m.name.toLowerCase().includes(q) &&
+          !m.source.toLowerCase().includes(q) &&
+          !m.tier.toLowerCase().includes(q)) return false;
+      return true;
+    });
+
+    countEl.textContent = `${filtered.length}/${MODELS.length}`;
+
+    if (filtered.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="7" class="no-results">No models found</td></tr>';
+      return;
+    }
+
+    const html = filtered.map((m) => {
+      const tierCls = TIER_CLASS[m.tier] || '';
+      const srcLabel = m.source === 'nim' ? 'NIM' : 'OR';
+      return `<tr>
+        <td class="td-tier ${tierCls}">${m.tier}</td>
+        <td class="td-src">${srcLabel}</td>
+        <td class="td-name" title="${m.id}">${m.name}</td>
+        <td class="td-ctx">${m.context}</td>
+        <td class="td-swe">${m.swe || '—'}</td>
+        <td class="td-intel">${m.intel ?? '—'}</td>
+        <td class="td-speed">${m.speed ? m.speed.toFixed(0) : '—'}</td>
+      </tr>`;
+    }).join('');
+    tbody.innerHTML = html;
+  }
+
+  searchInput.addEventListener('input', () => {
+    query = searchInput.value;
+    renderModels();
+  });
+
+  document.getElementById('tier-filters')!.addEventListener('click', (e) => {
+    const btn = (e.target as HTMLElement).closest('.tier-btn') as HTMLElement | null;
+    if (!btn) return;
+    activeTier = btn.dataset.tier || 'All';
+    document.querySelectorAll('.tier-btn').forEach((b) => b.classList.remove('active'));
+    btn.classList.add('active');
+    renderModels();
+  });
+
+  // Initial render
+  renderModels();
+
+  // ─── Provider Pings ────────────────────────────────────────────────────────
+  async function pingProvider(
+    url: string,
+    dotEl: HTMLElement,
+    pingEl: HTMLElement,
+  ) {
+    const t0 = performance.now();
+    try {
+      const res = await fetch(url, { method: 'GET', mode: 'cors' });
+      const ms = Math.round(performance.now() - t0);
+      if (res.ok) {
+        dotEl.className = 'status-dot up';
+        pingEl.textContent = `${ms}ms`;
+        pingEl.style.color = ms < 500 ? '#28c840' : ms < 1500 ? '#febc2e' : '#ff5f57';
+      } else {
+        dotEl.className = 'status-dot slow';
+        pingEl.textContent = `${res.status} · ${ms}ms`;
+        pingEl.style.color = '#febc2e';
+      }
+    } catch {
+      const ms = Math.round(performance.now() - t0);
+      dotEl.className = 'status-dot down';
+      pingEl.textContent = ms > 5000 ? 'timeout' : 'unreachable';
+      pingEl.style.color = '#ff5f57';
+    }
+  }
+
+  // Ping both providers on load
+  pingProvider(
+    'https://integrate.api.nvidia.com/v1/models',
+    document.getElementById('nim-status')!,
+    document.getElementById('nim-ping')!,
+  );
+  pingProvider(
+    'https://openrouter.ai/api/v1/models',
+    document.getElementById('or-status')!,
+    document.getElementById('or-ping')!,
+  );
+
+  // ─── Copy Buttons ──────────────────────────────────────────────────────────
   document.querySelectorAll('.copy-btn').forEach((btn) => {
     btn.addEventListener('click', async () => {
       const cmd = (btn as HTMLElement).dataset.cmd!;

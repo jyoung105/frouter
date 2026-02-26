@@ -274,3 +274,66 @@ exit 0
     }
   },
 );
+
+test(
+  "interactive target launch asks confirmation when fallback provider key is missing and declines launch on 'n'",
+  { skip: SKIP && "PTY harness uses `script`, unavailable on Windows" },
+  async () => {
+    const home = makeTempHome();
+    try {
+      writeHomeConfig(
+        home,
+        defaultConfig({
+          apiKeys: { nvidia: "nvapi-test" },
+          providers: {
+            nvidia: { enabled: true },
+            openrouter: { enabled: true },
+          },
+        }),
+      );
+
+      const fakeBin = join(home, "fake-bin");
+      const marker = join(home, "opencode-launched.log");
+      mkdirSync(fakeBin, { recursive: true });
+      writeFileSync(
+        join(fakeBin, "opencode"),
+        `#!/bin/sh
+echo "launched" >> "${marker}"
+exit 0
+`,
+        { mode: 0o755 },
+      );
+
+      const result = await runInPty(process.execPath, [BIN_PATH], {
+        cwd: ROOT_DIR,
+        env: {
+          HOME: home,
+          PATH: `${fakeBin}:${process.env.PATH ?? ""}`,
+          FROUTER_NO_FETCH: "1",
+          NVIDIA_API_KEY: "",
+          OPENROUTER_API_KEY: "",
+        },
+        inputChunks: [
+          { delayMs: 900, data: "\x1b[B".repeat(9) }, // select stepfun-ai/step-3.5-flash
+          { delayMs: 1200, data: "\r" }, // model -> target screen
+          { delayMs: 1450, data: "\r" }, // attempt launch
+          { delayMs: 1750, data: "n" }, // decline missing-key confirmation
+          { delayMs: 2400, data: "q" }, // back to main
+          { delayMs: 2700, data: "q" }, // quit app
+        ],
+        timeoutMs: 15_000,
+      });
+
+      assert.equal(result.timedOut, false);
+      assert.equal(result.code, 0);
+      assert.equal(existsSync(marker), false);
+
+      const text = stripAnsi(result.stdout);
+      assert.match(text, /Missing OpenRouter API key \(OPENROUTER_API_KEY\)/);
+      assert.match(text, /Launch opencode anyway\? \(Y\/n, default: n\)/);
+      assert.match(text, /Launch cancelled\. Set OPENROUTER_API_KEY in Settings \(P\)/);
+    } finally {
+      cleanupTempHome(home);
+    }
+  },
+);

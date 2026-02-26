@@ -21,6 +21,7 @@ import {
 } from "../lib/ping.js";
 import {
   writeOpenCode,
+  resolveOpenCodeSelection,
   isOpenCodeInstalled,
   detectAvailableInstallers,
   installOpenCode,
@@ -575,19 +576,29 @@ function enterTargetPickerFromSelection() {
 
 function resolveOpenCodeApplySelection(selectedModel) {
   const pk = selectedModel.providerKey;
-  const apiKey = getApiKey(config, pk);
+  const resolved = resolveOpenCodeSelection(selectedModel, pk, models);
+  const apiKey = getApiKey(config, resolved.providerKey);
+  const notice =
+    resolved.fallback &&
+    (resolved.providerKey !== pk || resolved.model?.id !== selectedModel.id)
+      ? `${YELLOW} ! OpenCode fallback: ${pk}/${selectedModel.id} → ${resolved.providerKey}/${resolved.model.id}${R}`
+      : "";
   return {
-    openCodeModel: selectedModel,
-    openCodePk: pk,
+    openCodeModel: resolved.model,
+    openCodePk: resolved.providerKey,
     openCodeApiKey: apiKey,
-    notice: "",
+    notice,
   };
 }
 
 function getOpenCodeAuthHint(providerKey, apiKey, { launch = false } = {}) {
-  if (launch || !apiKey || ALLOW_PLAINTEXT_KEY_EXPORT) return "";
   const envVar = PROVIDERS_META[providerKey]?.envVar;
-  if (!envVar || process.env[envVar]) return "";
+  if (!envVar || ALLOW_PLAINTEXT_KEY_EXPORT) return "";
+  if (!apiKey) {
+    if (launch) return "";
+    return `${YELLOW} ! OpenCode auth missing: ${envVar}. Configure key in Settings (P) before launching.${R}`;
+  }
+  if (launch || process.env[envVar]) return "";
   return `${YELLOW} ! OpenCode auth uses ${envVar}. Export it before launching opencode outside frouter.${R}`;
 }
 
@@ -598,6 +609,15 @@ function buildOpenCodeLaunchEnv(providerKey, apiKey) {
     launchEnv[envVar] = apiKey;
   }
   return launchEnv;
+}
+
+async function promptYesNoFromTarget(question: string): Promise<boolean> {
+  process.stdin.removeListener("data", onData);
+  try {
+    return await promptYesNo(question);
+  } finally {
+    process.stdin.on("data", onData);
+  }
 }
 
 async function promptInstallOpenCode() {
@@ -919,6 +939,25 @@ async function handleTarget(ch) {
     }
 
     const launch = !(ch === "s" || ch === "S");
+    const { openCodeModel, openCodePk, openCodeApiKey, notice } =
+      resolveOpenCodeApplySelection(selModel);
+
+    if (launch && !openCodeApiKey) {
+      const meta = PROVIDERS_META[openCodePk];
+      const envVar = meta?.envVar || "API key";
+
+      w(`\n${YELLOW} ! Missing ${meta?.name || openCodePk} API key (${envVar}).${R}\n`);
+      if (notice) w(`${notice}\n`);
+
+      const proceed = await promptYesNoFromTarget(
+        `${D}   Launch opencode anyway? (Y/n, default: n): ${R}`,
+      );
+      if (!proceed) {
+        tNotice = `${YELLOW} Launch cancelled. Set ${envVar} in Settings (P), then retry.${R}`;
+        render();
+        return;
+      }
+    }
 
     if (launch && !isOpenCodeInstalled()) {
       cleanup();
@@ -927,9 +966,6 @@ async function handleTarget(ch) {
         process.exit(0);
       }
     }
-
-    const { openCodeModel, openCodePk, openCodeApiKey, notice } =
-      resolveOpenCodeApplySelection(selModel);
 
     try {
       if (notice) w(`\n${notice}\n`);

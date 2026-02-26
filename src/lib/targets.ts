@@ -156,6 +156,46 @@ function openCodeProviderBlock(providerKey, apiKey) {
   };
 }
 
+const OPENCODE_PROVIDER_FALLBACKS: Record<
+  string,
+  { providerKey: string; modelId: string }
+> = {
+  // models.dev currently lists Stepfun 3.5 Flash under OpenRouter, not NVIDIA.
+  "nvidia:stepfun-ai/step-3.5-flash": {
+    providerKey: "openrouter",
+    modelId: "stepfun/step-3.5-flash:free",
+  },
+};
+
+function assertOpenCodeCompatible(model) {
+  if (model?.opencodeSupported === false) {
+    throw new Error(
+      `Model \"${model.id}\" is not marked as OpenCode-supported. Pick another model or refresh model metadata.`,
+    );
+  }
+}
+
+function modelTail(id: string): string {
+  return id.replace(/:free$/i, "").split("/").pop()?.toLowerCase() || "";
+}
+
+function findFallbackModel(
+  allModels: any[],
+  providerKey: string,
+  modelId: string,
+): any | null {
+  if (!Array.isArray(allModels) || !allModels.length) return null;
+  return (
+    allModels.find((m) => m?.providerKey === providerKey && m?.id === modelId) ||
+    allModels.find(
+      (m) =>
+        m?.providerKey === providerKey &&
+        modelTail(m?.id || "") === modelTail(modelId),
+    ) ||
+    null
+  );
+}
+
 // ─── OpenCode ────────────────────────────────────────────────────────────────
 
 /**
@@ -163,6 +203,7 @@ function openCodeProviderBlock(providerKey, apiKey) {
  * Preserves all existing keys (other providers, plugins, etc.).
  */
 export function writeOpenCode(model, providerKey, apiKey = null, options = {}) {
+  assertOpenCodeCompatible(model);
   const persistedApiKey = resolvePersistedApiKey(providerKey, apiKey, options);
   const currentCfg = readOpenCodeConfig();
   const nextCfg = {
@@ -190,7 +231,31 @@ export function writeOpenCode(model, providerKey, apiKey = null, options = {}) {
  * a model from NIM (or any provider), that exact provider/model is used.
  */
 export function resolveOpenCodeSelection(model, providerKey, _allModels = []) {
-  return { model, providerKey, fallback: false };
+  const fallbackRule = OPENCODE_PROVIDER_FALLBACKS[`${providerKey}:${model?.id}`];
+  if (!fallbackRule) return { model, providerKey, fallback: false };
+
+  const fallbackModel = findFallbackModel(
+    _allModels,
+    fallbackRule.providerKey,
+    fallbackRule.modelId,
+  );
+  if (!fallbackModel) {
+    return {
+      model: {
+        ...model,
+        id: fallbackRule.modelId,
+        providerKey: fallbackRule.providerKey,
+      },
+      providerKey: fallbackRule.providerKey,
+      fallback: true,
+    };
+  }
+
+  return {
+    model: fallbackModel,
+    providerKey: fallbackRule.providerKey,
+    fallback: true,
+  };
 }
 
 // ─── OpenClaw ────────────────────────────────────────────────────────────────

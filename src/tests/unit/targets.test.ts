@@ -161,7 +161,7 @@ test("resolveOpenCodeSelection keeps original model without oh-my-opencode plugi
   });
 });
 
-test("resolveOpenCodeSelection preserves NIM Stepfun model (no silent swap to OpenRouter)", async () => {
+test("resolveOpenCodeSelection remaps NIM Stepfun model to OpenRouter for OpenCode compatibility", async () => {
   await withTempTargetsModule(async ({ resolveOpenCodeSelection, home }) => {
     const configPath = join(home, ".config", "opencode", "opencode.json");
     mkdirSync(dirname(configPath), { recursive: true });
@@ -180,9 +180,9 @@ test("resolveOpenCodeSelection preserves NIM Stepfun model (no silent swap to Op
     ];
 
     const resolved = resolveOpenCodeSelection(selected, "nvidia", allModels);
-    assert.equal(resolved.fallback, false);
-    assert.equal(resolved.providerKey, "nvidia");
-    assert.equal(resolved.model.id, "stepfun-ai/step-3.5-flash");
+    assert.equal(resolved.fallback, true);
+    assert.equal(resolved.providerKey, "openrouter");
+    assert.equal(resolved.model.id, "stepfun/step-3.5-flash:free");
   });
 });
 
@@ -206,6 +206,21 @@ test("resolveOpenCodeSelection preserves OpenRouter selection as-is", async () =
     assert.equal(resolved.fallback, false);
     assert.equal(resolved.providerKey, "openrouter");
     assert.equal(resolved.model.id, "meta-llama/llama-3.2-3b-instruct:free");
+  });
+});
+
+test("resolveOpenCodeSelection still remaps when fallback model is unavailable in loaded catalog", async () => {
+  await withTempTargetsModule(async ({ resolveOpenCodeSelection }) => {
+    const selected = {
+      id: "stepfun-ai/step-3.5-flash",
+      providerKey: "nvidia",
+    };
+    const allModels = [selected];
+
+    const resolved = resolveOpenCodeSelection(selected, "nvidia", allModels);
+    assert.equal(resolved.fallback, true);
+    assert.equal(resolved.providerKey, "openrouter");
+    assert.equal(resolved.model.id, "stepfun/step-3.5-flash:free");
   });
 });
 
@@ -263,6 +278,19 @@ test("writeOpenClaw does not create env key when API key is missing", async () =
 
     const cfg = JSON.parse(readFileSync(configPath, "utf8"));
     assert.equal(cfg.env?.NVIDIA_API_KEY, undefined);
+  });
+});
+
+test("writeOpenCode rejects models explicitly marked unsupported by OpenCode", async () => {
+  await withTempTargetsModule(async ({ writeOpenCode }) => {
+    assert.throws(
+      () =>
+        writeOpenCode(
+          { id: "some/provider-model", opencodeSupported: false },
+          "nvidia",
+        ),
+      /not marked as OpenCode-supported/i,
+    );
   });
 });
 

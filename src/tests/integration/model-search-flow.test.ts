@@ -176,6 +176,54 @@ test(
 );
 
 test(
+  "startup layout keeps headers visible when PTY reports unknown size",
+  { skip: SKIP && "PTY harness uses `script`, unavailable on Windows" },
+  async () => {
+    const home = makeTempHome();
+    try {
+      writeHomeConfig(
+        home,
+        defaultConfig({
+          apiKeys: { nvidia: "nvapi-test" },
+          providers: {
+            nvidia: { enabled: true },
+            openrouter: { enabled: false },
+          },
+        }),
+      );
+
+      const result = await runInPty(process.execPath, [BIN_PATH], {
+        cwd: ROOT_DIR,
+        env: { HOME: home, FROUTER_NO_FETCH: "1" },
+        inputChunks: [{ delayMs: 900, data: "q" }],
+        timeoutMs: 12_000,
+      });
+
+      assert.equal(result.timedOut, false);
+      assert.equal(result.code, 0);
+
+      const frame = getLatestFrame(result.stdout, "[Model Search]");
+      assert.ok(frame, "expected a rendered main screen frame");
+      const lines = frame.split("\n").filter((line) => line !== "");
+
+      assert.match(lines[0] || "", /\bfrouter\b/i);
+      assert.match(lines[1] || "", /\[Model Search\]/);
+      assert.match(lines[2] || "", /#\s+Tier\s+Provider\s+Model/);
+      assert.ok(
+        lines.some((line) => line.includes("↑↓/jk:nav")),
+        "expected footer to remain visible",
+      );
+      assert.ok(
+        lines.length <= 26,
+        `expected compact viewport fallback (<=26 lines), got ${lines.length}`,
+      );
+    } finally {
+      cleanupTempHome(home);
+    }
+  },
+);
+
+test(
   "pressing Enter in search mode applies selected model to OpenCode only",
   { skip: SKIP && "PTY harness uses `script`, unavailable on Windows" },
   async () => {

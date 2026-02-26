@@ -1,0 +1,85 @@
+name: "Bug report"
+description: "Report a defect in frouter CLI or site"
+title: "fix: "
+labels: ["bug", "triage"]
+body:
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Affected scope
+      options:
+        - frouter CLI
+        - site
+        - both
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Version(s)
+      description: "Example: cli 1.1.5 / site 0.1.0"
+      placeholder: "cli x.y.z / site a.b.c"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: semver
+    attributes:
+      label: Expected SemVer impact
+      options:
+        - patch (bug fix)
+        - minor (backward-compatible feature-level fix)
+        - major (breaking behavior)
+    validations:
+      required: true
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What is broken?
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Reproduction steps
+      description: Provide exact steps to reproduce.
+      placeholder: |
+        1. ...
+        2. ...
+        3. ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: Logs / screenshots / context
+      description: Optional but recommended
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      options:
+        - label: I confirmed this issue still exists on the latest `dev` branch.
+          required: true
+        - label: I included enough detail to reproduce this consistently.
+          required: true

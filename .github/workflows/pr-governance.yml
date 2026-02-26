@@ -1,0 +1,62 @@
+name: PR Governance
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  governance:
+    name: Branch + PR policy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate branch flow
+        if: github.actor != 'github-actions[bot]' && github.actor != 'dependabot[bot]'
+        env:
+          BASE: ${{ github.event.pull_request.base.ref }}
+          HEAD: ${{ github.event.pull_request.head.ref }}
+        run: |
+          set -euo pipefail
+
+          echo "Validating branch flow: ${HEAD} -> ${BASE}"
+
+          if [[ "$BASE" == "main" ]]; then
+            if [[ ! "$HEAD" =~ ^(release|hotfix)/ ]]; then
+              echo "PRs to main must come from release/* or hotfix/* branches."
+              exit 1
+            fi
+          elif [[ "$BASE" == "dev" ]]; then
+            if [[ "$HEAD" =~ ^(release|hotfix)/ ]]; then
+              echo "release/* and hotfix/* branches should target main, not dev."
+              exit 1
+            fi
+          else
+            echo "Only main and dev are allowed as PR base branches."
+            exit 1
+          fi
+
+      - name: Validate PR title (Conventional Commits)
+        if: github.actor != 'github-actions[bot]' && github.actor != 'dependabot[bot]'
+        env:
+          TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          set -euo pipefail
+          PATTERN='^(feat|fix|perf|refactor|docs|test|build|ci|chore|revert)(\([a-z0-9._/-]+\))?(!)?: .+'
+          if [[ ! "$TITLE" =~ $PATTERN ]]; then
+            echo "PR title must follow Conventional Commits (e.g., feat(cli): add provider filter)."
+            exit 1
+          fi
+
+      - name: Validate linked issue
+        if: github.actor != 'github-actions[bot]' && github.actor != 'dependabot[bot]'
+        env:
+          BODY: ${{ github.event.pull_request.body }}
+        run: |
+          set -euo pipefail
+          if ! grep -Eiq '(close[sd]?|fix(e[sd])?|resolve[sd]?)\s+#([0-9]+)' <<<"${BODY:-}"; then
+            echo "PR body must include a linked issue (e.g., Closes #123)."
+            exit 1
+          fi

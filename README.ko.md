@@ -237,6 +237,11 @@ npm run perf:baseline
 npm run test:perf
 ```
 
+## 엔지니어링 워크플로
+
+`dev`/`main` 브랜치 전략, SemVer 규칙, PR/이슈 정책, 릴리스 태그(`cli-v*`, `site-v*`)는
+[`docs/release-governance.md`](./docs/release-governance.md)에서 확인할 수 있습니다.
+
 ## 모델 카탈로그 자동 동기화 (GitHub Actions)
 
 `frouter`는 모델 메타데이터를 최신 상태로 유지하기 위한 스케줄 워크플로를 포함합니다.

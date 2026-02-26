@@ -1,110 +1,358 @@
 #!/usr/bin/env bash
-# release.sh — Bump version, commit, tag, and push for automated npm publish
+# release.sh — release helper for CLI and site with double-branch workflow.
 #
 # Usage:
-#   ./scripts/release.sh patch    # 1.1.0 → 1.1.1
-#   ./scripts/release.sh minor    # 1.1.0 → 1.2.0
-#   ./scripts/release.sh major    # 1.1.0 → 2.0.0
-#   ./scripts/release.sh 1.2.3    # explicit version
+#   # Prepare release commit on release/* branch
+#   ./scripts/release.sh prepare cli patch
+#   ./scripts/release.sh prepare site minor --push
 #
-# What it does:
-#   1. Bumps version in package.json
-#   2. Commits the version bump
-#   3. Creates a git tag (v1.2.3)
-#   4. Pushes commit + tag → triggers .github/workflows/release.yml
+#   # Shorthand (defaults to CLI prepare mode)
+#   ./scripts/release.sh patch
+#   ./scripts/release.sh minor --push
 #
-# Prerequisites:
-#   - Clean working tree (no uncommitted changes)
-#   - NPM_TOKEN secret configured in GitHub repo settings
+#   # Create release tags on main after release PR merge
+#   ./scripts/release.sh tag cli --push
+#   ./scripts/release.sh tag site --push
+#
+# Options:
+#   --push             Push prepared release branch (prepare) or tags (tag)
+#   --yes, -y          Non-interactive confirmation
+#   --legacy-cli-tag   Also create/push legacy CLI tag format: vX.Y.Z
 
 set -euo pipefail
 
-BUMP="${1:-}"
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "${ROOT_DIR}"
 
-if [ -z "$BUMP" ]; then
-  echo "Usage: ./scripts/release.sh <patch|minor|major|x.y.z>"
+ASSUME_YES=0
+PUSH=0
+LEGACY_CLI_TAG=0
+
+usage() {
+  cat <<'EOF'
+Usage:
+  ./scripts/release.sh prepare <cli|site> <major|minor|patch|x.y.z> [--push] [--yes]
+  ./scripts/release.sh tag <cli|site> [--push] [--yes] [--legacy-cli-tag]
+
+Shorthand:
+  ./scripts/release.sh <major|minor|patch|x.y.z> [--push] [--yes]
+  # Equivalent to: ./scripts/release.sh prepare cli <bump>
+
+Examples:
+  ./scripts/release.sh prepare cli patch --push
+  ./scripts/release.sh prepare site minor
+  ./scripts/release.sh patch --push
+  ./scripts/release.sh tag cli --push
+  ./scripts/release.sh tag site --push
+EOF
+}
+
+die() {
+  echo "Error: $*" >&2
   exit 1
-fi
+}
 
-# Ensure clean working tree
-if [ -n "$(git status --porcelain)" ]; then
-  echo "Error: Working tree is not clean. Commit or stash changes first."
-  exit 1
-fi
+is_semver() {
+  [[ "$1" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
+}
 
-# Ensure on main branch
-BRANCH=$(git branch --show-current)
-if [ "$BRANCH" != "main" ]; then
-  echo "Warning: You are on branch '$BRANCH', not 'main'."
-  read -rp "Continue anyway? (y/N) " confirm
-  if [ "$confirm" != "y" ] && [ "$confirm" != "Y" ]; then
+is_bump_spec() {
+  [[ "$1" =~ ^(major|minor|patch)$ ]] || is_semver "$1"
+}
+
+ensure_target() {
+  case "$1" in
+    cli|site) ;;
+    *) die "Target must be 'cli' or 'site' (got: $1)" ;;
+  esac
+}
+
+ensure_clean_tree() {
+  if [[ -n "$(git status --porcelain)" ]]; then
+    die "Working tree is not clean. Commit or stash changes first."
+  fi
+}
+
+confirm_or_abort() {
+  local prompt="$1"
+  if [[ "$ASSUME_YES" -eq 1 ]]; then
+    return 0
+  fi
+
+  read -r -p "${prompt} (y/N) " answer
+  if [[ ! "$answer" =~ ^[Yy]$ ]]; then
+    echo "Aborted."
+    exit 0
+  fi
+}
+
+next_version() {
+  local old="$1"
+  local bump="$2"
+
+  if is_semver "$bump"; then
+    echo "$bump"
+    return 0
+  fi
+
+  local major minor patch
+  IFS='.' read -r major minor patch <<<"$old"
+
+  case "$bump" in
+    patch)
+      patch=$((patch + 1))
+      ;;
+    minor)
+      minor=$((minor + 1))
+      patch=0
+      ;;
+    major)
+      major=$((major + 1))
+      minor=0
+      patch=0
+      ;;
+    *)
+      die "Invalid bump value: $bump"
+      ;;
+  esac
+
+  echo "${major}.${minor}.${patch}"
+}
+
+tag_exists_local() {
+  local tag="$1"
+  git rev-parse -q --verify "refs/tags/${tag}" >/dev/null 2>&1
+}
+
+prepare_release() {
+  local target="$1"
+  local bump="$2"
+  local branch old_version new_version tag
+
+  ensure_target "$target"
+  if ! is_bump_spec "$bump"; then
+    die "Bump must be one of major/minor/patch/x.y.z (got: $bump)"
+  fi
+
+  ensure_clean_tree
+
+  branch="$(git branch --show-current)"
+  if [[ ! "$branch" =~ ^release/ ]]; then
+    die "Prepare mode must run on a release/* branch (current: ${branch})"
+  fi
+
+  case "$target" in
+    cli)
+      old_version="$(node -p "require('./package.json').version")"
+      new_version="$(next_version "$old_version" "$bump")"
+      tag="cli-v${new_version}"
+
+      if [[ "$old_version" == "$new_version" ]]; then
+        die "Current CLI version is already ${new_version}"
+      fi
+
+      confirm_or_abort "Prepare CLI release on ${branch}: ${old_version} -> ${new_version}"
+
+      npm version "$new_version" --no-git-tag-version >/dev/null
+
+      git add package.json
+      if [[ -f package-lock.json ]]; then
+        git add package-lock.json
+      fi
+
+      git commit -m "chore(release): cli v${new_version}"
+      ;;
+
+    site)
+      old_version="$(node -p "require('./site/package.json').version")"
+      new_version="$(next_version "$old_version" "$bump")"
+      tag="site-v${new_version}"
+
+      if [[ "$old_version" == "$new_version" ]]; then
+        die "Current site version is already ${new_version}"
+      fi
+
+      confirm_or_abort "Prepare site release on ${branch}: ${old_version} -> ${new_version}"
+
+      npm --prefix site version "$new_version" --no-git-tag-version >/dev/null
+
+      git add site/package.json
+      if [[ -f site/package-lock.json ]]; then
+        git add site/package-lock.json
+      fi
+
+      git commit -m "chore(release): site v${new_version}"
+      ;;
+
+    *)
+      die "Unsupported target: ${target}"
+      ;;
+  esac
+
+  echo
+  echo "Prepared ${target} release: ${old_version} -> ${new_version}"
+  echo "Candidate tag after merge to main: ${tag}"
+
+  if [[ "$PUSH" -eq 1 ]]; then
+    git push origin "$branch"
+    echo "Pushed ${branch} to origin."
+  else
+    echo "Not pushed yet. Push when ready: git push origin ${branch}"
+  fi
+
+  echo
+  echo "Next steps:"
+  echo "  1) Open/merge PR: ${branch} -> main"
+  echo "  2) Sync local main"
+  echo "  3) Run: ./scripts/release.sh tag ${target} --push"
+  if [[ "$target" == "cli" ]]; then
+    echo "     (optional legacy tag) ./scripts/release.sh tag cli --push --legacy-cli-tag"
+  fi
+}
+
+create_tag() {
+  local target="$1"
+  local branch version tag legacy_tag
+
+  ensure_target "$target"
+  ensure_clean_tree
+
+  branch="$(git branch --show-current)"
+  if [[ "$branch" != "main" ]]; then
+    die "Tag mode must run on main branch (current: ${branch})"
+  fi
+
+  case "$target" in
+    cli)
+      version="$(node -p "require('./package.json').version")"
+      tag="cli-v${version}"
+      ;;
+    site)
+      version="$(node -p "require('./site/package.json').version")"
+      tag="site-v${version}"
+      ;;
+    *)
+      die "Unsupported target: ${target}"
+      ;;
+  esac
+
+  if tag_exists_local "$tag"; then
+    die "Tag ${tag} already exists locally"
+  fi
+
+  legacy_tag=""
+  if [[ "$target" == "cli" && "$LEGACY_CLI_TAG" -eq 1 ]]; then
+    legacy_tag="v${version}"
+    if tag_exists_local "$legacy_tag"; then
+      die "Legacy tag ${legacy_tag} already exists locally"
+    fi
+  fi
+
+  if [[ -n "$legacy_tag" ]]; then
+    confirm_or_abort "Create tags ${tag} and ${legacy_tag} on main"
+  else
+    confirm_or_abort "Create tag ${tag} on main"
+  fi
+
+  git tag -a "$tag" -m "Release ${tag}"
+  if [[ -n "$legacy_tag" ]]; then
+    git tag -a "$legacy_tag" -m "Release ${legacy_tag}"
+  fi
+
+  echo
+  echo "Created tag(s):"
+  echo "  - ${tag}"
+  if [[ -n "$legacy_tag" ]]; then
+    echo "  - ${legacy_tag}"
+  fi
+
+  if [[ "$PUSH" -eq 1 ]]; then
+    if [[ -n "$legacy_tag" ]]; then
+      git push origin "$tag" "$legacy_tag"
+    else
+      git push origin "$tag"
+    fi
+    echo "Pushed tag(s) to origin."
+  else
+    if [[ -n "$legacy_tag" ]]; then
+      echo "Not pushed yet. Push manually: git push origin ${tag} ${legacy_tag}"
+    else
+      echo "Not pushed yet. Push manually: git push origin ${tag}"
+    fi
+  fi
+
+  echo
+  echo "Release workflow monitor: https://github.com/jyoung105/frouter/actions"
+}
+
+main() {
+  if [[ $# -eq 0 ]]; then
+    usage
     exit 1
   fi
-fi
 
-# Get current version
-OLD_VERSION=$(node -p "require('./package.json').version")
+  local mode="prepare"
 
-# Determine new version
-case "$BUMP" in
-  patch|minor|major)
-    IFS='.' read -r MAJOR MINOR PATCH <<< "$OLD_VERSION"
-    case "$BUMP" in
-      patch) PATCH=$((PATCH + 1)) ;;
-      minor) MINOR=$((MINOR + 1)); PATCH=0 ;;
-      major) MAJOR=$((MAJOR + 1)); MINOR=0; PATCH=0 ;;
+  if [[ "${1:-}" == "prepare" || "${1:-}" == "tag" ]]; then
+    mode="$1"
+    shift
+  fi
+
+  local positional=()
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --push)
+        PUSH=1
+        ;;
+      --yes|-y)
+        ASSUME_YES=1
+        ;;
+      --legacy-cli-tag)
+        LEGACY_CLI_TAG=1
+        ;;
+      -h|--help)
+        usage
+        exit 0
+        ;;
+      *)
+        positional+=("$1")
+        ;;
     esac
-    NEW_VERSION="${MAJOR}.${MINOR}.${PATCH}"
-    ;;
-  *)
-    # Validate semver format
-    if ! echo "$BUMP" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
-      echo "Error: '$BUMP' is not a valid semver (x.y.z)"
+    shift
+  done
+
+  set -- "${positional[@]}"
+
+  if [[ "$mode" == "prepare" ]]; then
+    local target bump
+
+    # Backward-compatible shorthand: ./scripts/release.sh patch
+    if [[ $# -eq 1 ]] && is_bump_spec "$1"; then
+      target="cli"
+      bump="$1"
+    elif [[ $# -eq 2 ]]; then
+      target="$1"
+      bump="$2"
+    else
+      usage
       exit 1
     fi
-    NEW_VERSION="$BUMP"
-    ;;
-esac
 
-TAG="v${NEW_VERSION}"
+    prepare_release "$target" "$bump"
+    return 0
+  fi
 
-# Check tag doesn't already exist
-if git rev-parse "$TAG" >/dev/null 2>&1; then
-  echo "Error: Tag '$TAG' already exists."
-  exit 1
-fi
+  if [[ "$mode" == "tag" ]]; then
+    if [[ $# -ne 1 ]]; then
+      usage
+      exit 1
+    fi
 
-echo ""
-echo "  Version bump: $OLD_VERSION → $NEW_VERSION"
-echo "  Tag:          $TAG"
-echo "  Branch:       $BRANCH"
-echo ""
-read -rp "Proceed? (y/N) " confirm
-if [ "$confirm" != "y" ] && [ "$confirm" != "Y" ]; then
-  echo "Aborted."
-  exit 0
-fi
+    create_tag "$1"
+    return 0
+  fi
 
-# Bump version in package.json (no git operations from npm version)
-npm version "$NEW_VERSION" --no-git-tag-version
+  die "Unknown mode: ${mode}"
+}
 
-# Commit and tag
-git add package.json package-lock.json 2>/dev/null || git add package.json
-git commit -m "chore: bump version to $NEW_VERSION"
-git tag -a "$TAG" -m "Release $TAG"
-
-echo ""
-echo "Created commit and tag $TAG locally."
-echo ""
-read -rp "Push to origin? (y/N) " confirm
-if [ "$confirm" != "y" ] && [ "$confirm" != "Y" ]; then
-  echo "Skipped push. Run manually:"
-  echo "  git push origin $BRANCH $TAG"
-  exit 0
-fi
-
-git push origin "$BRANCH" "$TAG"
-
-echo ""
-echo "Pushed $TAG — release workflow will publish to npm."
-echo "Monitor: https://github.com/jyoung105/frouter/actions"
+main "$@"

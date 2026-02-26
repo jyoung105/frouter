@@ -92,6 +92,10 @@ function makeModel(
     tier,
     aaIntelligence: ranking?.aa_intelligence ?? null,
     aaSpeedTps: ranking?.aa_speed_tps ?? null,
+    opencodeSupported:
+      typeof ranking?.opencode_supported === "boolean"
+        ? ranking.opencode_supported
+        : null,
     pings: [],
     status: "pending",
     httpCode: null,

@@ -1232,7 +1232,7 @@ function fetchLatestVersion(): Promise<string | null> {
   });
 }
 
-function promptYesNo(question: string): Promise<boolean> {
+function promptYesNo(question: string, defaultValue = false): Promise<boolean> {
   if (!process.stdin.isTTY) return Promise.resolve(false);
   return new Promise((resolve) => {
     process.stdout.write(question);
@@ -1241,18 +1241,32 @@ function promptYesNo(question: string): Promise<boolean> {
     process.stdin.resume();
     process.stdin.setEncoding("utf8");
 
-    function handler(ch: string) {
+    function finish(answer: boolean, echo = "") {
       process.stdin.removeListener("data", handler);
       try {
         process.stdin.setRawMode(wasRaw || false);
       } catch {
         /* best-effort */
       }
-      process.stdout.write(ch + "\n");
+      process.stdout.write(`${echo}\n`);
+      resolve(answer);
+    }
+
+    function handler(ch: string) {
+      if (!ch) return;
       if (ch === "\x03") {
+        finish(false);
         process.exit(0);
       } // Ctrl+C
-      resolve(ch.toLowerCase() === "y");
+
+      const yn = ch.toLowerCase().match(/[yn]/);
+      if (yn) {
+        finish(yn[0] === "y", yn[0]);
+        return;
+      }
+      if (ch.includes("\r") || ch.includes("\n")) {
+        finish(defaultValue);
+      }
     }
     process.stdin.on("data", handler);
   });
@@ -1266,7 +1280,7 @@ async function checkForUpdate(): Promise<void> {
     `\n${YELLOW}  Update available: ${D}${PKG_VERSION}${R} → ${GREEN}${latest}${R}\n`,
   );
 
-  const yes = await promptYesNo(`${D}  Update now? (y/N): ${R}`);
+  const yes = await promptYesNo(`${D}  Update now? (Y/n, default: n): ${R}`);
   if (!yes) {
     process.stdout.write(`${D}  Skipped update.${R}\n\n`);
     return;

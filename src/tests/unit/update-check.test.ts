@@ -1,6 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import {
+  chmodSync,
+  mkdirSync,
+  readFileSync,
+  writeFileSync,
+} from "node:fs";
 import { join } from "node:path";
 import { createHttpServer } from "../helpers/mock-http.js";
 import { BIN_PATH, ROOT_DIR } from "../helpers/test-paths.js";
@@ -107,6 +112,60 @@ test(
       assert.match(result.stdout, /Update available/);
       assert.match(result.stdout, /99\.0\.0/);
       assert.equal(result.timedOut, false);
+    } finally {
+      cleanupTempHome(home);
+      await server.close();
+    }
+  },
+);
+
+test(
+  'update check: interactive TTY accepts "y" even when Enter arrives in same input chunk',
+  { skip: SKIP_PTY && "PTY harness not available on Windows" },
+  async () => {
+    const server = await createHttpServer((_req, res) => {
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ version: "99.0.0" }));
+    });
+
+    const home = makeTempHome();
+    try {
+      makeConfig(home);
+      const fakeBin = join(home, "fake-bin");
+      const marker = join(home, "update-invoked.log");
+      const bunBin = join(fakeBin, "bun");
+      mkdirSync(fakeBin, { recursive: true });
+      writeFileSync(
+        bunBin,
+        `#!/bin/sh
+if [ "$1" = "--version" ]; then
+  echo "1.0.0-test"
+  exit 0
+fi
+echo "$@" > "$HOME/update-invoked.log"
+exit 0
+`,
+      );
+      chmodSync(bunBin, 0o755);
+
+      const result = await runInPty(process.execPath, [BIN_PATH], {
+        cwd: ROOT_DIR,
+        env: {
+          HOME: home,
+          PATH: `${fakeBin}:${process.env.PATH || ""}`,
+          FROUTER_REGISTRY_URL: `${server.baseUrl}/frouter-cli/latest`,
+        },
+        // Send y+Enter together to simulate terminals that coalesce chars.
+        inputChunks: [{ delayMs: 2000, data: "y\r" }],
+        timeoutMs: 15_000,
+      });
+
+      assert.equal(result.timedOut, false);
+      assert.match(result.stdout, /Update available/);
+      assert.match(result.stdout, /Update now\? \(Y\/n, default: n\):/);
+      assert.match(result.stdout, /Updating frouter-cli/);
+      assert.match(result.stdout, /Updated to 99\.0\.0/);
+      assert.equal(readFileSync(marker, "utf8").trim(), "install -g frouter-cli");
     } finally {
       cleanupTempHome(home);
       await server.close();

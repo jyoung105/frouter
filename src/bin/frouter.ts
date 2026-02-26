@@ -147,7 +147,7 @@ let userNavigated = false; // true once user actively moves cursor
 const cols = () => process.stdout.columns || 120;
 const rows = () => process.stdout.rows || 40;
 // All lines are truncated to terminal width so nothing wraps.
-// Chrome: header(1) + search(1) + colhdr(1) + detail(1) + footer(1) = 5 lines
+// Chrome: header(1) + search bar(1) + colhdr(1) + detail(1) + footer(1) = 5 lines
 const tRows = () => Math.max(0, rows() - 5);
 
 // ─── Sort column metadata ──────────────────────────────────────────────────────
@@ -268,9 +268,14 @@ function renderMain() {
     })
     .join("  ");
 
-  const searchBar = searchMode
+  const searchLabel = `${CYAN}${B}[Model Search]${R}`;
+  const searchInput = searchMode
     ? `${CYAN}/${searchQuery}_${R}`
-    : `${D}/ search${R}`;
+    : `${D}Press '/' to search models${R}`;
+  const searchHint = searchMode
+    ? `${YELLOW}[ESC clear]${R} ${GREEN}[Enter apply]${R}`
+    : `${CYAN}[/ start]${R}`;
+  const searchBar = `${searchLabel} ${searchInput} ${searchHint}`;
 
   const tierBar =
     tierFilter !== "All" ? `${YELLOW}tier:${tierFilter}${R}  ` : "";
@@ -352,7 +357,7 @@ function renderMain() {
   }
 
   // Footer
-  const footer = ` ↑↓/jk:nav  Enter:target  /:search (Enter=apply OpenCode)  A:api key  P:settings  T:tier  ?:help  0-9:sort  q:quit `;
+  const footer = ` ↑↓/jk:nav  /:focus model search  Enter:target (search Enter=apply OpenCode)  A:api key  P:settings  T:tier  ?:help  0-9:sort  q:quit `;
   out += fullWidthBar(footer, INVERT, true);
   w(out);
 }
@@ -377,7 +382,7 @@ function renderHelp() {
       `  G           Jump to bottom\n\n` +
       `${B}  Actions${R}\n` +
       `  Enter       Select model → target picker (OpenCode / OpenClaw disabled)\n` +
-      `  /           Search / filter models (Enter applies to OpenCode only)\n` +
+      `  /           Focus model search (filter by model name; Enter applies to OpenCode only)\n` +
       `  A           Quick API key add/change (opens key editor)\n` +
       `  T           Cycle tier filter (All → S+ → S → …)\n` +
       `  P           Settings (API keys, toggle providers)\n` +

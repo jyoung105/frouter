@@ -71,9 +71,10 @@ test(
       assert.equal(result.code, 0);
 
       const text = stripAnsi(result.stdout);
+      assert.match(text, /\[Model Search\]/);
       assert.match(text, /\/llama_/); // search query while editing
       assert.match(text, /\/llam_/); // after backspace
-      assert.match(text, /\/ search/); // after ESC
+      assert.match(text, /Press '\/' to search models/); // after ESC
     } finally {
       cleanupTempHome(home);
     }

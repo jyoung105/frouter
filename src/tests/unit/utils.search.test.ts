@@ -36,10 +36,10 @@ test("filterBySearch matches model id and display name (case-insensitive)", () =
   assert.equal(byName[0].providerKey, "openrouter");
 });
 
-test("filterBySearch matches provider, tier, and intelligence score fields", () => {
-  assert.equal(filterBySearch(MODELS, "openrouter").length, 1);
-  assert.equal(filterBySearch(MODELS, "A+").length, 1);
-  assert.equal(filterBySearch(MODELS, "60").length, 1);
+test("filterBySearch ignores non-model metadata fields", () => {
+  assert.equal(filterBySearch(MODELS, "openrouter").length, 0);
+  assert.equal(filterBySearch(MODELS, "A+").length, 0);
+  assert.equal(filterBySearch(MODELS, "60").length, 0);
 });
 
 test("filterBySearch returns all models for empty query", () => {

@@ -99,7 +99,7 @@ export function filterBySearch(models, query) {
   if (!query) return models;
   const q = query.toLowerCase();
   return models.filter((m) =>
-    `${m.id} ${m.displayName || ""} ${m.providerKey} ${m.tier || ""} ${m.aaIntelligence ?? ""}`
+    `${m.id} ${m.displayName || ""}`
       .toLowerCase()
       .includes(q),
   );

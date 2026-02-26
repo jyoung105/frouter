@@ -1,6 +1,10 @@
 # frouter
 
+[English](./README.md) | [한국어](./README.ko.md)
+
 [![CI](https://github.com/jyoung105/frouter/actions/workflows/ci.yml/badge.svg)](https://github.com/jyoung105/frouter/actions/workflows/ci.yml)
+[![npm version](https://img.shields.io/npm/v/frouter-cli)](https://www.npmjs.com/package/frouter-cli)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 
 Free model router CLI — discover, ping, and configure free AI models for OpenCode / OpenClaw.
 
@@ -270,3 +274,7 @@ npm run models:sync:apply
 - ESLint config is TypeScript: `eslint.config.ts`
 - Runtime JS output is generated only in `dist/` via `npm run build`
 - Tests run from compiled `dist/tests/` output after build
+
+## License
+
+MIT. See [LICENSE](./LICENSE).

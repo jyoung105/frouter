@@ -1,6 +1,10 @@
 # frouter
 
+[English](./README.md) | [한국어](./README.ko.md)
+
 [![CI](https://github.com/jyoung105/frouter/actions/workflows/ci.yml/badge.svg)](https://github.com/jyoung105/frouter/actions/workflows/ci.yml)
+[![npm version](https://img.shields.io/npm/v/frouter-cli)](https://www.npmjs.com/package/frouter-cli)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 
 무료 AI 모델 라우터 CLI — OpenCode / OpenClaw용 무료 모델을 탐색, 핑 테스트, 설정합니다.
 
@@ -267,3 +271,7 @@ npm run models:sync:apply
 - ESLint 설정도 TypeScript 파일(`eslint.config.ts`)로 관리합니다.
 - 런타임 JavaScript는 `npm run build` 시 `dist/`에만 생성됩니다.
 - 테스트는 빌드 후 `dist/tests/` 산출물을 기준으로 실행됩니다.
+
+## 라이선스
+
+MIT 라이선스입니다. 자세한 내용은 [LICENSE](./LICENSE)를 참고하세요.

@@ -170,6 +170,8 @@ exit 0
           HOME: home,
           PATH: `${fakeBin}:${process.env.PATH || ""}`,
           FROUTER_REGISTRY_URL: `${server.baseUrl}/frouter-cli/latest`,
+          npm_config_user_agent: "",
+          npm_execpath: "",
         },
         // Send y+Enter together to simulate terminals that coalesce chars.
         // Then send q to exit the TUI after update completes.

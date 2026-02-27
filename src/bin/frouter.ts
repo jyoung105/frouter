@@ -52,9 +52,9 @@ import {
   BG_SEL,
 } from "../lib/utils.js";
 import { spawn, spawnSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { readFileSync, realpathSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { dirname, resolve } from "node:path";
+import { basename, dirname, resolve } from "node:path";
 import { get as httpsGet } from "node:https";
 import { get as httpGet } from "node:http";
 
@@ -1440,6 +1440,44 @@ function hasCommand(bin: string): boolean {
   return !probe.error && probe.status === 0;
 }
 
+type UpdateInstaller = "npm" | "bun";
+
+function inferPreferredUpdateInstaller(): UpdateInstaller | null {
+  const ua = String(process.env.npm_config_user_agent || "").toLowerCase();
+  if (ua.startsWith("bun/")) return "bun";
+  if (ua.startsWith("npm/")) return "npm";
+
+  const runtimeBin = basename(process.execPath).toLowerCase();
+  if (runtimeBin.includes("bun")) return "bun";
+
+  const rawHints = [process.argv[1], process.env._, process.env.npm_execpath];
+  let resolvedArgvPath = "";
+  try {
+    resolvedArgvPath = process.argv[1] ? realpathSync(process.argv[1]) : "";
+  } catch {
+    resolvedArgvPath = "";
+  }
+  rawHints.push(resolvedArgvPath);
+
+  const hints = rawHints
+    .map((hint) => String(hint || "").toLowerCase())
+    .filter(Boolean);
+  for (const hint of hints) {
+    if (
+      hint.includes("/.bun/") ||
+      hint.includes("\\.bun\\") ||
+      hint.includes("/bun/install/") ||
+      hint.includes("\\bun\\install\\")
+    ) {
+      return "bun";
+    }
+    if (hint.includes("/node_modules/") || hint.includes("\\node_modules\\")) {
+      return "npm";
+    }
+  }
+  return null;
+}
+
 function detectUpdateInstallCommand(): UpdateInstallCommand | null {
   const npmCommand: UpdateInstallCommand = {
     bin: "npm",
@@ -1450,10 +1488,13 @@ function detectUpdateInstallCommand(): UpdateInstallCommand | null {
     args: ["install", "-g", UPDATE_PACKAGE_NAME],
   };
 
-  const ua = String(process.env.npm_config_user_agent || "").toLowerCase();
-  const candidates = ua.startsWith("bun/")
-    ? [bunCommand, npmCommand]
-    : [npmCommand, bunCommand];
+  const preferred = inferPreferredUpdateInstaller();
+  const candidates =
+    preferred === "bun"
+      ? [bunCommand, npmCommand]
+      : preferred === "npm"
+        ? [npmCommand, bunCommand]
+        : [npmCommand, bunCommand];
 
   for (const candidate of candidates) {
     if (hasCommand(candidate.bin)) return candidate;

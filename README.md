@@ -108,7 +108,7 @@ Default ranking: **availability first**, then **higher tier first** (S+ → S �
 | Key            | Action                                                           |
 | -------------- | ---------------------------------------------------------------- |
 | `Enter`        | Select model → target picker (OpenCode / OpenClaw)               |
-| `/`            | Search / filter models (Enter in search = apply to both targets) |
+| `/`            | Search / filter models (Enter in search = apply to OpenCode only) |
 | `A`            | Quick API key add/change (opens key editor in Settings)          |
 | `T`            | Cycle tier filter: All → S+ → S → A+ → …                         |
 | `P`            | Settings screen (edit keys, toggle providers, test)              |
@@ -152,6 +152,16 @@ Configs written:
 - **OpenClaw** → `~/.openclaw/openclaw.json`
 
 Existing configs are backed up before writing.
+
+When frouter launches OpenCode, it now sets `OPENCODE_CLI_RUN_MODE=true`
+by default (unless you already set it) to reduce startup log noise from
+plugin auto-update checks in the OpenCode TUI.
+
+If you want OpenCode's default startup hook behavior instead, launch frouter with:
+
+```bash
+OPENCODE_CLI_RUN_MODE=false frouter
+```
 
 ### Settings screen (`P`)
 

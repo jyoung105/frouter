@@ -729,6 +729,11 @@ function buildOpenCodeLaunchEnv(providerKey, apiKey) {
   if (apiKey && envVar) {
     launchEnv[envVar] = apiKey;
   }
+  // Prevent oh-my-opencode startup auto-update/install logs from polluting
+  // the interactive OpenCode TUI launched by frouter.
+  if (launchEnv.OPENCODE_CLI_RUN_MODE == null) {
+    launchEnv.OPENCODE_CLI_RUN_MODE = "true";
+  }
   return launchEnv;
 }
 

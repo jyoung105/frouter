@@ -51,6 +51,31 @@ test("update check: skips silently when version matches", async () => {
   }
 });
 
+test("update check: skips silently when registry version is older", async () => {
+  const server = await createHttpServer((_req, res) => {
+    res.writeHead(200, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ version: "0.0.1" }));
+  });
+
+  const home = makeTempHome();
+  try {
+    makeConfig(home);
+    const result = await runNode([BIN_PATH], {
+      cwd: ROOT_DIR,
+      env: {
+        HOME: home,
+        FROUTER_REGISTRY_URL: `${server.baseUrl}/frouter-cli/latest`,
+      },
+      timeoutMs: 7_000,
+    });
+
+    assert.doesNotMatch(result.stdout + result.stderr, /Update available/);
+  } finally {
+    cleanupTempHome(home);
+    await server.close();
+  }
+});
+
 test("update check: shows update available in non-TTY and auto-skips", async () => {
   const server = await createHttpServer((_req, res) => {
     res.writeHead(200, { "Content-Type": "application/json" });

@@ -1359,9 +1359,27 @@ function promptYesNo(question: string, defaultValue = false): Promise<boolean> {
   });
 }
 
+function semverParts(v: string): [number, number, number] | null {
+  const m = /^(\d+)\.(\d+)\.(\d+)$/.exec(v.trim());
+  if (!m) return null;
+  return [Number(m[1]), Number(m[2]), Number(m[3])];
+}
+
+function isStrictlyNewerVersion(current: string, latest: string): boolean {
+  const c = semverParts(current);
+  const l = semverParts(latest);
+  if (!c || !l) return latest !== current;
+
+  for (let i = 0; i < 3; i++) {
+    if (l[i] > c[i]) return true;
+    if (l[i] < c[i]) return false;
+  }
+  return false;
+}
+
 async function checkForUpdate(): Promise<void> {
   const latest = await fetchLatestVersion();
-  if (!latest || latest === PKG_VERSION) return;
+  if (!latest || !isStrictlyNewerVersion(PKG_VERSION, latest)) return;
 
   process.stdout.write(
     `\n${YELLOW}  Update available: ${D}${PKG_VERSION}${R} → ${GREEN}${latest}${R}\n`,

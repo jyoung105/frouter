@@ -1471,7 +1471,9 @@ function restartAfterUpdate(): boolean {
   process.exit(restarted.status ?? 0);
 }
 
-async function runGlobalUpdate(command: UpdateInstallCommand): Promise<boolean> {
+async function runGlobalUpdate(
+  command: UpdateInstallCommand,
+): Promise<boolean> {
   return new Promise((resolve) => {
     let done = false;
     let progress = 0;

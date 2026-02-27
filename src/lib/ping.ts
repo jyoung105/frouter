@@ -67,7 +67,6 @@ async function pooled<T, R>(
 // ─── Progressive backoff for dead models ──────────────────────────────────────
 let _roundCounter = 0;
 
-
 /**
  * Single minimal chat-completion request to measure TTFB latency.
  * Returns { code: '200'|'401'|'429'|'404'|'000'|'ERR', ms: number, detail?: string }

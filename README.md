@@ -105,16 +105,16 @@ Default ranking: **availability first**, then **higher tier first** (S+ → S �
 
 **Actions**
 
-| Key            | Action                                                           |
-| -------------- | ---------------------------------------------------------------- |
-| `Enter`        | Select model → target picker (OpenCode / OpenClaw)               |
+| Key            | Action                                                            |
+| -------------- | ----------------------------------------------------------------- |
+| `Enter`        | Select model → target picker (OpenCode / OpenClaw)                |
 | `/`            | Search / filter models (Enter in search = apply to OpenCode only) |
-| `A`            | Quick API key add/change (opens key editor in Settings)          |
-| `T`            | Cycle tier filter: All → S+ → S → A+ → …                         |
-| `P`            | Settings screen (edit keys, toggle providers, test)              |
-| `W` / `X`      | Faster / slower ping interval                                    |
-| `?`            | Help overlay                                                     |
-| `q` / `Ctrl+C` | Quit                                                             |
+| `A`            | Quick API key add/change (opens key editor in Settings)           |
+| `T`            | Cycle tier filter: All → S+ → S → A+ → …                          |
+| `P`            | Settings screen (edit keys, toggle providers, test)               |
+| `W` / `X`      | Faster / slower ping interval                                     |
+| `?`            | Help overlay                                                      |
+| `q` / `Ctrl+C` | Quit                                                              |
 
 **Sort** (press to sort, press again to reverse)
 

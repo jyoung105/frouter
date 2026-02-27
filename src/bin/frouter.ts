@@ -1315,6 +1315,13 @@ function restartLoop() {
 const REGISTRY_URL =
   process.env.FROUTER_REGISTRY_URL ||
   "https://registry.npmjs.org/frouter-cli/latest";
+const UPDATE_SKIP_ONCE_ENV = "FROUTER_SKIP_UPDATE_ONCE";
+const UPDATE_PACKAGE_NAME = "frouter-cli";
+
+type UpdateInstallCommand = {
+  bin: string;
+  args: string[];
+};
 
 function fetchLatestVersion(): Promise<string | null> {
   return new Promise((resolve) => {
@@ -1425,7 +1432,46 @@ function isStrictlyNewerVersion(current: string, latest: string): boolean {
   return false;
 }
 
-async function runNpmGlobalUpdate(): Promise<boolean> {
+function hasCommand(bin: string): boolean {
+  const probe = spawnSync(bin, ["--version"], {
+    stdio: "ignore",
+    env: process.env,
+  });
+  return !probe.error && probe.status === 0;
+}
+
+function detectUpdateInstallCommand(): UpdateInstallCommand | null {
+  const npmCommand: UpdateInstallCommand = {
+    bin: "npm",
+    args: ["install", "-g", UPDATE_PACKAGE_NAME],
+  };
+  const bunCommand: UpdateInstallCommand = {
+    bin: "bun",
+    args: ["install", "-g", UPDATE_PACKAGE_NAME],
+  };
+
+  const ua = String(process.env.npm_config_user_agent || "").toLowerCase();
+  const candidates = ua.startsWith("bun/")
+    ? [bunCommand, npmCommand]
+    : [npmCommand, bunCommand];
+
+  for (const candidate of candidates) {
+    if (hasCommand(candidate.bin)) return candidate;
+  }
+  return null;
+}
+
+function restartAfterUpdate(): boolean {
+  const restarted = spawnSync(process.execPath, process.argv.slice(1), {
+    stdio: "inherit",
+    env: { ...process.env, [UPDATE_SKIP_ONCE_ENV]: "1" },
+  });
+  if (restarted.error) return false;
+  if (restarted.signal) process.exit(1);
+  process.exit(restarted.status ?? 0);
+}
+
+async function runGlobalUpdate(command: UpdateInstallCommand): Promise<boolean> {
   return new Promise((resolve) => {
     let done = false;
     let progress = 0;
@@ -1446,7 +1492,7 @@ async function runNpmGlobalUpdate(): Promise<boolean> {
 
     renderUpdateProgress(progress);
 
-    const child = spawn("npm", ["install", "-g", "frouter-cli"], {
+    const child = spawn(command.bin, command.args, {
       stdio: ["ignore", "pipe", "pipe"],
       env: process.env,
     });
@@ -1481,6 +1527,8 @@ async function runNpmGlobalUpdate(): Promise<boolean> {
 }
 
 async function checkForUpdate(): Promise<void> {
+  if (process.env[UPDATE_SKIP_ONCE_ENV] === "1") return;
+
   const latest = await fetchLatestVersion();
   if (!latest || !isStrictlyNewerVersion(PKG_VERSION, latest)) return;
 
@@ -1494,16 +1542,25 @@ async function checkForUpdate(): Promise<void> {
     return;
   }
   try {
-    const ok = await runNpmGlobalUpdate();
-    if (!ok) throw new Error("npm update failed");
+    const command = detectUpdateInstallCommand();
+    if (!command) throw new Error("no supported updater");
+    const ok = await runGlobalUpdate(command);
+    if (!ok) throw new Error("update command failed");
     process.stdout.write(
-      `${GREEN}  ✓ Updated to ${latest}. Restart frouter to use the new version.${R}
+      `${GREEN}  ✓ Updated to ${latest}. Restarting frouter now...${R}
+
+`,
+    );
+    if (restartAfterUpdate()) return;
+    process.stdout.write(
+      `${YELLOW}  ! Update finished, but restart failed. Run frouter manually to use ${latest}.${R}
 
 `,
     );
   } catch {
     process.stdout.write(
       `${RED}  ✗ Update failed. Run manually: npm install -g frouter-cli${R}
+${D}    (or: bun install -g frouter-cli)${R}
 
 `,
     );

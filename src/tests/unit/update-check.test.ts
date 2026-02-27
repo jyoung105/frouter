@@ -186,6 +186,8 @@ exit 0
       assert.match(result.stdout, /Updating frouter-cli/);
       assert.match(result.stdout, /\d{1,3}%/);
       assert.match(result.stdout, /Updated to 99\.0\.0/);
+      assert.match(result.stdout, /Restarting frouter now/);
+      assert.equal((result.stdout.match(/Update available/g) || []).length, 1);
       assert.equal(
         readFileSync(marker, "utf8").trim(),
         "install -g frouter-cli",

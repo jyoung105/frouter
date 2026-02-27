@@ -30,6 +30,9 @@ frouter
 
 On first run, a setup wizard prompts for API keys (ESC to skip any provider).
 
+If you accept the in-app update prompt (`Y`), frouter now updates globally and
+restarts automatically, so you can continue without running `frouter` again.
+
 ## First-run onboarding test (clean state)
 
 Use an isolated temporary `HOME` to test onboarding from zero without deleting your real install/config:

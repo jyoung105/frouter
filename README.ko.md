@@ -65,6 +65,9 @@ API 키 우선순위: 환경 변수 → `~/.frouter.json` → 키 없이 핑 (�
 ```bash
 NVIDIA_API_KEY=nvapi-xxx frouter
 OPENROUTER_API_KEY=sk-or-xxx frouter
+
+# 선택 사항: 스크롤 중 자동 재정렬 일시정지 시간(ms)
+FROUTER_SCROLL_SORT_PAUSE_MS=2500 frouter
 ```
 
 ## TUI (터미널 UI)
@@ -194,9 +197,15 @@ API 키가 최소 하나 이상 설정되어 있어야 합니다. 선택 기준:
   "providers": {
     "nvidia": { "enabled": true },
     "openrouter": { "enabled": true }
+  },
+  "ui": {
+    "scrollSortPauseMs": 1500
   }
 }
 ```
+
+`ui.scrollSortPauseMs` 는 탐색 입력 이후 자동 재정렬을 얼마나 오래 멈출지(ms) 설정합니다.
+`FROUTER_SCROLL_SORT_PAUSE_MS` 환경 변수가 있으면 설정값보다 우선합니다. `0`이면 일시정지를 끕니다.
 
 ## 등급 기준 (SWE-bench Verified)
 

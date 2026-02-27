@@ -89,6 +89,31 @@ test("loadConfig returns defaults when config file does not exist", async () => 
     assert.deepEqual(cfg.apiKeys, {});
     assert.equal(cfg.providers.nvidia.enabled, true);
     assert.equal(cfg.providers.openrouter.enabled, true);
+    assert.equal(cfg.ui.scrollSortPauseMs, 1500);
+  });
+});
+
+test("loadConfig preserves ui.scrollSortPauseMs when provided", async () => {
+  await withTempConfigModule(async ({ loadConfig, CONFIG_PATH }) => {
+    writeFileSync(
+      CONFIG_PATH,
+      JSON.stringify(
+        {
+          apiKeys: { nvidia: "nvapi-demo" },
+          providers: {
+            nvidia: { enabled: true },
+            openrouter: { enabled: false },
+          },
+          ui: { scrollSortPauseMs: 2600 },
+        },
+        null,
+        2,
+      ),
+      "utf8",
+    );
+
+    const cfg = loadConfig();
+    assert.equal(cfg.ui.scrollSortPauseMs, 2600);
   });
 });
 

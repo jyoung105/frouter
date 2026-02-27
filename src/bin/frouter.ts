@@ -131,6 +131,7 @@ let sortCol = "priority";
 let sortAsc = true;
 let searchMode = false;
 let searchQuery = "";
+let searchTabScrolled = false;
 let tierFilter = "All";
 let pingMs = 2000;
 let screen = "main"; // 'main' | 'settings' | 'target' | 'help'
@@ -402,8 +403,19 @@ function renderMain() {
     }
   }
   if (!isLoading) {
-    const slice = filtered.slice(scrollOff, scrollOff + tr);
-    for (let i = 0; i < tr; i++) {
+    const showSearchPixelTitle =
+      searchMode &&
+      !searchTabScrolled &&
+      scrollOff === 0 &&
+      tr > STARTUP_PIXEL_TITLE.length;
+    const titleLines = showSearchPixelTitle ? startupPixelTitleLines() : [];
+    for (const line of titleLines) {
+      out += fullWidthLine(line) + "\n";
+    }
+
+    const rowsAvailable = Math.max(0, tr - titleLines.length);
+    const slice = filtered.slice(scrollOff, scrollOff + rowsAvailable);
+    for (let i = 0; i < rowsAvailable; i++) {
       const m = slice[i];
       if (!m) {
         out += fullWidthLine("") + "\n";
@@ -661,6 +673,7 @@ function isAutoSortPaused() {
 function resetSearchState() {
   searchMode = false;
   searchQuery = "";
+  searchTabScrolled = false;
   cursor = 0;
   scrollOff = 0;
 }
@@ -858,9 +871,11 @@ function handleMain(ch) {
       searchQuery = searchQuery.slice(0, -1);
       needsRefilter = true;
     } else if (ch === UP) {
+      searchTabScrolled = true;
       noteUserNavigation();
       cursor = Math.max(0, cursor - 1);
     } else if (ch === DOWN) {
+      searchTabScrolled = true;
       noteUserNavigation();
       cursor = clampCursor(cursor + 1);
     } else if (ch.length === 1 && ch >= " ") {

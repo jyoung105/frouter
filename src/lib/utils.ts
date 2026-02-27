@@ -14,7 +14,7 @@ export const BG_SEL = "\x1b[48;5;235m"; // subtle selection highlight
 
 // ─── Tier order ────────────────────────────────────────────────────────────────
 export const TIER_CYCLE = ["All", "S+", "S", "A+", "A", "A-", "B+", "B", "C"];
-const TIER_ORDER = {
+export const TIER_ORDER = {
   "S+": 0,
   S: 1,
   "A+": 2,
@@ -220,6 +220,7 @@ const EMOJI_RE =
 
 export function visLen(s) {
   const stripped = String(s).replace(ANSI_RE, "");
+  if (!/[^\x00-\x7f]/.test(stripped)) return stripped.length;
   let width = 0;
   for (const ch of stripped) {
     width += EMOJI_RE.test(ch) ? 2 : 1;

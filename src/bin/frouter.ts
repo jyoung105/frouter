@@ -160,9 +160,7 @@ const CHROME_ROWS = 5;
 
 function envSize(name: string): number | null {
   const raw = process.env[name];
-  if (!raw) return null;
-  const n = Number.parseInt(raw, 10);
-  return Number.isFinite(n) && n > 0 ? n : null;
+  return raw ? positiveInt(Number.parseInt(raw, 10)) : null;
 }
 
 function positiveInt(v: unknown): number | null {
@@ -263,13 +261,7 @@ function fmtLatency(ms) {
 }
 
 function fullWidthBar(content, style = INVERT, lastLine = false) {
-  const c = cols();
-  // Reserve one column on every row. This avoids edge autowrap drift in some
-  // terminals (especially with wide glyphs / emoji width differences).
-  const guard = lastLine ? Math.max(1, WRAP_GUARD_COLS) : WRAP_GUARD_COLS;
-  const maxW = Math.max(0, c - guard);
-  const truncated = truncAnsi(content, maxW);
-  return `${style}${truncated}${" ".repeat(Math.max(0, maxW - visLen(truncated)))}${R}`;
+  return `${style}${fullWidthLine(content, lastLine)}${R}`;
 }
 
 function fullWidthLine(content, lastLine = false) {
@@ -401,8 +393,7 @@ function renderMain() {
     for (let i = 0; i < tr; i++) {
       out += truncAnsi(loadingLines[i] ?? "", c) + "\n";
     }
-  }
-  if (!isLoading) {
+  } else {
     const showSearchPixelTitle =
       searchMode &&
       !searchTabScrolled &&
@@ -644,7 +635,11 @@ function clampCursor(next) {
   return Math.max(0, Math.min(maxCursorIndex(), next));
 }
 
-function parseSortPauseMs(raw: unknown): number {
+function resolveUserScrollSortPauseMs(cfg: any): number {
+  // Env overrides config so users can tune behavior per terminal/session.
+  const raw = process.env.FROUTER_SCROLL_SORT_PAUSE_MS != null
+    ? process.env.FROUTER_SCROLL_SORT_PAUSE_MS
+    : cfg?.ui?.scrollSortPauseMs;
   if (raw == null || raw === "") return DEFAULT_USER_SCROLL_SORT_PAUSE_MS;
   const parsed = Number(raw);
   if (!Number.isFinite(parsed) || parsed < 0) {
@@ -653,17 +648,14 @@ function parseSortPauseMs(raw: unknown): number {
   return Math.round(parsed);
 }
 
-function resolveUserScrollSortPauseMs(cfg: any): number {
-  // Env overrides config so users can tune behavior per terminal/session.
-  if (process.env.FROUTER_SCROLL_SORT_PAUSE_MS != null) {
-    return parseSortPauseMs(process.env.FROUTER_SCROLL_SORT_PAUSE_MS);
-  }
-  return parseSortPauseMs(cfg?.ui?.scrollSortPauseMs);
-}
-
 function noteUserNavigation() {
   userNavigated = true;
   autoSortPauseUntil = Date.now() + userScrollSortPauseMs;
+}
+
+function navigate(target: number) {
+  noteUserNavigation();
+  cursor = clampCursor(target);
 }
 
 function isAutoSortPaused() {
@@ -877,12 +869,10 @@ function handleMain(ch) {
       needsRefilter = true;
     } else if (ch === UP) {
       searchTabScrolled = true;
-      noteUserNavigation();
-      cursor = Math.max(0, cursor - 1);
+      navigate(cursor - 1);
     } else if (ch === DOWN) {
       searchTabScrolled = true;
-      noteUserNavigation();
-      cursor = clampCursor(cursor + 1);
+      navigate(cursor + 1);
     } else if (ch.length === 1 && ch >= " ") {
       searchQuery += ch;
       needsRefilter = true;
@@ -895,23 +885,17 @@ function handleMain(ch) {
 
   // Navigation
   if (ch === UP || ch === "k") {
-    noteUserNavigation();
-    cursor = Math.max(0, cursor - 1);
+    navigate(cursor - 1);
   } else if (ch === DOWN || ch === "j") {
-    noteUserNavigation();
-    cursor = clampCursor(cursor + 1);
+    navigate(cursor + 1);
   } else if (ch === PGUP) {
-    noteUserNavigation();
-    cursor = Math.max(0, cursor - tRows());
+    navigate(cursor - tRows());
   } else if (ch === PGDN) {
-    noteUserNavigation();
-    cursor = clampCursor(cursor + tRows());
+    navigate(cursor + tRows());
   } else if (ch === "g" || ch === HOME) {
-    noteUserNavigation();
-    cursor = 0;
+    navigate(0);
   } else if (ch === "G" || ch === END) {
-    noteUserNavigation();
-    cursor = maxCursorIndex();
+    navigate(maxCursorIndex());
   }
 
   // Actions
@@ -1044,17 +1028,15 @@ function handleSettings(ch) {
 }
 
 async function handleTarget(ch) {
+  tNotice = "";
   if (ch === "\x1b" || ch === "q") {
     screen = "main";
-    tNotice = "";
     render();
     return;
   } else if (ch === UP) {
     tCursor = Math.max(0, tCursor - 1);
-    tNotice = "";
   } else if (ch === DOWN) {
     tCursor = Math.min(TARGETS.length - 1, tCursor + 1);
-    tNotice = "";
   }
 
   // Enter/G = write config + open target; S = write config only

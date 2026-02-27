@@ -2,6 +2,7 @@
 import http from "node:http";
 import https from "node:https";
 import { getApiKey, PROVIDERS_META } from "./config.js";
+import { TIER_ORDER } from "./utils.js";
 
 const TIMEOUT_MS = 6_000; // steady-state ping timeout
 const INITIAL_TIMEOUT_MS = 2_500; // faster first-pass to clear pending sooner
@@ -10,7 +11,7 @@ const PING_CONCURRENCY = 20; // steady-state concurrency
 const INITIAL_PING_CONCURRENCY = 64; // first-pass concurrency for pending models
 const BACKOFF_THRESHOLD = 3; // Phase 2F: lowered from 5 — stop wasting slots sooner
 
-export type PingResult = { code: string; ms: number; detail?: string };
+type PingResult = { code: string; ms: number; detail?: string };
 type PingOptions = { timeoutMs?: number };
 
 const STATUS_MAP: Record<string, string> = {
@@ -41,7 +42,7 @@ function getKeepAliveAgent(url: URL): http.Agent | https.Agent {
 }
 
 // ─── Concurrency limiter with per-item callback (Phase 3G) ──────────────────
-export async function pooled<T, R>(
+async function pooled<T, R>(
   items: T[],
   limit: number,
   fn: (item: T) => Promise<R>,
@@ -66,17 +67,6 @@ export async function pooled<T, R>(
 // ─── Progressive backoff for dead models ──────────────────────────────────────
 let _roundCounter = 0;
 
-// ─── Tier sort order for ping priority (Phase 3H) ────────────────────────────
-const TIER_PRIORITY: Record<string, number> = {
-  "S+": 0,
-  S: 1,
-  "A+": 2,
-  A: 3,
-  "A-": 4,
-  "B+": 5,
-  B: 6,
-  C: 7,
-};
 
 /**
  * Single minimal chat-completion request to measure TTFB latency.
@@ -178,7 +168,7 @@ export async function pingAllOnce(
 
   // Phase 3H: sort by tier priority — S+ models get pinged first
   toPing.sort(
-    (a, b) => (TIER_PRIORITY[a.tier] ?? 99) - (TIER_PRIORITY[b.tier] ?? 99),
+    (a, b) => (TIER_ORDER[a.tier] ?? 99) - (TIER_ORDER[b.tier] ?? 99),
   );
 
   const pendingFirstPass = toPing.filter(

@@ -150,7 +150,9 @@ let userScrollSortPauseMs = DEFAULT_USER_SCROLL_SORT_PAUSE_MS;
 
 // ─── Geometry ──────────────────────────────────────────────────────────────────
 const DEFAULT_COLS = 80;
-const DEFAULT_ROWS = 24;
+// Keep fallback rows compact: some remote PTYs report unknown size until a
+// later resize, and an oversized fallback can push headers off-screen.
+const DEFAULT_ROWS = 12;
 const MIN_COLS = 40;
 const MIN_ROWS = 8;
 const CHROME_ROWS = 5;
@@ -162,26 +164,42 @@ function envSize(name: string): number | null {
   return Number.isFinite(n) && n > 0 ? n : null;
 }
 
+function positiveInt(v: unknown): number | null {
+  const n = Number(v);
+  if (!Number.isFinite(n) || n <= 0) return null;
+  return Math.floor(n);
+}
+
 function viewport() {
-  let c = Number(process.stdout.columns);
-  let r = Number(process.stdout.rows);
+  // Some remote terminals expose dimensions on stdin/stderr before stdout.
+  // Probe all TTY streams first.
+  const streams: any[] = [process.stdout, process.stderr, process.stdin];
+  let c = null;
+  let r = null;
+
+  for (const stream of streams) {
+    if (c == null) c = positiveInt(stream?.columns);
+    if (r == null) r = positiveInt(stream?.rows);
+    if (c != null && r != null) break;
+  }
 
   // Some PTYs report 0x0 until the first SIGWINCH.
-  if (
-    (c <= 0 || !Number.isFinite(c) || r <= 0 || !Number.isFinite(r)) &&
-    typeof process.stdout.getWindowSize === "function"
-  ) {
-    try {
-      const [wc, wr] = process.stdout.getWindowSize();
-      if ((c <= 0 || !Number.isFinite(c)) && wc > 0) c = wc;
-      if ((r <= 0 || !Number.isFinite(r)) && wr > 0) r = wr;
-    } catch {
-      /* best-effort */
+  if (c == null || r == null) {
+    for (const stream of streams) {
+      if (typeof stream?.getWindowSize !== "function") continue;
+      try {
+        const [wc, wr] = stream.getWindowSize();
+        if (c == null) c = positiveInt(wc);
+        if (r == null) r = positiveInt(wr);
+        if (c != null && r != null) break;
+      } catch {
+        /* best-effort */
+      }
     }
   }
 
-  if (c <= 0 || !Number.isFinite(c)) c = envSize("COLUMNS") ?? DEFAULT_COLS;
-  if (r <= 0 || !Number.isFinite(r)) r = envSize("LINES") ?? DEFAULT_ROWS;
+  if (c == null) c = envSize("COLUMNS") ?? DEFAULT_COLS;
+  if (r == null) r = envSize("LINES") ?? DEFAULT_ROWS;
 
   return {
     c: Math.max(MIN_COLS, Math.floor(c)),
@@ -194,6 +212,7 @@ const rows = () => viewport().r;
 // All lines are truncated to terminal width so nothing wraps.
 // Chrome: header(1) + search bar(1) + colhdr(1) + detail(1) + footer(1) = 5 lines
 const tRows = () => Math.max(0, rows() - CHROME_ROWS);
+const WRAP_GUARD_COLS = 1;
 
 // ─── Sort column metadata ──────────────────────────────────────────────────────
 const SORT_COLS = [
@@ -244,16 +263,18 @@ function fmtLatency(ms) {
 
 function fullWidthBar(content, style = INVERT, lastLine = false) {
   const c = cols();
-  // On the last terminal row, writing exactly `c` chars triggers auto-scroll in
-  // many terminals (Ghostty, iTerm2, etc.).  Use c-1 to avoid this.
-  const maxW = lastLine ? Math.max(0, c - 1) : c;
+  // Reserve one column on every row. This avoids edge autowrap drift in some
+  // terminals (especially with wide glyphs / emoji width differences).
+  const guard = lastLine ? Math.max(1, WRAP_GUARD_COLS) : WRAP_GUARD_COLS;
+  const maxW = Math.max(0, c - guard);
   const truncated = truncAnsi(content, maxW);
   return `${style}${truncated}${" ".repeat(Math.max(0, maxW - visLen(truncated)))}${R}`;
 }
 
 function fullWidthLine(content, lastLine = false) {
   const c = cols();
-  const maxW = lastLine ? Math.max(0, c - 1) : c;
+  const guard = lastLine ? Math.max(1, WRAP_GUARD_COLS) : WRAP_GUARD_COLS;
+  const maxW = Math.max(0, c - guard);
   const truncated = truncAnsi(content, maxW);
   return `${truncated}${" ".repeat(Math.max(0, maxW - visLen(truncated)))}`;
 }

@@ -22,6 +22,14 @@ function getLatestFrame(rawOutput, needle) {
   return "";
 }
 
+function getLatestFrameRaw(rawOutput, needle) {
+  const chunks = String(rawOutput).split("\x1b[2J\x1b[H");
+  for (let i = chunks.length - 1; i >= 0; i--) {
+    if (stripAnsi(chunks[i]).includes(needle)) return chunks[i];
+  }
+  return "";
+}
+
 function buildInputChunks(tokens, startDelayMs = 850, stepMs = 120) {
   let delayMs = startDelayMs;
   return tokens.map((data) => {
@@ -263,6 +271,147 @@ test(
         homeCount >= 2,
         `expected repeated cursor-home renders, got ${homeCount}`,
       );
+    } finally {
+      cleanupTempHome(home);
+    }
+  },
+);
+
+test(
+  "returning from settings refresh keeps viewport anchored near top ranks",
+  { skip: SKIP && "PTY harness uses `script`, unavailable on Windows" },
+  async () => {
+    const home = makeTempHome();
+    try {
+      writeHomeConfig(
+        home,
+        defaultConfig({
+          apiKeys: { nvidia: "nvapi-test" },
+          providers: {
+            nvidia: { enabled: true },
+            openrouter: { enabled: false },
+          },
+        }),
+      );
+
+      const result = await runInPty(process.execPath, [BIN_PATH], {
+        cwd: ROOT_DIR,
+        env: { HOME: home, FROUTER_NO_FETCH: "1" },
+        inputChunks: [
+          { delayMs: 850, data: "j" },
+          { delayMs: 980, data: "j" }, // rank 3 in top section
+          { delayMs: 1200, data: "P" }, // open settings
+          { delayMs: 1400, data: " " }, // nvidia off
+          { delayMs: 1600, data: " " }, // nvidia on (simulated refresh trigger)
+          { delayMs: 1800, data: "\x1b" }, // back to main -> refreshModels()
+          { delayMs: 3200, data: "q" },
+        ],
+        timeoutMs: 15_000,
+      });
+
+      assert.equal(result.timedOut, false);
+      assert.equal(result.code, 0);
+
+      const rawFrame = getLatestFrameRaw(result.stdout, "[Model Search]");
+      assert.ok(rawFrame, "expected a rendered main screen frame");
+
+      const lines = stripAnsi(rawFrame).split("\n").filter((line) => line !== "");
+      assert.match(lines[0] || "", /\bfrouter\b/i);
+      assert.match(lines[1] || "", /\[Model Search\]/);
+      assert.match(lines[2] || "", /#\s+Tier\s+Provider\s+Model/);
+
+      const selectedRaw = rawFrame
+        .split("\n")
+        .find((line) => line.includes("\x1b[48;5;235m"));
+      assert.ok(selectedRaw, "expected selected row highlight");
+      const selectedLine = stripAnsi(selectedRaw || "");
+      const rankMatch = /^\s*(\d+)\s+/.exec(selectedLine);
+      assert.ok(rankMatch, `expected selected row rank, got: ${selectedLine}`);
+      const selectedRank = Number.parseInt(rankMatch?.[1] || "0", 10);
+      assert.ok(
+        selectedRank <= 20,
+        `expected selection to stay near top ranks after refresh, got rank ${selectedRank}`,
+      );
+
+      const wrappedNoise = lines.filter((line) => /^[A-Z]\s+\d/.test(line));
+      assert.equal(
+        wrappedNoise.length,
+        0,
+        `unexpected wrapped/noise lines: ${wrappedNoise.join(" | ")}`,
+      );
+    } finally {
+      cleanupTempHome(home);
+    }
+  },
+);
+
+test(
+  "model removal during refresh keeps selection near top and avoids viewport jump",
+  { skip: SKIP && "PTY harness uses `script`, unavailable on Windows" },
+  async () => {
+    const home = makeTempHome();
+    try {
+      writeHomeConfig(
+        home,
+        defaultConfig({
+          apiKeys: { nvidia: "nvapi-test" },
+          providers: {
+            nvidia: { enabled: true },
+            openrouter: { enabled: false },
+          },
+        }),
+      );
+
+      const result = await runInPty(process.execPath, [BIN_PATH], {
+        cwd: ROOT_DIR,
+        env: {
+          HOME: home,
+          FROUTER_NO_FETCH: "1",
+          FROUTER_TEST_DROP_MODEL_AFTER_CALL:
+            "2:nvidia/deepseek-ai/deepseek-v3.2",
+        },
+        inputChunks: [
+          { delayMs: 850, data: "j" },
+          { delayMs: 980, data: "j" }, // rank 3 while user is in top section
+          { delayMs: 1200, data: "P" }, // open settings
+          { delayMs: 1800, data: "\x1b" }, // back to main -> refreshModels()
+          { delayMs: 3300, data: "q" },
+        ],
+        timeoutMs: 15_000,
+      });
+
+      assert.equal(result.timedOut, false);
+      assert.equal(result.code, 0);
+
+      const rawFrame = getLatestFrameRaw(result.stdout, "[Model Search]");
+      assert.ok(rawFrame, "expected a rendered main screen frame");
+
+      const lines = stripAnsi(rawFrame).split("\n").filter((line) => line !== "");
+      assert.match(lines[0] || "", /\bfrouter\b/i);
+      assert.match(lines[1] || "", /\[Model Search\]/);
+      assert.match(lines[1] || "", /141\/141 models/);
+      assert.match(lines[2] || "", /#\s+Tier\s+Provider\s+Model/);
+
+      const selectedRaw = rawFrame
+        .split("\n")
+        .find((line) => line.includes("\x1b[48;5;235m"));
+      assert.ok(selectedRaw, "expected selected row highlight");
+      const selectedLine = stripAnsi(selectedRaw || "");
+      const rankMatch = /^\s*(\d+)\s+/.exec(selectedLine);
+      assert.ok(rankMatch, `expected selected row rank, got: ${selectedLine}`);
+      const selectedRank = Number.parseInt(rankMatch?.[1] || "0", 10);
+      assert.ok(
+        selectedRank <= 20,
+        `expected selection to stay near top after model removal, got rank ${selectedRank}`,
+      );
+
+      const wrappedNoise = lines.filter((line) => /^[A-Z]\s+\d/.test(line));
+      assert.equal(
+        wrappedNoise.length,
+        0,
+        `unexpected wrapped/noise lines: ${wrappedNoise.join(" | ")}`,
+      );
+      assert.equal(rawFrame.includes("DeepSeek V3.2"), false);
     } finally {
       cleanupTempHome(home);
     }

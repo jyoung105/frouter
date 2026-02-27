@@ -43,8 +43,14 @@ test("pingAllOnce resolves first-pass pending statuses quickly", async () => {
       elapsedMs < 7_000,
       `expected fast first-pass status resolution, got ${elapsedMs.toFixed(1)}ms`,
     );
-    assert.equal(models.every((m) => m.status !== "pending"), true);
-    assert.equal(models.every((m) => m.httpCode === "000"), true);
+    assert.equal(
+      models.every((m) => m.status !== "pending"),
+      true,
+    );
+    assert.equal(
+      models.every((m) => m.httpCode === "000"),
+      true,
+    );
   } finally {
     PROVIDERS_META.nvidia.chatUrl = originalChatUrl;
     await server.close();

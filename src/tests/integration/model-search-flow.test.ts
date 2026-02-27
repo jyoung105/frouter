@@ -368,7 +368,9 @@ test(
       const rawFrame = getLatestFrameRaw(result.stdout, "[Model Search]");
       assert.ok(rawFrame, "expected a rendered main screen frame");
 
-      const lines = stripAnsi(rawFrame).split("\n").filter((line) => line !== "");
+      const lines = stripAnsi(rawFrame)
+        .split("\n")
+        .filter((line) => line !== "");
       assert.match(lines[0] || "", /\bfrouter\b/i);
       assert.match(lines[1] || "", /\[Model Search\]/);
       assert.match(lines[2] || "", /#\s+Tier\s+Provider\s+Model/);
@@ -439,7 +441,9 @@ test(
       const rawFrame = getLatestFrameRaw(result.stdout, "[Model Search]");
       assert.ok(rawFrame, "expected a rendered main screen frame");
 
-      const lines = stripAnsi(rawFrame).split("\n").filter((line) => line !== "");
+      const lines = stripAnsi(rawFrame)
+        .split("\n")
+        .filter((line) => line !== "");
       assert.match(lines[0] || "", /\bfrouter\b/i);
       assert.match(lines[1] || "", /\[Model Search\]/);
       assert.match(lines[1] || "", /141\/141 models/);

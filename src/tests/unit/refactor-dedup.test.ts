@@ -12,7 +12,6 @@ import {
   D,
   GREEN,
   RED,
-  YELLOW,
 } from "../../lib/utils.js";
 
 // ─── 1. TIER_ORDER export & shape ────────────────────────────────────────────
@@ -21,10 +20,7 @@ test("TIER_ORDER is exported and contains all expected tiers", () => {
   assert.equal(typeof TIER_ORDER, "object");
   const expectedTiers = ["S+", "S", "A+", "A", "A-", "B+", "B", "C"];
   for (const tier of expectedTiers) {
-    assert.ok(
-      tier in TIER_ORDER,
-      `TIER_ORDER should contain key "${tier}"`,
-    );
+    assert.ok(tier in TIER_ORDER, `TIER_ORDER should contain key "${tier}"`);
     assert.equal(typeof TIER_ORDER[tier], "number");
   }
 });
@@ -42,16 +38,13 @@ test("TIER_ORDER values are strictly ascending (lower = higher priority)", () =>
 test("TIER_ORDER keys match TIER_CYCLE (minus 'All')", () => {
   const cycleWithoutAll = TIER_CYCLE.filter((t) => t !== "All");
   const orderKeys = Object.keys(TIER_ORDER);
-  assert.deepEqual(
-    cycleWithoutAll.sort(),
-    orderKeys.sort(),
-  );
+  assert.deepEqual(cycleWithoutAll.sort(), orderKeys.sort());
 });
 
 test("TIER_ORDER returns undefined for unknown tier (used as ?? 99 fallback)", () => {
   assert.equal(TIER_ORDER["Z"], undefined);
   assert.equal(TIER_ORDER[""], undefined);
-  assert.equal((TIER_ORDER["Z"] ?? 99), 99);
+  assert.equal(TIER_ORDER["Z"] ?? 99, 99);
 });
 
 // ─── 2. sortModels using TIER_ORDER (regression) ────────────────────────────

@@ -2,13 +2,17 @@
 import http from "node:http";
 import https from "node:https";
 import { getApiKey, PROVIDERS_META } from "./config.js";
+import { TIER_ORDER } from "./utils.js";
 
-const TIMEOUT_MS = 6_000; // Phase 1B: lowered from 15s — anything >6s is unusable
+const TIMEOUT_MS = 6_000; // steady-state ping timeout
+const INITIAL_TIMEOUT_MS = 2_500; // faster first-pass to clear pending sooner
 const MAX_PINGS = 100; // cap history per model
-const PING_CONCURRENCY = 20;
+const PING_CONCURRENCY = 20; // steady-state concurrency
+const INITIAL_PING_CONCURRENCY = 64; // first-pass concurrency for pending models
 const BACKOFF_THRESHOLD = 3; // Phase 2F: lowered from 5 — stop wasting slots sooner
 
-export type PingResult = { code: string; ms: number; detail?: string };
+type PingResult = { code: string; ms: number; detail?: string };
+type PingOptions = { timeoutMs?: number };
 
 const STATUS_MAP: Record<string, string> = {
   "200": "up",
@@ -29,7 +33,7 @@ function getKeepAliveAgent(url: URL): http.Agent | https.Agent {
     const Ctor = url.protocol === "http:" ? http.Agent : https.Agent;
     agent = new Ctor({
       keepAlive: true,
-      maxSockets: PING_CONCURRENCY,
+      maxSockets: Math.max(PING_CONCURRENCY, INITIAL_PING_CONCURRENCY),
       timeout: TIMEOUT_MS,
     });
     _agents.set(key, agent);
@@ -38,7 +42,7 @@ function getKeepAliveAgent(url: URL): http.Agent | https.Agent {
 }
 
 // ─── Concurrency limiter with per-item callback (Phase 3G) ──────────────────
-export async function pooled<T, R>(
+async function pooled<T, R>(
   items: T[],
   limit: number,
   fn: (item: T) => Promise<R>,
@@ -63,18 +67,6 @@ export async function pooled<T, R>(
 // ─── Progressive backoff for dead models ──────────────────────────────────────
 let _roundCounter = 0;
 
-// ─── Tier sort order for ping priority (Phase 3H) ────────────────────────────
-const TIER_PRIORITY: Record<string, number> = {
-  "S+": 0,
-  S: 1,
-  "A+": 2,
-  A: 3,
-  "A-": 4,
-  "B+": 5,
-  B: 6,
-  C: 7,
-};
-
 /**
  * Single minimal chat-completion request to measure TTFB latency.
  * Returns { code: '200'|'401'|'429'|'404'|'000'|'ERR', ms: number, detail?: string }
@@ -85,8 +77,14 @@ export function ping(
   apiKey: string | null | undefined,
   modelId: string,
   chatUrl: string,
+  options: PingOptions = {},
 ): Promise<PingResult> {
   return new Promise((resolve) => {
+    const requestedTimeout = options.timeoutMs;
+    const timeoutMs =
+      Number.isFinite(requestedTimeout) && requestedTimeout > 0
+        ? Math.round(requestedTimeout)
+        : TIMEOUT_MS;
     const url = new URL(chatUrl);
     const lib = url.protocol === "http:" ? http : https;
     const body = JSON.stringify({
@@ -117,7 +115,7 @@ export function ping(
     const timer = setTimeout(() => {
       settle("000");
       req.destroy();
-    }, TIMEOUT_MS);
+    }, timeoutMs);
 
     const req = lib.request(
       {
@@ -169,37 +167,56 @@ export async function pingAllOnce(
 
   // Phase 3H: sort by tier priority — S+ models get pinged first
   toPing.sort(
-    (a, b) => (TIER_PRIORITY[a.tier] ?? 99) - (TIER_PRIORITY[b.tier] ?? 99),
+    (a, b) => (TIER_ORDER[a.tier] ?? 99) - (TIER_ORDER[b.tier] ?? 99),
+  );
+
+  const pendingFirstPass = toPing.filter(
+    (m) => !Array.isArray(m.pings) || m.pings.length === 0,
+  );
+  const steadyState = toPing.filter(
+    (m) => Array.isArray(m.pings) && m.pings.length > 0,
+  );
+
+  async function runPing(m: any, timeoutMs: number) {
+    const meta = PROVIDERS_META[m.providerKey];
+    const apiKey = getApiKey(config, m.providerKey);
+    const result = await ping(apiKey, m.id, meta.chatUrl, { timeoutMs });
+
+    m.pings.push(result);
+    if (m.pings.length > MAX_PINGS) m.pings.shift();
+
+    m.httpCode = result.code;
+    m.status = STATUS_MAP[result.code] || "down";
+
+    // Track consecutive failures for backoff
+    if (result.code === "200" || result.code === "401") {
+      m._consecutiveFails = 0;
+    } else {
+      m._consecutiveFails = (m._consecutiveFails || 0) + 1;
+      if (m._consecutiveFails >= BACKOFF_THRESHOLD) {
+        const delay = Math.min(
+          32,
+          2 ** (m._consecutiveFails - BACKOFF_THRESHOLD),
+        );
+        m._skipUntilRound = _roundCounter + delay;
+      }
+    }
+  }
+
+  await pooled(
+    pendingFirstPass,
+    INITIAL_PING_CONCURRENCY,
+    (m) => runPing(m, INITIAL_TIMEOUT_MS),
+    () => {
+      // Phase 3G: fire callback after each individual ping completes
+      onEachPing?.();
+    },
   );
 
   await pooled(
-    toPing,
+    steadyState,
     PING_CONCURRENCY,
-    async (m) => {
-      const meta = PROVIDERS_META[m.providerKey];
-      const apiKey = getApiKey(config, m.providerKey);
-      const result = await ping(apiKey, m.id, meta.chatUrl);
-
-      m.pings.push(result);
-      if (m.pings.length > MAX_PINGS) m.pings.shift();
-
-      m.httpCode = result.code;
-      m.status = STATUS_MAP[result.code] || "down";
-
-      // Track consecutive failures for backoff
-      if (result.code === "200" || result.code === "401") {
-        m._consecutiveFails = 0;
-      } else {
-        m._consecutiveFails = (m._consecutiveFails || 0) + 1;
-        if (m._consecutiveFails >= BACKOFF_THRESHOLD) {
-          const delay = Math.min(
-            32,
-            2 ** (m._consecutiveFails - BACKOFF_THRESHOLD),
-          );
-          m._skipUntilRound = _roundCounter + delay;
-        }
-      }
-    },
+    (m) => runPing(m, TIMEOUT_MS),
     () => {
       // Phase 3G: fire callback after each individual ping completes
       onEachPing?.();

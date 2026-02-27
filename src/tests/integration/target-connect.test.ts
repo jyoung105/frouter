@@ -105,6 +105,10 @@ if [ "$NVIDIA_API_KEY" != "nvapi-test" ]; then
   echo "missing-env" >> "${marker}"
   exit 1
 fi
+if [ "$OPENCODE_CLI_RUN_MODE" != "true" ]; then
+  echo "missing-cli-run-mode" >> "${marker}"
+  exit 1
+fi
 if grep -q '"model": "nvidia/' "$cfg"; then
   echo "launched" >> "${marker}"
   exit 0
@@ -135,6 +139,7 @@ exit 0
       const markerOut = readFileSync(marker, "utf8");
       assert.match(markerOut, /launched/);
       assert.doesNotMatch(markerOut, /missing-env/);
+      assert.doesNotMatch(markerOut, /missing-cli-run-mode/);
       const openCodePath = join(home, ".config", "opencode", "opencode.json");
       assert.equal(existsSync(openCodePath), true);
       const openCode = readFileSync(openCodePath, "utf8");

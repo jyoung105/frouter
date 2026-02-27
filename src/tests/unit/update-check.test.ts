@@ -153,20 +153,16 @@ test(
       makeConfig(home);
       const fakeBin = join(home, "fake-bin");
       const marker = join(home, "update-invoked.log");
-      const bunBin = join(fakeBin, "bun");
+      const npmBin = join(fakeBin, "npm");
       mkdirSync(fakeBin, { recursive: true });
       writeFileSync(
-        bunBin,
+        npmBin,
         `#!/bin/sh
-if [ "$1" = "--version" ]; then
-  echo "1.0.0-test"
-  exit 0
-fi
 echo "$@" > "$HOME/update-invoked.log"
 exit 0
 `,
       );
-      chmodSync(bunBin, 0o755);
+      chmodSync(npmBin, 0o755);
 
       const result = await runInPty(process.execPath, [BIN_PATH], {
         cwd: ROOT_DIR,
@@ -176,14 +172,19 @@ exit 0
           FROUTER_REGISTRY_URL: `${server.baseUrl}/frouter-cli/latest`,
         },
         // Send y+Enter together to simulate terminals that coalesce chars.
-        inputChunks: [{ delayMs: 2000, data: "y\r" }],
-        timeoutMs: 15_000,
+        // Then send q to exit the TUI after update completes.
+        inputChunks: [
+          { delayMs: 2000, data: "y\r" },
+          { delayMs: 6000, data: "q" },
+        ],
+        timeoutMs: 20_000,
       });
 
       assert.equal(result.timedOut, false);
       assert.match(result.stdout, /Update available/);
       assert.match(result.stdout, /Update now\? \(Y\/n, default: n\):/);
       assert.match(result.stdout, /Updating frouter-cli/);
+      assert.match(result.stdout, /\d{1,3}%/);
       assert.match(result.stdout, /Updated to 99\.0\.0/);
       assert.equal(
         readFileSync(marker, "utf8").trim(),

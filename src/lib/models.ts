@@ -9,6 +9,7 @@ import { getApiKey } from "./config.js";
 
 let _byId: Map<string, any> | null = null;
 let _bySlug: Map<string, any> | null = null;
+let _getAllModelsCallCount = 0;
 
 function loadRankings(): void {
   if (_byId) return;
@@ -100,6 +101,37 @@ function makeModel(
     status: "pending",
     httpCode: null,
   };
+}
+
+type TestDropSpec = { afterCall: number; targets: Set<string> };
+
+function parseTestDropSpec(raw: string | undefined): TestDropSpec | null {
+  if (!raw) return null;
+  const [afterCallRaw, targetsRaw = ""] = raw.split(":");
+  const afterCall = Number.parseInt(afterCallRaw, 10);
+  if (!Number.isFinite(afterCall) || afterCall < 1) return null;
+
+  const targets = new Set(
+    targetsRaw
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean),
+  );
+  if (!targets.size) return null;
+
+  return { afterCall, targets };
+}
+
+function applyTestDrops(models: any[]): any[] {
+  // Integration-test hook:
+  // FROUTER_TEST_DROP_MODEL_AFTER_CALL='2:nvidia/deepseek-ai/deepseek-v3.2'
+  // or multiple targets via comma separation.
+  const spec = parseTestDropSpec(
+    process.env.FROUTER_TEST_DROP_MODEL_AFTER_CALL,
+  );
+  if (!spec) return models;
+  if (_getAllModelsCallCount < spec.afterCall) return models;
+  return models.filter((m) => !spec.targets.has(`${m.providerKey}/${m.id}`));
 }
 
 // ─── NVIDIA NIM hardcoded model list ─────────────────────────────────────────
@@ -758,6 +790,7 @@ async function fetchOpenRouterModels(apiKey: string | null): Promise<any[]> {
  *                 pings:[], status:'pending', httpCode:null
  */
 export async function getAllModels(config: any): Promise<any[]> {
+  _getAllModelsCallCount++;
   const noFetch = process.env.FROUTER_NO_FETCH === "1";
   const results: any[] = [];
 
@@ -787,5 +820,5 @@ export async function getAllModels(config: any): Promise<any[]> {
   ]);
 
   results.push(...nimResult, ...orResult);
-  return results;
+  return applyTestDrops(results);
 }

@@ -8,7 +8,7 @@
 
 무료 AI 모델 라우터 CLI — OpenCode / OpenClaw용 무료 모델을 탐색, 핑 테스트, 설정합니다.
 
-![frouter-gif](./frouter-example.gif)
+![frouter-gif](./public/example.gif)
 
 ## 설치
 
@@ -105,15 +105,15 @@ FROUTER_SCROLL_SORT_PAUSE_MS=2500 frouter
 
 **액션**
 
-| 키             | 동작                                                        |
-| -------------- | ----------------------------------------------------------- |
-| `Enter`        | 모델 선택 → 타겟 선택 (OpenCode / OpenClaw)                 |
-| `/`            | 모델 검색 / 필터 (검색 중 Enter = 두 타겟 모두에 즉시 적용) |
-| `T`            | 등급 필터 순환: 전체 → S+ → S → A+ → …                      |
-| `P`            | 설정 화면 (키 편집, 프로바이더 활성화/비활성화, 테스트)     |
-| `W` / `X`      | 핑 간격 빠르게 / 느리게                                     |
-| `?`            | 도움말 오버레이                                             |
-| `q` / `Ctrl+C` | 종료                                                        |
+| 키             | 동작                                                      |
+| -------------- | --------------------------------------------------------- |
+| `Enter`        | 모델 선택 → 타겟 선택 (OpenCode / OpenClaw)               |
+| `/`            | 모델 검색 / 필터 (검색 중 Enter = OpenCode에만 즉시 적용) |
+| `T`            | 등급 필터 순환: 전체 → S+ → S → A+ → …                    |
+| `P`            | 설정 화면 (키 편집, 프로바이더 활성화/비활성화, 테스트)   |
+| `W` / `X`      | 핑 간격 빠르게 / 느리게                                   |
+| `?`            | 도움말 오버레이                                           |
+| `q` / `Ctrl+C` | 종료                                                      |
 
 **정렬** (해당 키를 누르면 정렬, 다시 누르면 역순)
 
@@ -151,6 +151,16 @@ OpenCode fallback로 프로바이더가 바뀌는 경우(예: NIM Stepfun → Op
 - **OpenClaw** → `~/.openclaw/openclaw.json`
 
 기존 설정 파일은 덮어쓰기 전 자동으로 백업됩니다.
+
+frouter가 OpenCode를 실행할 때는 기본적으로 `OPENCODE_CLI_RUN_MODE=true`
+(이미 값이 설정된 경우는 유지) 를 전달하여, OpenCode TUI 시작 시
+플러그인 자동 업데이트 체크 로그가 섞여 보이는 현상을 줄입니다.
+
+기본 OpenCode 시작 훅 동작을 그대로 원하면 다음처럼 실행하세요:
+
+```bash
+OPENCODE_CLI_RUN_MODE=false frouter
+```
 
 ### 설정 화면 (`P`)
 

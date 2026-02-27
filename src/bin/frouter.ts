@@ -51,7 +51,7 @@ import {
   ORANGE,
   BG_SEL,
 } from "../lib/utils.js";
-import { spawnSync, execSync } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
@@ -131,6 +131,7 @@ let sortCol = "priority";
 let sortAsc = true;
 let searchMode = false;
 let searchQuery = "";
+let searchTabScrolled = false;
 let tierFilter = "All";
 let pingMs = 2000;
 let screen = "main"; // 'main' | 'settings' | 'target' | 'help'
@@ -150,38 +151,54 @@ let userScrollSortPauseMs = DEFAULT_USER_SCROLL_SORT_PAUSE_MS;
 
 // ─── Geometry ──────────────────────────────────────────────────────────────────
 const DEFAULT_COLS = 80;
-const DEFAULT_ROWS = 24;
+// Keep fallback rows compact: some remote PTYs report unknown size until a
+// later resize, and an oversized fallback can push headers off-screen.
+const DEFAULT_ROWS = 12;
 const MIN_COLS = 40;
 const MIN_ROWS = 8;
 const CHROME_ROWS = 5;
 
 function envSize(name: string): number | null {
   const raw = process.env[name];
-  if (!raw) return null;
-  const n = Number.parseInt(raw, 10);
-  return Number.isFinite(n) && n > 0 ? n : null;
+  return raw ? positiveInt(Number.parseInt(raw, 10)) : null;
+}
+
+function positiveInt(v: unknown): number | null {
+  const n = Number(v);
+  if (!Number.isFinite(n) || n <= 0) return null;
+  return Math.floor(n);
 }
 
 function viewport() {
-  let c = Number(process.stdout.columns);
-  let r = Number(process.stdout.rows);
+  // Some remote terminals expose dimensions on stdin/stderr before stdout.
+  // Probe all TTY streams first.
+  const streams: any[] = [process.stdout, process.stderr, process.stdin];
+  let c = null;
+  let r = null;
+
+  for (const stream of streams) {
+    if (c == null) c = positiveInt(stream?.columns);
+    if (r == null) r = positiveInt(stream?.rows);
+    if (c != null && r != null) break;
+  }
 
   // Some PTYs report 0x0 until the first SIGWINCH.
-  if (
-    (c <= 0 || !Number.isFinite(c) || r <= 0 || !Number.isFinite(r)) &&
-    typeof process.stdout.getWindowSize === "function"
-  ) {
-    try {
-      const [wc, wr] = process.stdout.getWindowSize();
-      if ((c <= 0 || !Number.isFinite(c)) && wc > 0) c = wc;
-      if ((r <= 0 || !Number.isFinite(r)) && wr > 0) r = wr;
-    } catch {
-      /* best-effort */
+  if (c == null || r == null) {
+    for (const stream of streams) {
+      if (typeof stream?.getWindowSize !== "function") continue;
+      try {
+        const [wc, wr] = stream.getWindowSize();
+        if (c == null) c = positiveInt(wc);
+        if (r == null) r = positiveInt(wr);
+        if (c != null && r != null) break;
+      } catch {
+        /* best-effort */
+      }
     }
   }
 
-  if (c <= 0 || !Number.isFinite(c)) c = envSize("COLUMNS") ?? DEFAULT_COLS;
-  if (r <= 0 || !Number.isFinite(r)) r = envSize("LINES") ?? DEFAULT_ROWS;
+  if (c == null) c = envSize("COLUMNS") ?? DEFAULT_COLS;
+  if (r == null) r = envSize("LINES") ?? DEFAULT_ROWS;
 
   return {
     c: Math.max(MIN_COLS, Math.floor(c)),
@@ -194,6 +211,7 @@ const rows = () => viewport().r;
 // All lines are truncated to terminal width so nothing wraps.
 // Chrome: header(1) + search bar(1) + colhdr(1) + detail(1) + footer(1) = 5 lines
 const tRows = () => Math.max(0, rows() - CHROME_ROWS);
+const WRAP_GUARD_COLS = 1;
 
 // ─── Sort column metadata ──────────────────────────────────────────────────────
 const SORT_COLS = [
@@ -243,17 +261,13 @@ function fmtLatency(ms) {
 }
 
 function fullWidthBar(content, style = INVERT, lastLine = false) {
-  const c = cols();
-  // On the last terminal row, writing exactly `c` chars triggers auto-scroll in
-  // many terminals (Ghostty, iTerm2, etc.).  Use c-1 to avoid this.
-  const maxW = lastLine ? Math.max(0, c - 1) : c;
-  const truncated = truncAnsi(content, maxW);
-  return `${style}${truncated}${" ".repeat(Math.max(0, maxW - visLen(truncated)))}${R}`;
+  return `${style}${fullWidthLine(content, lastLine)}${R}`;
 }
 
 function fullWidthLine(content, lastLine = false) {
   const c = cols();
-  const maxW = lastLine ? Math.max(0, c - 1) : c;
+  const guard = lastLine ? Math.max(1, WRAP_GUARD_COLS) : WRAP_GUARD_COLS;
+  const maxW = Math.max(0, c - guard);
   const truncated = truncAnsi(content, maxW);
   return `${truncated}${" ".repeat(Math.max(0, maxW - visLen(truncated)))}`;
 }
@@ -379,10 +393,20 @@ function renderMain() {
     for (let i = 0; i < tr; i++) {
       out += truncAnsi(loadingLines[i] ?? "", c) + "\n";
     }
-  }
-  if (!isLoading) {
-    const slice = filtered.slice(scrollOff, scrollOff + tr);
-    for (let i = 0; i < tr; i++) {
+  } else {
+    const showSearchPixelTitle =
+      searchMode &&
+      !searchTabScrolled &&
+      scrollOff === 0 &&
+      tr > STARTUP_PIXEL_TITLE.length;
+    const titleLines = showSearchPixelTitle ? startupPixelTitleLines() : [];
+    for (const line of titleLines) {
+      out += fullWidthLine(line) + "\n";
+    }
+
+    const rowsAvailable = Math.max(0, tr - titleLines.length);
+    const slice = filtered.slice(scrollOff, scrollOff + rowsAvailable);
+    for (let i = 0; i < rowsAvailable; i++) {
       const m = slice[i];
       if (!m) {
         out += fullWidthLine("") + "\n";
@@ -611,7 +635,12 @@ function clampCursor(next) {
   return Math.max(0, Math.min(maxCursorIndex(), next));
 }
 
-function parseSortPauseMs(raw: unknown): number {
+function resolveUserScrollSortPauseMs(cfg: any): number {
+  // Env overrides config so users can tune behavior per terminal/session.
+  const raw =
+    process.env.FROUTER_SCROLL_SORT_PAUSE_MS != null
+      ? process.env.FROUTER_SCROLL_SORT_PAUSE_MS
+      : cfg?.ui?.scrollSortPauseMs;
   if (raw == null || raw === "") return DEFAULT_USER_SCROLL_SORT_PAUSE_MS;
   const parsed = Number(raw);
   if (!Number.isFinite(parsed) || parsed < 0) {
@@ -620,17 +649,14 @@ function parseSortPauseMs(raw: unknown): number {
   return Math.round(parsed);
 }
 
-function resolveUserScrollSortPauseMs(cfg: any): number {
-  // Env overrides config so users can tune behavior per terminal/session.
-  if (process.env.FROUTER_SCROLL_SORT_PAUSE_MS != null) {
-    return parseSortPauseMs(process.env.FROUTER_SCROLL_SORT_PAUSE_MS);
-  }
-  return parseSortPauseMs(cfg?.ui?.scrollSortPauseMs);
-}
-
 function noteUserNavigation() {
   userNavigated = true;
   autoSortPauseUntil = Date.now() + userScrollSortPauseMs;
+}
+
+function navigate(target: number) {
+  noteUserNavigation();
+  cursor = clampCursor(target);
 }
 
 function isAutoSortPaused() {
@@ -640,6 +666,7 @@ function isAutoSortPaused() {
 function resetSearchState() {
   searchMode = false;
   searchQuery = "";
+  searchTabScrolled = false;
   cursor = 0;
   scrollOff = 0;
 }
@@ -694,6 +721,11 @@ function buildOpenCodeLaunchEnv(providerKey, apiKey) {
   const envVar = PROVIDERS_META[providerKey]?.envVar;
   if (apiKey && envVar) {
     launchEnv[envVar] = apiKey;
+  }
+  // Prevent oh-my-opencode startup auto-update/install logs from polluting
+  // the interactive OpenCode TUI launched by frouter.
+  if (launchEnv.OPENCODE_CLI_RUN_MODE == null) {
+    launchEnv.OPENCODE_CLI_RUN_MODE = "true";
   }
   return launchEnv;
 }
@@ -837,11 +869,11 @@ function handleMain(ch) {
       searchQuery = searchQuery.slice(0, -1);
       needsRefilter = true;
     } else if (ch === UP) {
-      noteUserNavigation();
-      cursor = Math.max(0, cursor - 1);
+      searchTabScrolled = true;
+      navigate(cursor - 1);
     } else if (ch === DOWN) {
-      noteUserNavigation();
-      cursor = clampCursor(cursor + 1);
+      searchTabScrolled = true;
+      navigate(cursor + 1);
     } else if (ch.length === 1 && ch >= " ") {
       searchQuery += ch;
       needsRefilter = true;
@@ -854,23 +886,17 @@ function handleMain(ch) {
 
   // Navigation
   if (ch === UP || ch === "k") {
-    noteUserNavigation();
-    cursor = Math.max(0, cursor - 1);
+    navigate(cursor - 1);
   } else if (ch === DOWN || ch === "j") {
-    noteUserNavigation();
-    cursor = clampCursor(cursor + 1);
+    navigate(cursor + 1);
   } else if (ch === PGUP) {
-    noteUserNavigation();
-    cursor = Math.max(0, cursor - tRows());
+    navigate(cursor - tRows());
   } else if (ch === PGDN) {
-    noteUserNavigation();
-    cursor = clampCursor(cursor + tRows());
+    navigate(cursor + tRows());
   } else if (ch === "g" || ch === HOME) {
-    noteUserNavigation();
-    cursor = 0;
+    navigate(0);
   } else if (ch === "G" || ch === END) {
-    noteUserNavigation();
-    cursor = maxCursorIndex();
+    navigate(maxCursorIndex());
   }
 
   // Actions
@@ -1003,17 +1029,15 @@ function handleSettings(ch) {
 }
 
 async function handleTarget(ch) {
+  tNotice = "";
   if (ch === "\x1b" || ch === "q") {
     screen = "main";
-    tNotice = "";
     render();
     return;
   } else if (ch === UP) {
     tCursor = Math.max(0, tCursor - 1);
-    tNotice = "";
   } else if (ch === DOWN) {
     tCursor = Math.min(TARGETS.length - 1, tCursor + 1);
-    tNotice = "";
   }
 
   // Enter/G = write config + open target; S = write config only
@@ -1361,6 +1385,28 @@ function promptYesNo(question: string, defaultValue = false): Promise<boolean> {
   });
 }
 
+const UPDATE_BAR_WIDTH = 24;
+
+function renderUpdateProgress(percent: number): void {
+  const pct = Math.max(0, Math.min(100, Math.round(percent)));
+  const filled = Math.round((pct / 100) * UPDATE_BAR_WIDTH);
+  const bar = `${"█".repeat(filled)}${"░".repeat(Math.max(0, UPDATE_BAR_WIDTH - filled))}`;
+  process.stdout.write(
+    `\r${D}  Updating frouter-cli [${bar}] ${String(pct).padStart(3)}%${R}`,
+  );
+}
+
+function readHighestPercent(text: string): number | null {
+  let highest = -1;
+  for (const match of text.matchAll(/(\d{1,3})%/g)) {
+    const pct = Number.parseInt(match[1], 10);
+    if (Number.isFinite(pct) && pct >= 0 && pct <= 100) {
+      highest = Math.max(highest, pct);
+    }
+  }
+  return highest >= 0 ? highest : null;
+}
+
 function semverParts(v: string): [number, number, number] | null {
   const m = /^(\d+)\.(\d+)\.(\d+)$/.exec(v.trim());
   if (!m) return null;
@@ -1379,6 +1425,61 @@ function isStrictlyNewerVersion(current: string, latest: string): boolean {
   return false;
 }
 
+async function runNpmGlobalUpdate(): Promise<boolean> {
+  return new Promise((resolve) => {
+    let done = false;
+    let progress = 0;
+
+    function finish(ok: boolean) {
+      if (done) return;
+      done = true;
+      process.stdout.write("\n");
+      resolve(ok);
+    }
+
+    function setProgress(next: number) {
+      const pct = Math.max(progress, Math.min(100, Math.round(next)));
+      if (pct === progress) return;
+      progress = pct;
+      renderUpdateProgress(progress);
+    }
+
+    renderUpdateProgress(progress);
+
+    const child = spawn("npm", ["install", "-g", "frouter-cli"], {
+      stdio: ["ignore", "pipe", "pipe"],
+      env: process.env,
+    });
+
+    const fallback = setInterval(() => {
+      if (progress < 95) setProgress(progress + 1);
+    }, 120);
+
+    const onChunk = (chunk: string | Buffer) => {
+      const highest = readHighestPercent(String(chunk));
+      if (highest != null) setProgress(Math.min(highest, 99));
+    };
+
+    child.stdout?.on("data", onChunk);
+    child.stderr?.on("data", onChunk);
+
+    child.on("error", () => {
+      clearInterval(fallback);
+      finish(false);
+    });
+
+    child.on("close", (code) => {
+      clearInterval(fallback);
+      if (code === 0) {
+        setProgress(100);
+        finish(true);
+        return;
+      }
+      finish(false);
+    });
+  });
+}
+
 async function checkForUpdate(): Promise<void> {
   const latest = await fetchLatestVersion();
   if (!latest || !isStrictlyNewerVersion(PKG_VERSION, latest)) return;
@@ -1392,25 +1493,19 @@ async function checkForUpdate(): Promise<void> {
     process.stdout.write(`${D}  Skipped update.${R}\n\n`);
     return;
   }
-
-  process.stdout.write(`${D}  Updating frouter-cli…${R}\n`);
   try {
-    // Detect package manager: prefer bun if available, else npm
-    let cmd = "npm install -g frouter-cli";
-    try {
-      execSync("bun --version", { stdio: "ignore" });
-      cmd = "bun install -g frouter-cli";
-    } catch {
-      /* npm fallback */
-    }
-    execSync(cmd, { stdio: "inherit" });
+    const ok = await runNpmGlobalUpdate();
+    if (!ok) throw new Error("npm update failed");
     process.stdout.write(
-      `${GREEN}  ✓ Updated to ${latest}. Please re-run frouter.${R}\n`,
+      `${GREEN}  ✓ Updated to ${latest}. Restart frouter to use the new version.${R}
+
+`,
     );
-    process.exit(0);
   } catch {
     process.stdout.write(
-      `${RED}  ✗ Update failed. Run manually: npm install -g frouter-cli${R}\n\n`,
+      `${RED}  ✗ Update failed. Run manually: npm install -g frouter-cli${R}
+
+`,
     );
   }
 }

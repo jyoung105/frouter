@@ -8,7 +8,7 @@
 
 Free model router CLI — discover, ping, and configure free AI models for OpenCode / OpenClaw.
 
-![frouter-gif](./frouter-example.gif)
+![frouter-gif](./public/example.gif)
 
 ## Install
 
@@ -105,16 +105,16 @@ Default ranking: **availability first**, then **higher tier first** (S+ → S �
 
 **Actions**
 
-| Key            | Action                                                           |
-| -------------- | ---------------------------------------------------------------- |
-| `Enter`        | Select model → target picker (OpenCode / OpenClaw)               |
-| `/`            | Search / filter models (Enter in search = apply to both targets) |
-| `A`            | Quick API key add/change (opens key editor in Settings)          |
-| `T`            | Cycle tier filter: All → S+ → S → A+ → …                         |
-| `P`            | Settings screen (edit keys, toggle providers, test)              |
-| `W` / `X`      | Faster / slower ping interval                                    |
-| `?`            | Help overlay                                                     |
-| `q` / `Ctrl+C` | Quit                                                             |
+| Key            | Action                                                            |
+| -------------- | ----------------------------------------------------------------- |
+| `Enter`        | Select model → target picker (OpenCode / OpenClaw)                |
+| `/`            | Search / filter models (Enter in search = apply to OpenCode only) |
+| `A`            | Quick API key add/change (opens key editor in Settings)           |
+| `T`            | Cycle tier filter: All → S+ → S → A+ → …                          |
+| `P`            | Settings screen (edit keys, toggle providers, test)               |
+| `W` / `X`      | Faster / slower ping interval                                     |
+| `?`            | Help overlay                                                      |
+| `q` / `Ctrl+C` | Quit                                                              |
 
 **Sort** (press to sort, press again to reverse)
 
@@ -152,6 +152,16 @@ Configs written:
 - **OpenClaw** → `~/.openclaw/openclaw.json`
 
 Existing configs are backed up before writing.
+
+When frouter launches OpenCode, it now sets `OPENCODE_CLI_RUN_MODE=true`
+by default (unless you already set it) to reduce startup log noise from
+plugin auto-update checks in the OpenCode TUI.
+
+If you want OpenCode's default startup hook behavior instead, launch frouter with:
+
+```bash
+OPENCODE_CLI_RUN_MODE=false frouter
+```
 
 ### Settings screen (`P`)
 

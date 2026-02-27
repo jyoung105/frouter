@@ -240,6 +240,11 @@ npm run perf:baseline
 npm run test:perf
 ```
 
+## Engineering workflow
+
+For branch strategy (`dev`/`main`), SemVer rules, PR/issue governance, and release tags
+(`cli-v*`, `site-v*`), see [`docs/release-governance.md`](./docs/release-governance.md).
+
 ## Model catalog auto-sync (GitHub Actions)
 
 `frouter` includes a scheduled workflow to keep model metadata current:

@@ -1,0 +1,57 @@
+name: "Release request"
+description: "Track a planned release for CLI or site"
+title: "release: "
+labels: ["release", "triage"]
+body:
+  - type: dropdown
+    id: target
+    attributes:
+      label: Release target
+      options:
+        - frouter CLI
+        - site
+    validations:
+      required: true
+
+  - type: dropdown
+    id: bump
+    attributes:
+      label: SemVer bump
+      options:
+        - patch
+        - minor
+        - major
+    validations:
+      required: true
+
+  - type: input
+    id: current
+    attributes:
+      label: Current version
+      placeholder: "x.y.z"
+    validations:
+      required: true
+
+  - type: input
+    id: next
+    attributes:
+      label: Target version
+      placeholder: "x.y.z"
+    validations:
+      required: true
+
+  - type: textarea
+    id: included
+    attributes:
+      label: Included PRs / issues
+      description: Link all PRs and issues that must be in this release.
+    validations:
+      required: true
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: Release notes highlights
+      description: User-facing changes only.
+    validations:
+      required: true

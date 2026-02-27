@@ -3,14 +3,17 @@ name: Release
 on:
   push:
     tags:
+      - "cli-v*"
+      - "site-v*"
       - "v*"
 
 permissions:
   contents: write
 
 jobs:
-  publish:
-    name: Publish to npm
+  publish-cli:
+    name: Publish CLI (npm)
+    if: startsWith(github.ref_name, 'cli-v') || (startsWith(github.ref_name, 'v') && !startsWith(github.ref_name, 'site-v'))
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -22,34 +25,85 @@ jobs:
           node-version: 22
           registry-url: https://registry.npmjs.org
 
-      - name: Verify tag matches package.json version
+      - name: Verify tag matches root package.json version
         run: |
-          PKG_VERSION="v$(node -p "require('./package.json').version")"
-          if [ "$PKG_VERSION" != "${{ github.ref_name }}" ]; then
-            echo "Tag ${{ github.ref_name }} does not match package.json version $PKG_VERSION"
+          PKG_VERSION_LEGACY="v$(node -p "require('./package.json').version")"
+          PKG_VERSION_TARGETED="cli-v$(node -p "require('./package.json').version")"
+          if [ "${{ github.ref_name }}" != "$PKG_VERSION_LEGACY" ] && [ "${{ github.ref_name }}" != "$PKG_VERSION_TARGETED" ]; then
+            echo "Tag ${{ github.ref_name }} does not match package.json version ($PKG_VERSION_LEGACY or $PKG_VERSION_TARGETED)"
             exit 1
           fi
 
       - name: Install dependencies
-        run: npm install
-
-      - name: Typecheck
-        run: npm run typecheck
+        run: npm ci
 
       - name: Lint
         run: npm run lint
 
-      - name: Run tests
-        run: npm test
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Build dist artifacts
+        run: npm run build
+
+      - name: Run unit + security tests
+        run: node --test dist/tests/unit/*.test.js dist/tests/security/*.test.js
+
+      - name: Run integration tests
+        run: node --test dist/tests/integration/*.test.js
+
+      - name: Perf baseline + perf tests
+        continue-on-error: true
+        run: |
+          npm run perf:baseline
+          npm run test:perf
 
       - name: Publish to npm
         run: npm publish
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      - name: Create GitHub Release
+      - name: Create GitHub release
         run: |
           gh release create "${{ github.ref_name }}" \
+            --title "${{ github.ref_name }}" \
+            --generate-notes
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+  release-site:
+    name: Release site artifact
+    if: startsWith(github.ref_name, 'site-v')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+
+      - name: Verify tag matches site/package.json version
+        run: |
+          SITE_VERSION="site-v$(node -p "require('./site/package.json').version")"
+          if [ "$SITE_VERSION" != "${{ github.ref_name }}" ]; then
+            echo "Tag ${{ github.ref_name }} does not match site/package.json version $SITE_VERSION"
+            exit 1
+          fi
+
+      - name: Install site dependencies
+        run: npm --prefix site install
+
+      - name: Build site
+        run: npm --prefix site run build
+
+      - name: Package site artifact
+        run: tar -C site/dist -czf site-dist.tgz .
+
+      - name: Create GitHub release
+        run: |
+          gh release create "${{ github.ref_name }}" site-dist.tgz \
             --title "${{ github.ref_name }}" \
             --generate-notes
         env:

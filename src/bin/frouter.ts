@@ -986,7 +986,9 @@ async function handleTarget(ch) {
       const meta = PROVIDERS_META[openCodePk];
       const envVar = meta?.envVar || "API key";
 
-      w(`\n${YELLOW} ! Missing ${meta?.name || openCodePk} API key (${envVar}).${R}\n`);
+      w(
+        `\n${YELLOW} ! Missing ${meta?.name || openCodePk} API key (${envVar}).${R}\n`,
+      );
       if (notice) w(`${notice}\n`);
 
       const proceed = await promptYesNoFromTarget(

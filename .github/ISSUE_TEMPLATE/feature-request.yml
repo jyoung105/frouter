@@ -1,0 +1,68 @@
+name: "Feature request"
+description: "Propose a new capability for frouter CLI or site"
+title: "feat: "
+labels: ["enhancement", "triage"]
+body:
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Target scope
+      options:
+        - frouter CLI
+        - site
+        - both
+    validations:
+      required: true
+
+  - type: dropdown
+    id: semver
+    attributes:
+      label: Planned SemVer impact
+      options:
+        - patch (small compatibility improvement)
+        - minor (new backward-compatible feature)
+        - major (breaking change)
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem statement
+      description: What user pain does this solve?
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: Describe your desired behavior.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: Write concrete, testable outcomes.
+      placeholder: |
+        - [ ] ...
+        - [ ] ...
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      options:
+        - label: This proposal is aligned with the `dev -> release/* -> main` flow.
+          required: true
+        - label: I documented any breaking change impact if I selected major.
+          required: true

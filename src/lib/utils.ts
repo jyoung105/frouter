@@ -99,9 +99,7 @@ export function filterBySearch(models, query) {
   if (!query) return models;
   const q = query.toLowerCase();
   return models.filter((m) =>
-    `${m.id} ${m.displayName || ""}`
-      .toLowerCase()
-      .includes(q),
+    `${m.id} ${m.displayName || ""}`.toLowerCase().includes(q),
   );
 }
 

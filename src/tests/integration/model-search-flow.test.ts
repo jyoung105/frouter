@@ -176,7 +176,60 @@ test(
         (line) => line.includes("#") && line.includes("Model"),
       );
       assert.notEqual(headerIdx, -1);
-      assert.match(lines[headerIdx + 1] || "", /^\s+1\s+/);
+      assert.match(frame, /█████/);
+      const firstRankLine = lines
+        .slice(headerIdx + 1)
+        .find((line) => /^\s+\d+\s+/.test(line));
+      assert.ok(firstRankLine, "expected first ranked row in search viewport");
+      assert.match(firstRankLine || "", /^\s+1\s+/);
+    } finally {
+      cleanupTempHome(home);
+    }
+  },
+);
+
+test(
+  "scrolling in search mode hides startup pixel title",
+  { skip: SKIP && "PTY harness uses `script`, unavailable on Windows" },
+  async () => {
+    const home = makeTempHome();
+    try {
+      writeHomeConfig(
+        home,
+        defaultConfig({
+          apiKeys: { nvidia: "nvapi-test" },
+          providers: {
+            nvidia: { enabled: true },
+            openrouter: { enabled: false },
+          },
+        }),
+      );
+
+      const result = await runInPty(process.execPath, [BIN_PATH], {
+        cwd: ROOT_DIR,
+        env: { HOME: home, FROUTER_NO_FETCH: "1" },
+        inputChunks: [
+          { delayMs: 850, data: "/" },
+          { delayMs: 1050, data: "\x1b[B" },
+          { delayMs: 1300, data: "\x03" }, // Ctrl+C
+        ],
+        timeoutMs: 12_000,
+      });
+
+      assert.equal(result.timedOut, false);
+      assert.equal(result.code, 0);
+
+      const frameRaw = getLatestFrameRaw(result.stdout, "/_");
+      assert.ok(frameRaw, "expected a rendered search frame after scroll");
+      const frame = stripAnsi(frameRaw);
+      assert.doesNotMatch(frame, /█████/);
+
+      const selectedRaw = frameRaw
+        .split("\n")
+        .find((line) => line.includes("\x1b[48;5;235m"));
+      assert.ok(selectedRaw, "expected selected row highlight after scroll");
+      const selectedLine = stripAnsi(selectedRaw || "");
+      assert.match(selectedLine, /^\s*2\s+/);
     } finally {
       cleanupTempHome(home);
     }

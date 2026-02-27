@@ -1537,7 +1537,11 @@ async function runGlobalUpdate(
 
     const child = spawn(command.bin, command.args, {
       stdio: ["ignore", "pipe", "pipe"],
-      env: process.env,
+      env: Object.fromEntries(
+        Object.entries(process.env).filter(
+          ([k]) => !k.toLowerCase().startsWith("npm_"),
+        ),
+      ),
     });
 
     const fallback = setInterval(() => {

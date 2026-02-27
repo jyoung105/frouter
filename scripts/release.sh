@@ -119,6 +119,20 @@ next_version() {
   echo "${major}.${minor}.${patch}"
 }
 
+set_package_version() {
+  local package_file="$1"
+  local new_version="$2"
+
+  node -e '
+const fs = require("fs");
+const packageFile = process.argv[1];
+const version = process.argv[2];
+const pkg = JSON.parse(fs.readFileSync(packageFile, "utf8"));
+pkg.version = version;
+fs.writeFileSync(packageFile, `${JSON.stringify(pkg, null, 2)}\n`);
+' "$package_file" "$new_version"
+}
+
 tag_exists_local() {
   local tag="$1"
   git rev-parse -q --verify "refs/tags/${tag}" >/dev/null 2>&1
@@ -153,12 +167,9 @@ prepare_release() {
 
       confirm_or_abort "Prepare CLI release on ${branch}: ${old_version} -> ${new_version}"
 
-      npm version "$new_version" --no-git-tag-version >/dev/null
+      set_package_version "./package.json" "$new_version"
 
       git add package.json
-      if [[ -f package-lock.json ]]; then
-        git add package-lock.json
-      fi
 
       git commit -m "chore(release): cli v${new_version}"
       ;;
@@ -174,12 +185,9 @@ prepare_release() {
 
       confirm_or_abort "Prepare site release on ${branch}: ${old_version} -> ${new_version}"
 
-      npm --prefix site version "$new_version" --no-git-tag-version >/dev/null
+      set_package_version "./site/package.json" "$new_version"
 
       git add site/package.json
-      if [[ -f site/package-lock.json ]]; then
-        git add site/package-lock.json
-      fi
 
       git commit -m "chore(release): site v${new_version}"
       ;;

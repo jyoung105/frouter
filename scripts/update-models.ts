@@ -17,8 +17,8 @@ import { fileURLToPath } from "node:url";
 
 const __dir = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dir, "..");
-const RANKINGS_PATH = join(ROOT, "model-rankings.json");
-const SUPPORT_PATH = join(ROOT, "model-support.json");
+const RANKINGS_PATH = join(ROOT, "data", "model-rankings.json");
+const SUPPORT_PATH = join(ROOT, "data", "model-support.json");
 const MODELS_TS_PATH = join(ROOT, "src", "lib", "models.ts");
 
 const APPLY = process.argv.includes("--apply");

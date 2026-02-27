@@ -12,7 +12,6 @@ import {
   D,
   GREEN,
   RED,
-  YELLOW,
 } from "../../lib/utils.js";
 
 // ─── 1. TIER_ORDER export & shape ────────────────────────────────────────────

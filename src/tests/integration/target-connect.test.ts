@@ -331,10 +331,7 @@ exit 0
       const text = stripAnsi(result.stdout);
       assert.match(text, /Missing OpenRouter API key \(OPENROUTER_API_KEY\)/);
       assert.match(text, /Launch opencode anyway\? \(Y\/n, default: n\)/);
-      assert.match(
-        text,
-        /Launch cancelled\. Set OPENROUTER_API_KEY in Settings \(P\)/,
-      );
+      assert.match(text, /Launch cancelled\. Set OPENROUTER_API_KEY in Settings \(P\)/);
     } finally {
       cleanupTempHome(home);
     }

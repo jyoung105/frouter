@@ -274,6 +274,22 @@ function truncAnsi(s: string, maxVis: number): string {
   return out;
 }
 
+const STARTUP_PIXEL_TITLE = [
+  "  █████  ████    ███   █   █  █████  █████  ████   ",
+  "  █      █   █  █   █  █   █    █    █      █   █  ",
+  "  ████   ████   █   █  █   █    █    ████   ████   ",
+  "  █      █ █    █   █  █   █    █    █      █ █    ",
+  "  █      █  ██   ███    ███     █    █████  █  ██  ",
+];
+
+function startupPixelTitleLines() {
+  return STARTUP_PIXEL_TITLE.map((line, idx) => {
+    if (idx <= 1) return `${B}${line}${R}`;
+    if (idx >= 3) return `${D}${line}${R}`;
+    return line;
+  });
+}
+
 function statusDot(model) {
   switch (model.status) {
     case "up":
@@ -344,8 +360,14 @@ function renderMain() {
   }
   const isLoading = filtered.length === 0 && models.length === 0;
   if (isLoading) {
-    out += `\n${D}    Loading models…${R}\n`;
-    for (let i = 2; i < tr; i++) out += "\n";
+    const loadingLines = [
+      ...startupPixelTitleLines(),
+      `${D}  FROUTER · Free Model Router${R}`,
+      `${D}  Loading models…${R}`,
+    ];
+    for (let i = 0; i < tr; i++) {
+      out += truncAnsi(loadingLines[i] ?? "", c) + "\n";
+    }
   }
   if (!isLoading) {
     const slice = filtered.slice(scrollOff, scrollOff + tr);

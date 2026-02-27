@@ -205,10 +205,12 @@ test(
       const frame = getLatestFrame(result.stdout, "[Model Search]");
       assert.ok(frame, "expected a rendered main screen frame");
       const lines = frame.split("\n").filter((line) => line !== "");
+      const outputText = stripAnsi(result.stdout);
 
       assert.match(lines[0] || "", /\bfrouter\b/i);
       assert.match(lines[1] || "", /\[Model Search\]/);
       assert.match(lines[2] || "", /#\s+Tier\s+Provider\s+Model/);
+      assert.match(outputText, /FROUTER · Free Model Router/);
       assert.ok(
         lines.some((line) => line.includes("↑↓/jk:nav")),
         "expected footer to remain visible",

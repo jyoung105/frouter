@@ -1,11 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {
-  chmodSync,
-  mkdirSync,
-  readFileSync,
-  writeFileSync,
-} from "node:fs";
+import { chmodSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { createHttpServer } from "../helpers/mock-http.js";
 import { BIN_PATH, ROOT_DIR } from "../helpers/test-paths.js";
@@ -165,7 +160,10 @@ exit 0
       assert.match(result.stdout, /Update now\? \(Y\/n, default: n\):/);
       assert.match(result.stdout, /Updating frouter-cli/);
       assert.match(result.stdout, /Updated to 99\.0\.0/);
-      assert.equal(readFileSync(marker, "utf8").trim(), "install -g frouter-cli");
+      assert.equal(
+        readFileSync(marker, "utf8").trim(),
+        "install -g frouter-cli",
+      );
     } finally {
       cleanupTempHome(home);
       await server.close();

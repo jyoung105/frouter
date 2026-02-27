@@ -1,11 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {
-  chmodSync,
-  mkdirSync,
-  readFileSync,
-  writeFileSync,
-} from "node:fs";
+import { chmodSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { createHttpServer } from "../helpers/mock-http.js";
 import { BIN_PATH, ROOT_DIR } from "../helpers/test-paths.js";
@@ -30,6 +25,31 @@ test("update check: skips silently when version matches", async () => {
   const server = await createHttpServer((_req, res) => {
     res.writeHead(200, { "Content-Type": "application/json" });
     res.end(JSON.stringify({ version: PKG_VERSION }));
+  });
+
+  const home = makeTempHome();
+  try {
+    makeConfig(home);
+    const result = await runNode([BIN_PATH], {
+      cwd: ROOT_DIR,
+      env: {
+        HOME: home,
+        FROUTER_REGISTRY_URL: `${server.baseUrl}/frouter-cli/latest`,
+      },
+      timeoutMs: 7_000,
+    });
+
+    assert.doesNotMatch(result.stdout + result.stderr, /Update available/);
+  } finally {
+    cleanupTempHome(home);
+    await server.close();
+  }
+});
+
+test("update check: skips silently when registry version is older", async () => {
+  const server = await createHttpServer((_req, res) => {
+    res.writeHead(200, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ version: "0.0.1" }));
   });
 
   const home = makeTempHome();
@@ -165,7 +185,10 @@ exit 0
       assert.match(result.stdout, /Update now\? \(Y\/n, default: n\):/);
       assert.match(result.stdout, /Updating frouter-cli/);
       assert.match(result.stdout, /Updated to 99\.0\.0/);
-      assert.equal(readFileSync(marker, "utf8").trim(), "install -g frouter-cli");
+      assert.equal(
+        readFileSync(marker, "utf8").trim(),
+        "install -g frouter-cli",
+      );
     } finally {
       cleanupTempHome(home);
       await server.close();

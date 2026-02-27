@@ -257,7 +257,10 @@ test(
       const clearCount = (result.stdout.match(/\x1b\[2J\x1b\[H/g) || []).length;
       const homeCount = (result.stdout.match(/\x1b\[H/g) || []).length;
       assert.equal(clearCount, 0);
-      assert.ok(homeCount >= 2, `expected repeated cursor-home renders, got ${homeCount}`);
+      assert.ok(
+        homeCount >= 2,
+        `expected repeated cursor-home renders, got ${homeCount}`,
+      );
     } finally {
       cleanupTempHome(home);
     }

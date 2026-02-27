@@ -176,7 +176,13 @@ function assertOpenCodeCompatible(model) {
 }
 
 function modelTail(id: string): string {
-  return id.replace(/:free$/i, "").split("/").pop()?.toLowerCase() || "";
+  return (
+    id
+      .replace(/:free$/i, "")
+      .split("/")
+      .pop()
+      ?.toLowerCase() || ""
+  );
 }
 
 function findFallbackModel(
@@ -186,7 +192,9 @@ function findFallbackModel(
 ): any | null {
   if (!Array.isArray(allModels) || !allModels.length) return null;
   return (
-    allModels.find((m) => m?.providerKey === providerKey && m?.id === modelId) ||
+    allModels.find(
+      (m) => m?.providerKey === providerKey && m?.id === modelId,
+    ) ||
     allModels.find(
       (m) =>
         m?.providerKey === providerKey &&
@@ -231,7 +239,8 @@ export function writeOpenCode(model, providerKey, apiKey = null, options = {}) {
  * a model from NIM (or any provider), that exact provider/model is used.
  */
 export function resolveOpenCodeSelection(model, providerKey, _allModels = []) {
-  const fallbackRule = OPENCODE_PROVIDER_FALLBACKS[`${providerKey}:${model?.id}`];
+  const fallbackRule =
+    OPENCODE_PROVIDER_FALLBACKS[`${providerKey}:${model?.id}`];
   if (!fallbackRule) return { model, providerKey, fallback: false };
 
   const fallbackModel = findFallbackModel(

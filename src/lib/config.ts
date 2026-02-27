@@ -54,8 +54,7 @@ export function loadConfig() {
     return {
       apiKeys: parsed.apiKeys || {},
       providers: parsed.providers || defaults.providers,
-      ui:
-        parsed.ui && typeof parsed.ui === "object" ? parsed.ui : defaults.ui,
+      ui: parsed.ui && typeof parsed.ui === "object" ? parsed.ui : defaults.ui,
     };
   } catch {
     try {

@@ -204,7 +204,7 @@ API 키가 최소 하나 이상 설정되어 있어야 합니다. 선택 기준:
 }
 ```
 
-`ui.scrollSortPauseMs` 는 탐색 입력 이후 자동 재정렬을 얼마나 오래 멈출지(ms) 설정합니다.  
+`ui.scrollSortPauseMs` 는 탐색 입력 이후 자동 재정렬을 얼마나 오래 멈출지(ms) 설정합니다.
 `FROUTER_SCROLL_SORT_PAUSE_MS` 환경 변수가 있으면 설정값보다 우선합니다. `0`이면 일시정지를 끕니다.
 
 ## 등급 기준 (SWE-bench Verified)

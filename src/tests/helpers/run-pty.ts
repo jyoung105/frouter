@@ -174,6 +174,7 @@ export async function runInPty(
 
   const runnerEnv = {
     ...process.env,
+    FROUTER_TUI_FORCE_CLEAR: "1", // keep deterministic frame boundaries in PTY snapshots
     ...env,
     PTY_CMD: JSON.stringify([command, ...args]),
     PTY_INPUT: JSON.stringify(inputChunks),

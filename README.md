@@ -65,6 +65,9 @@ API key priority: environment variable → `~/.frouter.json` → keyless ping (l
 ```bash
 NVIDIA_API_KEY=nvapi-xxx frouter
 OPENROUTER_API_KEY=sk-or-xxx frouter
+
+# Optional: pause auto re-sorting while you scroll (milliseconds)
+FROUTER_SCROLL_SORT_PAUSE_MS=2500 frouter
 ```
 
 ## TUI
@@ -197,9 +200,15 @@ Stored at `~/.frouter.json` (permissions `0600`).
   "providers": {
     "nvidia": { "enabled": true },
     "openrouter": { "enabled": true }
+  },
+  "ui": {
+    "scrollSortPauseMs": 1500
   }
 }
 ```
+
+`ui.scrollSortPauseMs` sets how long (ms) auto re-sorting stays paused after navigation input.
+`FROUTER_SCROLL_SORT_PAUSE_MS` overrides config. Set to `0` to disable pause.
 
 ## Tier scale (SWE-bench Verified)
 

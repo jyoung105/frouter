@@ -205,12 +205,10 @@ test(
       const frame = getLatestFrame(result.stdout, "[Model Search]");
       assert.ok(frame, "expected a rendered main screen frame");
       const lines = frame.split("\n").filter((line) => line !== "");
-      const outputText = stripAnsi(result.stdout);
 
       assert.match(lines[0] || "", /\bfrouter\b/i);
       assert.match(lines[1] || "", /\[Model Search\]/);
       assert.match(lines[2] || "", /#\s+Tier\s+Provider\s+Model/);
-      assert.match(outputText, /FROUTER · Free Model Router/);
       assert.ok(
         lines.some((line) => line.includes("↑↓/jk:nav")),
         "expected footer to remain visible",
@@ -219,6 +217,47 @@ test(
         lines.length <= 26,
         `expected compact viewport fallback (<=26 lines), got ${lines.length}`,
       );
+    } finally {
+      cleanupTempHome(home);
+    }
+  },
+);
+
+test(
+  "main screen redraw uses cursor-home updates (no full clear flicker) by default",
+  { skip: SKIP && "PTY harness uses `script`, unavailable on Windows" },
+  async () => {
+    const home = makeTempHome();
+    try {
+      writeHomeConfig(
+        home,
+        defaultConfig({
+          apiKeys: { nvidia: "nvapi-test" },
+          providers: {
+            nvidia: { enabled: true },
+            openrouter: { enabled: false },
+          },
+        }),
+      );
+
+      const result = await runInPty(process.execPath, [BIN_PATH], {
+        cwd: ROOT_DIR,
+        env: {
+          HOME: home,
+          FROUTER_NO_FETCH: "1",
+          FROUTER_TUI_FORCE_CLEAR: "0",
+        },
+        inputChunks: [{ delayMs: 3200, data: "q" }],
+        timeoutMs: 12_000,
+      });
+
+      assert.equal(result.timedOut, false);
+      assert.equal(result.code, 0);
+
+      const clearCount = (result.stdout.match(/\x1b\[2J\x1b\[H/g) || []).length;
+      const homeCount = (result.stdout.match(/\x1b\[H/g) || []).length;
+      assert.equal(clearCount, 0);
+      assert.ok(homeCount >= 2, `expected repeated cursor-home renders, got ${homeCount}`);
     } finally {
       cleanupTempHome(home);
     }

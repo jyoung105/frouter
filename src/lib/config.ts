@@ -44,6 +44,9 @@ export function loadConfig() {
       nvidia: { enabled: true },
       openrouter: { enabled: true },
     },
+    ui: {
+      scrollSortPauseMs: 1500,
+    },
   };
   if (!existsSync(CONFIG_PATH)) return defaults;
   try {
@@ -51,6 +54,8 @@ export function loadConfig() {
     return {
       apiKeys: parsed.apiKeys || {},
       providers: parsed.providers || defaults.providers,
+      ui:
+        parsed.ui && typeof parsed.ui === "object" ? parsed.ui : defaults.ui,
     };
   } catch {
     try {

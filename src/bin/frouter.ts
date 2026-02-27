@@ -67,6 +67,7 @@ const PKG_VERSION = JSON.parse(
 // ─── ANSI shortcuts ────────────────────────────────────────────────────────────
 const w = (s) => process.stdout.write(String(s));
 const CLEAR = "\x1b[2J\x1b[H";
+const CURSOR_HOME = "\x1b[H";
 const HIDEC = "\x1b[?25l";
 const SHOWC = "\x1b[?25h";
 const INVERT = "\x1b[7m";
@@ -75,6 +76,7 @@ const ALT_ON = "\x1b[?1049h";
 const ALT_OFF = "\x1b[?1049l";
 const ALLOW_PLAINTEXT_KEY_EXPORT =
   process.env.FROUTER_EXPORT_PLAINTEXT_KEYS === "1";
+const FORCE_FRAME_CLEAR = process.env.FROUTER_TUI_FORCE_CLEAR === "1";
 
 // ─── Parse CLI args ────────────────────────────────────────────────────────────
 const argv = process.argv.slice(2);
@@ -141,8 +143,10 @@ let sTestRes = {};
 let sNotice = "";
 let tNotice = "";
 let pingRef = null;
-let trackedId = null; // model id to track cursor across re-sorts
 let userNavigated = false; // true once user actively moves cursor
+let autoSortPauseUntil = 0;
+const DEFAULT_USER_SCROLL_SORT_PAUSE_MS = 1500;
+let userScrollSortPauseMs = DEFAULT_USER_SCROLL_SORT_PAUSE_MS;
 
 // ─── Geometry ──────────────────────────────────────────────────────────────────
 const DEFAULT_COLS = 80;
@@ -247,6 +251,13 @@ function fullWidthBar(content, style = INVERT, lastLine = false) {
   return `${style}${truncated}${" ".repeat(Math.max(0, maxW - visLen(truncated)))}${R}`;
 }
 
+function fullWidthLine(content, lastLine = false) {
+  const c = cols();
+  const maxW = lastLine ? Math.max(0, c - 1) : c;
+  const truncated = truncAnsi(content, maxW);
+  return `${truncated}${" ".repeat(Math.max(0, maxW - visLen(truncated)))}`;
+}
+
 // Truncate a string with ANSI codes to at most `maxVis` visible columns.
 // Preserves escape sequences but stops emitting visible chars once the limit is reached.
 function truncAnsi(s: string, maxVis: number): string {
@@ -338,16 +349,14 @@ function renderMain() {
     tierFilter !== "All" ? `${YELLOW}tier:${tierFilter}${R}  ` : "";
   const stats = `${D}${filtered.length}/${models.length} models  ${pingMs / 1000}s${R}`;
 
-  let out = CLEAR + HIDEC;
+  let out = (FORCE_FRAME_CLEAR ? CLEAR : CURSOR_HOME) + HIDEC;
 
   // Header
-  const hdrRaw = `${BG_HDR}${WHITE}${B} frouter ${R}  ${provStatus}`;
-  const hdrTrunc = truncAnsi(hdrRaw, c);
-  const hdrPad = Math.max(0, c - visLen(hdrTrunc));
-  out += `${hdrTrunc}${" ".repeat(hdrPad)}${R}\n`;
+  const hdrRaw = `${BG_HDR}${WHITE}${B} frouter ${R}  ${provStatus}${R}`;
+  out += fullWidthLine(hdrRaw) + "\n";
 
   // Search + stats bar
-  out += truncAnsi(` ${searchBar}   ${tierBar}${stats}`, c) + "\n";
+  out += fullWidthLine(` ${searchBar}   ${tierBar}${stats}`) + "\n";
 
   // Column headers with sort indicators
   const hdr = `  ${"#".padStart(3)}  ${colHdr("Tier", "tier", 4)}  ${colHdr("Provider", "provider", 11)}  ${colHdr("Model", "model", 32)}  ${colHdr("Ctx", "context", 5, true)}  ${colHdr("AA", "intel", 3, true)}  ${colHdr("Avg", "avg", 6, true)}  ${colHdr("Lat", "latest", 6, true)}  ${colHdr("Up%", "uptime", 4, true)}  ${colHdr("Verdict", "verdict", 7)}`;
@@ -355,6 +364,8 @@ function renderMain() {
 
   // Model rows (skip if terminal too small)
   if (tr === 0) {
+    // Ensure stale lower lines are cleared when viewport is tiny.
+    out += "\x1b[J";
     w(out);
     return;
   }
@@ -374,7 +385,7 @@ function renderMain() {
     for (let i = 0; i < tr; i++) {
       const m = slice[i];
       if (!m) {
-        out += "\n";
+        out += fullWidthLine("") + "\n";
         continue;
       }
 
@@ -399,9 +410,8 @@ function renderMain() {
           ? String(Math.round(m.aaIntelligence)).padStart(3)
           : `${D}  —${R}`;
 
-      const row = truncAnsi(
+      const row = fullWidthLine(
         `  ${rank}  ${tier}  ${prov}  ${name}  ${ctx}  ${aaStr}  ${avgStr}  ${latStr}  ${upStr}  ${dot} ${verdict}`,
-        c,
       );
       if (isSel) out += `${BG_SEL}${B}${row}${R}\n`;
       else out += `${row}${R}\n`;
@@ -414,9 +424,9 @@ function renderMain() {
     const fullId = `${sel.providerKey}/${sel.id}`;
     const sweStr = sel.sweScore != null ? `  SWE:${sel.sweScore}%` : "";
     const ctxStr = sel.context ? `  ctx:${fmtCtx(sel.context).trim()}` : "";
-    out += truncAnsi(`${D} ${fullId}${sweStr}${ctxStr}${R}`, c) + "\n";
+    out += fullWidthLine(`${D} ${fullId}${sweStr}${ctxStr}${R}`) + "\n";
   } else {
-    out += "\n";
+    out += fullWidthLine("") + "\n";
   }
 
   // Footer
@@ -564,24 +574,14 @@ function render() {
   }
 }
 
-// ─── Filter + sort (with cursor tracking) ──────────────────────────────────────
+// ─── Filter + sort ─────────────────────────────────────────────────────────────
 function applyFilters() {
-  // Remember which model the cursor is on (only if user actively navigated)
-  if (userNavigated && filtered[cursor]) {
-    trackedId = modelKey(filtered[cursor]);
-  }
-
   let r = models;
   if (tierFilter !== "All") r = filterByTier(r, tierFilter);
   if (searchQuery) r = filterBySearch(r, searchQuery);
   r = sortModels(r, sortCol, sortAsc);
   filtered = r;
 
-  // Restore cursor to the same model if it still exists
-  if (userNavigated && trackedId) {
-    const idx = filtered.findIndex((m) => modelKey(m) === trackedId);
-    if (idx !== -1) cursor = idx;
-  }
   if (cursor >= filtered.length) cursor = Math.max(0, filtered.length - 1);
   if (cursor < 0) cursor = 0;
   // Keep scrollOff pinned to 0 until the user actively navigates
@@ -611,12 +611,37 @@ function clampCursor(next) {
   return Math.max(0, Math.min(maxCursorIndex(), next));
 }
 
+function parseSortPauseMs(raw: unknown): number {
+  if (raw == null || raw === "") return DEFAULT_USER_SCROLL_SORT_PAUSE_MS;
+  const parsed = Number(raw);
+  if (!Number.isFinite(parsed) || parsed < 0) {
+    return DEFAULT_USER_SCROLL_SORT_PAUSE_MS;
+  }
+  return Math.round(parsed);
+}
+
+function resolveUserScrollSortPauseMs(cfg: any): number {
+  // Env overrides config so users can tune behavior per terminal/session.
+  if (process.env.FROUTER_SCROLL_SORT_PAUSE_MS != null) {
+    return parseSortPauseMs(process.env.FROUTER_SCROLL_SORT_PAUSE_MS);
+  }
+  return parseSortPauseMs(cfg?.ui?.scrollSortPauseMs);
+}
+
+function noteUserNavigation() {
+  userNavigated = true;
+  autoSortPauseUntil = Date.now() + userScrollSortPauseMs;
+}
+
+function isAutoSortPaused() {
+  return Date.now() < autoSortPauseUntil;
+}
+
 function resetSearchState() {
   searchMode = false;
   searchQuery = "";
   cursor = 0;
   scrollOff = 0;
-  trackedId = null;
 }
 
 function resetSettingsState() {
@@ -812,10 +837,10 @@ function handleMain(ch) {
       searchQuery = searchQuery.slice(0, -1);
       needsRefilter = true;
     } else if (ch === UP) {
-      userNavigated = true;
+      noteUserNavigation();
       cursor = Math.max(0, cursor - 1);
     } else if (ch === DOWN) {
-      userNavigated = true;
+      noteUserNavigation();
       cursor = clampCursor(cursor + 1);
     } else if (ch.length === 1 && ch >= " ") {
       searchQuery += ch;
@@ -829,22 +854,22 @@ function handleMain(ch) {
 
   // Navigation
   if (ch === UP || ch === "k") {
-    userNavigated = true;
+    noteUserNavigation();
     cursor = Math.max(0, cursor - 1);
   } else if (ch === DOWN || ch === "j") {
-    userNavigated = true;
+    noteUserNavigation();
     cursor = clampCursor(cursor + 1);
   } else if (ch === PGUP) {
-    userNavigated = true;
+    noteUserNavigation();
     cursor = Math.max(0, cursor - tRows());
   } else if (ch === PGDN) {
-    userNavigated = true;
+    noteUserNavigation();
     cursor = clampCursor(cursor + tRows());
   } else if (ch === "g" || ch === HOME) {
-    userNavigated = true;
+    noteUserNavigation();
     cursor = 0;
   } else if (ch === "G" || ch === END) {
-    userNavigated = true;
+    noteUserNavigation();
     cursor = maxCursorIndex();
   }
 
@@ -1252,8 +1277,8 @@ function restartLoop() {
     config,
     pingMs,
     () => {
-      // End-of-round: re-sort + full render
-      applyFilters();
+      // End-of-round: freeze re-sorting while the user is actively navigating.
+      if (!isAutoSortPaused()) applyFilters();
       if (screen === "main") render();
     },
     onPingTick,
@@ -1442,6 +1467,7 @@ async function main() {
   }
 
   config = loadConfig();
+  userScrollSortPauseMs = resolveUserScrollSortPauseMs(config);
 
   if (!Object.keys(config.apiKeys || {}).length) {
     config = await runFirstRunWizard(config);

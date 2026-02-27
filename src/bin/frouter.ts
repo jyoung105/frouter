@@ -51,7 +51,7 @@ import {
   ORANGE,
   BG_SEL,
 } from "../lib/utils.js";
-import { spawnSync, execSync } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
@@ -1336,6 +1336,84 @@ function promptYesNo(question: string, defaultValue = false): Promise<boolean> {
   });
 }
 
+const UPDATE_BAR_WIDTH = 24;
+
+function renderUpdateProgress(percent: number): void {
+  const pct = Math.max(0, Math.min(100, Math.round(percent)));
+  const filled = Math.round((pct / 100) * UPDATE_BAR_WIDTH);
+  const bar =
+    `${"█".repeat(filled)}${"░".repeat(Math.max(0, UPDATE_BAR_WIDTH - filled))}`;
+  process.stdout.write(
+    `${D}  Updating frouter-cli [${bar}] ${String(pct).padStart(3)}%${R}`,
+  );
+}
+
+function readHighestPercent(text: string): number | null {
+  let highest = -1;
+  for (const match of text.matchAll(/(\d{1,3})%/g)) {
+    const pct = Number.parseInt(match[1], 10);
+    if (Number.isFinite(pct) && pct >= 0 && pct <= 100) {
+      highest = Math.max(highest, pct);
+    }
+  }
+  return highest >= 0 ? highest : null;
+}
+
+async function runNpmGlobalUpdate(): Promise<boolean> {
+  return new Promise((resolve) => {
+    let done = false;
+    let progress = 0;
+
+    function finish(ok: boolean) {
+      if (done) return;
+      done = true;
+      process.stdout.write("\n");
+      resolve(ok);
+    }
+
+    function setProgress(next: number) {
+      const pct = Math.max(progress, Math.min(100, Math.round(next)));
+      if (pct === progress) return;
+      progress = pct;
+      renderUpdateProgress(progress);
+    }
+
+    renderUpdateProgress(progress);
+
+    const child = spawn("npm", ["install", "-g", "frouter-cli"], {
+      stdio: ["ignore", "pipe", "pipe"],
+      env: process.env,
+    });
+
+    const fallback = setInterval(() => {
+      if (progress < 95) setProgress(progress + 1);
+    }, 120);
+
+    const onChunk = (chunk: string | Buffer) => {
+      const highest = readHighestPercent(String(chunk));
+      if (highest != null) setProgress(Math.min(highest, 99));
+    };
+
+    child.stdout?.on("data", onChunk);
+    child.stderr?.on("data", onChunk);
+
+    child.on("error", () => {
+      clearInterval(fallback);
+      finish(false);
+    });
+
+    child.on("close", (code) => {
+      clearInterval(fallback);
+      if (code === 0) {
+        setProgress(100);
+        finish(true);
+        return;
+      }
+      finish(false);
+    });
+  });
+}
+
 async function checkForUpdate(): Promise<void> {
   const latest = await fetchLatestVersion();
   if (!latest || latest === PKG_VERSION) return;
@@ -1349,25 +1427,19 @@ async function checkForUpdate(): Promise<void> {
     process.stdout.write(`${D}  Skipped update.${R}\n\n`);
     return;
   }
-
-  process.stdout.write(`${D}  Updating frouter-cli…${R}\n`);
   try {
-    // Detect package manager: prefer bun if available, else npm
-    let cmd = "npm install -g frouter-cli";
-    try {
-      execSync("bun --version", { stdio: "ignore" });
-      cmd = "bun install -g frouter-cli";
-    } catch {
-      /* npm fallback */
-    }
-    execSync(cmd, { stdio: "inherit" });
+    const ok = await runNpmGlobalUpdate();
+    if (!ok) throw new Error("npm update failed");
     process.stdout.write(
-      `${GREEN}  ✓ Updated to ${latest}. Please re-run frouter.${R}\n`,
+      `${GREEN}  ✓ Updated to ${latest}. Restart frouter to use the new version.${R}
+
+`,
     );
-    process.exit(0);
   } catch {
     process.stdout.write(
-      `${RED}  ✗ Update failed. Run manually: npm install -g frouter-cli${R}\n\n`,
+      `${RED}  ✗ Update failed. Run manually: npm install -g frouter-cli${R}
+
+`,
     );
   }
 }

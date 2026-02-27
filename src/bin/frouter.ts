@@ -637,9 +637,10 @@ function clampCursor(next) {
 
 function resolveUserScrollSortPauseMs(cfg: any): number {
   // Env overrides config so users can tune behavior per terminal/session.
-  const raw = process.env.FROUTER_SCROLL_SORT_PAUSE_MS != null
-    ? process.env.FROUTER_SCROLL_SORT_PAUSE_MS
-    : cfg?.ui?.scrollSortPauseMs;
+  const raw =
+    process.env.FROUTER_SCROLL_SORT_PAUSE_MS != null
+      ? process.env.FROUTER_SCROLL_SORT_PAUSE_MS
+      : cfg?.ui?.scrollSortPauseMs;
   if (raw == null || raw === "") return DEFAULT_USER_SCROLL_SORT_PAUSE_MS;
   const parsed = Number(raw);
   if (!Number.isFinite(parsed) || parsed < 0) {
@@ -1389,8 +1390,7 @@ const UPDATE_BAR_WIDTH = 24;
 function renderUpdateProgress(percent: number): void {
   const pct = Math.max(0, Math.min(100, Math.round(percent)));
   const filled = Math.round((pct / 100) * UPDATE_BAR_WIDTH);
-  const bar =
-    `${"█".repeat(filled)}${"░".repeat(Math.max(0, UPDATE_BAR_WIDTH - filled))}`;
+  const bar = `${"█".repeat(filled)}${"░".repeat(Math.max(0, UPDATE_BAR_WIDTH - filled))}`;
   process.stdout.write(
     `\r${D}  Updating frouter-cli [${bar}] ${String(pct).padStart(3)}%${R}`,
   );

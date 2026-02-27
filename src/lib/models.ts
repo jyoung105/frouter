@@ -126,7 +126,9 @@ function applyTestDrops(models: any[]): any[] {
   // Integration-test hook:
   // FROUTER_TEST_DROP_MODEL_AFTER_CALL='2:nvidia/deepseek-ai/deepseek-v3.2'
   // or multiple targets via comma separation.
-  const spec = parseTestDropSpec(process.env.FROUTER_TEST_DROP_MODEL_AFTER_CALL);
+  const spec = parseTestDropSpec(
+    process.env.FROUTER_TEST_DROP_MODEL_AFTER_CALL,
+  );
   if (!spec) return models;
   if (_getAllModelsCallCount < spec.afterCall) return models;
   return models.filter((m) => !spec.targets.has(`${m.providerKey}/${m.id}`));

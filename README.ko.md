@@ -4,6 +4,7 @@
 
 [![CI](https://github.com/jyoung105/frouter/actions/workflows/ci.yml/badge.svg)](https://github.com/jyoung105/frouter/actions/workflows/ci.yml)
 [![npm version](https://img.shields.io/npm/v/frouter-cli)](https://www.npmjs.com/package/frouter-cli)
+[![npm downloads](https://img.shields.io/npm/dm/frouter-cli)](https://www.npmjs.com/package/frouter-cli)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 
 무료 AI 모델 라우터 CLI — OpenCode / OpenClaw용 무료 모델을 탐색, 핑 테스트, 설정합니다.

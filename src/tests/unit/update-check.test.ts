@@ -369,34 +369,31 @@ esac
   },
 );
 
-test(
-  "update check: FROUTER_SKIP_UPDATE_ONCE suppresses update check entirely",
-  async () => {
-    const server = await createHttpServer((_req, res) => {
-      res.writeHead(200, { "Content-Type": "application/json" });
-      res.end(JSON.stringify({ version: "99.0.0" }));
+test("update check: FROUTER_SKIP_UPDATE_ONCE suppresses update check entirely", async () => {
+  const server = await createHttpServer((_req, res) => {
+    res.writeHead(200, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ version: "99.0.0" }));
+  });
+
+  const home = makeTempHome();
+  try {
+    makeConfig(home);
+    const result = await runNode([BIN_PATH], {
+      cwd: ROOT_DIR,
+      env: {
+        HOME: home,
+        FROUTER_REGISTRY_URL: `${server.baseUrl}/frouter-cli/latest`,
+        FROUTER_SKIP_UPDATE_ONCE: "1",
+      },
+      timeoutMs: 7_000,
     });
 
-    const home = makeTempHome();
-    try {
-      makeConfig(home);
-      const result = await runNode([BIN_PATH], {
-        cwd: ROOT_DIR,
-        env: {
-          HOME: home,
-          FROUTER_REGISTRY_URL: `${server.baseUrl}/frouter-cli/latest`,
-          FROUTER_SKIP_UPDATE_ONCE: "1",
-        },
-        timeoutMs: 7_000,
-      });
-
-      assert.doesNotMatch(result.stdout + result.stderr, /Update available/);
-    } finally {
-      cleanupTempHome(home);
-      await server.close();
-    }
-  },
-);
+    assert.doesNotMatch(result.stdout + result.stderr, /Update available/);
+  } finally {
+    cleanupTempHome(home);
+    await server.close();
+  }
+});
 
 test(
   "update check: simulated 1.1.11 publish updates global binary and restart sees new version",

@@ -93,7 +93,10 @@ test("perf: pingAllOnce stays within absolute and baseline budgets", async () =>
     );
 
     if (baselinePingMs > 0 && Number.isFinite(baselinePingMs)) {
-      const relativeBudgetMs = Math.max(baselinePingMs * 1.05, baselinePingMs + 5);
+      const relativeBudgetMs = Math.max(
+        baselinePingMs * 1.05,
+        baselinePingMs + 5,
+      );
       assert.ok(
         avgMs <= relativeBudgetMs,
         `ping baseline regression: ${avgMs.toFixed(2)}ms > ${relativeBudgetMs.toFixed(2)}ms (baseline=${baselinePingMs}ms)`,

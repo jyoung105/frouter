@@ -18,6 +18,7 @@ import {
   startPingLoop,
   stopPingLoop,
   destroyAgents,
+  bumpPingEpoch,
 } from "../lib/ping.js";
 import {
   writeOpenCode,
@@ -77,6 +78,9 @@ const ALT_OFF = "\x1b[?1049l";
 const ALLOW_PLAINTEXT_KEY_EXPORT =
   process.env.FROUTER_EXPORT_PLAINTEXT_KEYS === "1";
 const FORCE_FRAME_CLEAR = process.env.FROUTER_TUI_FORCE_CLEAR === "1";
+const STRICT_RENDER_AUTH =
+  process.env.NODE_ENV === "test" ||
+  process.env.FROUTER_STRICT_RENDER_AUTH === "1";
 
 // ─── Parse CLI args ────────────────────────────────────────────────────────────
 const argv = process.argv.slice(2);
@@ -148,6 +152,7 @@ let userNavigated = false; // true once user actively moves cursor
 let autoSortPauseUntil = 0;
 const DEFAULT_USER_SCROLL_SORT_PAUSE_MS = 1500;
 let userScrollSortPauseMs = DEFAULT_USER_SCROLL_SORT_PAUSE_MS;
+let renderAuthorityViolations = 0;
 
 // ─── Geometry ──────────────────────────────────────────────────────────────────
 const DEFAULT_COLS = 80;
@@ -598,6 +603,35 @@ function render() {
   }
 }
 
+const ALLOWED_RENDER_REASONS = new Set([
+  "main-input",
+  "main-search",
+  "main-sort",
+  "settings-ui",
+  "settings-test",
+  "settings-exit",
+  "target-ui",
+  "target-prompt",
+  "help-close",
+  "resize",
+  "startup",
+  "refresh-complete",
+  "onPingTick",
+  "round-complete",
+  "timed-return",
+  "throttled",
+]);
+
+function renderWithAuthority(reason: string) {
+  if (!ALLOWED_RENDER_REASONS.has(reason)) {
+    renderAuthorityViolations++;
+    const msg = `[frouter] non-authoritative render attempt: ${reason}\n`;
+    if (STRICT_RENDER_AUTH) throw new Error(msg.trim());
+    process.stderr.write(msg);
+  }
+  render();
+}
+
 // ─── Filter + sort ─────────────────────────────────────────────────────────────
 function applyFilters() {
   let r = models;
@@ -821,7 +855,7 @@ function quickApplySelectionToTargets() {
   setTimeout(
     () => {
       screen = "main";
-      render();
+      renderWithAuthority("timed-return");
     },
     ok ? 1400 : 2000,
   );
@@ -963,7 +997,7 @@ function handleSettings(ch) {
         const checked = validateProviderApiKey(currentPk, sKeyBuf);
         if (!checked.ok) {
           sNotice = `${RED}Invalid key for ${currentMeta.name}: ${checked.reason}${R}`;
-          render();
+          renderWithAuthority("settings-ui");
           return;
         }
         config.apiKeys[currentPk] = checked.key;
@@ -980,16 +1014,16 @@ function handleSettings(ch) {
     } else if (ch.length === 1 && ch >= " ") {
       sKeyBuf += ch;
     }
-    render();
+    renderWithAuthority("settings-ui");
     return;
   }
 
   if (ch === "\x1b" || ch === "q") {
     screen = "main";
-    render();
+    renderWithAuthority("settings-exit");
     void refreshModels().then(() => {
       restartLoop();
-      render();
+      renderWithAuthority("refresh-complete");
     });
     return;
   } else if (ch === UP) {
@@ -1017,22 +1051,22 @@ function handleSettings(ch) {
   } else if (ch === "t" || ch === "T") {
     const key = getApiKey(config, currentPk);
     sTestRes[currentPk] = "testing…";
-    render();
+    renderWithAuthority("settings-test");
     void ping(key, currentMeta.testModel, currentMeta.chatUrl).then((r) => {
       sTestRes[currentPk] = r.code === "200" ? `${r.ms}ms ✓` : `${r.code} ✗`;
-      render();
+      renderWithAuthority("settings-test");
     });
     return;
   }
 
-  render();
+  renderWithAuthority("settings-ui");
 }
 
 async function handleTarget(ch) {
   tNotice = "";
   if (ch === "\x1b" || ch === "q") {
     screen = "main";
-    render();
+    renderWithAuthority("target-ui");
     return;
   } else if (ch === UP) {
     tCursor = Math.max(0, tCursor - 1);
@@ -1045,7 +1079,7 @@ async function handleTarget(ch) {
     const target = TARGETS[tCursor];
     if (!target?.enabled) {
       tNotice = `${YELLOW} ${target?.label || "This target"} is currently disabled.${R}`;
-      render();
+      renderWithAuthority("target-ui");
       return;
     }
 
@@ -1067,7 +1101,7 @@ async function handleTarget(ch) {
       );
       if (!proceed) {
         tNotice = `${YELLOW} Launch cancelled. Set ${envVar} in Settings (P), then retry.${R}`;
-        render();
+        renderWithAuthority("target-prompt");
         return;
       }
     }
@@ -1118,14 +1152,14 @@ async function handleTarget(ch) {
     setTimeout(
       () => {
         screen = "main";
-        render();
+        renderWithAuthority("timed-return");
       },
       launch ? 2000 : 1400,
     );
     return;
   }
 
-  render();
+  renderWithAuthority("target-ui");
 }
 
 // ─── Raw input dispatcher ──────────────────────────────────────────────────────
@@ -1147,14 +1181,14 @@ function throttledRender() {
       _renderTimer = null;
     }
     _lastRenderTime = now;
-    render();
+    renderWithAuthority("throttled");
   } else if (!_renderTimer) {
     // Schedule a trailing render so the final cursor position is always shown
     _renderTimer = setTimeout(
       () => {
         _renderTimer = null;
         _lastRenderTime = Date.now();
-        render();
+        renderWithAuthority("throttled");
       },
       RENDER_INTERVAL_MS - (now - _lastRenderTime),
     );
@@ -1247,7 +1281,7 @@ function dispatch(ch) {
 
   if (screen === "help") {
     screen = "main";
-    render();
+    renderWithAuthority("help-close");
     return;
   }
 
@@ -1261,8 +1295,14 @@ const PING_STATE_KEYS = [
   "pings",
   "status",
   "httpCode",
+  "_metrics",
   "_consecutiveFails",
   "_skipUntilRound",
+  "_seqEpoch",
+  "_nextSeq",
+  "_lastCommitEpoch",
+  "_lastCommitSeq",
+  "_staleCommitDrops",
 ];
 
 function modelKey(m) {
@@ -1293,10 +1333,11 @@ function onPingTick() {
   const now = performance.now();
   if (now - _lastPingRender < PING_RENDER_THROTTLE_MS) return;
   _lastPingRender = now;
-  render();
+  renderWithAuthority("onPingTick");
 }
 
 function restartLoop() {
+  bumpPingEpoch();
   stopPingLoop(pingRef);
   pingRef = startPingLoop(
     models,
@@ -1305,7 +1346,7 @@ function restartLoop() {
     () => {
       // End-of-round: freeze re-sorting while the user is actively navigating.
       if (!isAutoSortPaused()) applyFilters();
-      if (screen === "main") render();
+      if (screen === "main") renderWithAuthority("round-complete");
     },
     onPingTick,
   );
@@ -1618,6 +1659,11 @@ ${D}    (or: bun install -g frouter-cli)${R}
 function cleanup() {
   stopPingLoop(pingRef);
   destroyAgents();
+  if (renderAuthorityViolations > 0) {
+    process.stderr.write(
+      `[frouter] render authority violations: ${renderAuthorityViolations}\n`,
+    );
+  }
   w(SHOWC + ALT_OFF);
   try {
     if (process.stdin.isTTY) process.stdin.setRawMode(false);
@@ -1711,12 +1757,12 @@ async function main() {
   };
   process.on("SIGINT", onSignal);
   process.on("SIGTERM", onSignal);
-  process.stdout.on("resize", render);
+  process.stdout.on("resize", () => renderWithAuthority("resize"));
 
-  render(); // show loading state immediately
+  renderWithAuthority("startup"); // show loading state immediately
   await refreshModels();
   restartLoop();
-  render();
+  renderWithAuthority("refresh-complete");
 }
 
 main().catch((err) => {

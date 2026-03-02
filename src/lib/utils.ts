@@ -25,10 +25,151 @@ export const TIER_ORDER = {
   C: 7,
 };
 
+// ─── Rolling metrics cache ────────────────────────────────────────────────────
+
+const METRICS_CACHE_VERSION = 1;
+const METRICS_CACHE_ENABLED = process.env.FROUTER_METRICS_CACHE !== "0";
+
+type ModelMetrics = {
+  version: number;
+  count: number;
+  okCount: number;
+  sumOkMs: number;
+};
+
+function emptyMetrics(): ModelMetrics {
+  return {
+    version: METRICS_CACHE_VERSION,
+    count: 0,
+    okCount: 0,
+    sumOkMs: 0,
+  };
+}
+
+function isFiniteMs(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value);
+}
+
+function isOkPing(ping: any): boolean {
+  return ping?.code === "200" && isFiniteMs(ping?.ms);
+}
+
+function recomputeMetricsFromPings(pings: any[]): ModelMetrics {
+  const metrics = emptyMetrics();
+  for (const ping of pings) {
+    metrics.count++;
+    if (isOkPing(ping)) {
+      metrics.okCount++;
+      metrics.sumOkMs += ping.ms;
+    }
+  }
+  return metrics;
+}
+
+function hasValidMetrics(model: any): boolean {
+  const m = model?._metrics;
+  return (
+    !!m &&
+    m.version === METRICS_CACHE_VERSION &&
+    Number.isInteger(m.count) &&
+    Number.isInteger(m.okCount) &&
+    isFiniteMs(m.sumOkMs) &&
+    m.count >= 0 &&
+    m.okCount >= 0 &&
+    m.okCount <= m.count
+  );
+}
+
+function ensureMetrics(model: any): ModelMetrics | null {
+  if (!METRICS_CACHE_ENABLED) return null;
+  if (!Array.isArray(model.pings)) model.pings = [];
+  if (!hasValidMetrics(model)) {
+    model._metrics = recomputeMetricsFromPings(model.pings);
+  }
+  return model._metrics;
+}
+
+export function isMetricsCacheEnabled(): boolean {
+  return METRICS_CACHE_ENABLED;
+}
+
+export function rebuildModelMetrics(model: any): ModelMetrics | null {
+  if (!Array.isArray(model.pings)) model.pings = [];
+  if (!METRICS_CACHE_ENABLED) {
+    delete model._metrics;
+    return null;
+  }
+  model._metrics = recomputeMetricsFromPings(model.pings);
+  return model._metrics;
+}
+
+export function applyModelPingResult(
+  model: any,
+  pingResult: any,
+  maxPings: number,
+): void {
+  if (!Array.isArray(model.pings)) model.pings = [];
+  const metrics = ensureMetrics(model);
+
+  model.pings.push(pingResult);
+  if (metrics) {
+    metrics.count++;
+    if (isOkPing(pingResult)) {
+      metrics.okCount++;
+      metrics.sumOkMs += pingResult.ms;
+    }
+  }
+
+  while (model.pings.length > maxPings) {
+    const removed = model.pings.shift();
+    if (metrics) {
+      metrics.count = Math.max(0, metrics.count - 1);
+      if (isOkPing(removed)) {
+        metrics.okCount = Math.max(0, metrics.okCount - 1);
+        metrics.sumOkMs -= removed.ms;
+      }
+    }
+  }
+}
+
+export function assertModelMetricsInvariant(model: any): {
+  ok: boolean;
+  reason?: string;
+} {
+  if (!METRICS_CACHE_ENABLED) return { ok: true };
+  const metrics = ensureMetrics(model);
+  const oracle = recomputeMetricsFromPings(Array.isArray(model.pings) ? model.pings : []);
+  if (!metrics) return { ok: false, reason: "metrics missing" };
+  if (metrics.count !== oracle.count) {
+    return {
+      ok: false,
+      reason: `count mismatch cache=${metrics.count} oracle=${oracle.count}`,
+    };
+  }
+  if (metrics.okCount !== oracle.okCount) {
+    return {
+      ok: false,
+      reason: `okCount mismatch cache=${metrics.okCount} oracle=${oracle.okCount}`,
+    };
+  }
+  if (metrics.sumOkMs !== oracle.sumOkMs) {
+    return {
+      ok: false,
+      reason: `sumOkMs mismatch cache=${metrics.sumOkMs} oracle=${oracle.sumOkMs}`,
+    };
+  }
+  return { ok: true };
+}
+
 // ─── Stats ─────────────────────────────────────────────────────────────────────
 
 /** Average latency from HTTP 200 pings only. Returns Infinity if none yet. */
 export function getAvg(model) {
+  const metrics = ensureMetrics(model);
+  if (metrics) {
+    if (!metrics.okCount) return Infinity;
+    return metrics.sumOkMs / metrics.okCount;
+  }
   const ok = model.pings.filter((p) => p.code === "200");
   if (!ok.length) return Infinity;
   return ok.reduce((s, p) => s + p.ms, 0) / ok.length;
@@ -36,6 +177,11 @@ export function getAvg(model) {
 
 /** Uptime % = HTTP 200 pings / total pings x 100. */
 export function getUptime(model) {
+  const metrics = ensureMetrics(model);
+  if (metrics) {
+    if (!metrics.count) return 0;
+    return Math.round((metrics.okCount / metrics.count) * 100);
+  }
   if (!model.pings.length) return 0;
   return Math.round(
     (model.pings.filter((p) => p.code === "200").length / model.pings.length) *
@@ -49,7 +195,8 @@ export function getUptime(model) {
 export function getVerdict(model) {
   const last = model.pings.at(-1);
   const avg = getAvg(model);
-  const everUp = model.pings.some((p) => p.code === "200");
+  const metrics = ensureMetrics(model);
+  const everUp = metrics ? metrics.okCount > 0 : model.pings.some((p) => p.code === "200");
 
   if (model.status === "ratelimit" || last?.code === "429")
     return "🔥 Overloaded";

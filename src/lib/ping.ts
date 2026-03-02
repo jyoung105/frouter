@@ -2,7 +2,7 @@
 import http from "node:http";
 import https from "node:https";
 import { getApiKey, PROVIDERS_META } from "./config.js";
-import { TIER_ORDER } from "./utils.js";
+import { TIER_ORDER, applyModelPingResult } from "./utils.js";
 
 const TIMEOUT_MS = 6_000; // steady-state ping timeout
 const INITIAL_TIMEOUT_MS = 2_500; // faster first-pass to clear pending sooner
@@ -66,6 +66,35 @@ async function pooled<T, R>(
 
 // ─── Progressive backoff for dead models ──────────────────────────────────────
 let _roundCounter = 0;
+let _epoch = 1;
+
+export function getPingEpoch(): number {
+  return _epoch;
+}
+
+export function bumpPingEpoch(): number {
+  _epoch++;
+  return _epoch;
+}
+
+function nextSeqForEpoch(model: any, epoch: number): number {
+  if (model._seqEpoch !== epoch) {
+    model._seqEpoch = epoch;
+    model._nextSeq = 0;
+  }
+  model._nextSeq = (model._nextSeq || 0) + 1;
+  return model._nextSeq;
+}
+
+function isStaleCommit(model: any, epoch: number, seq: number): boolean {
+  // Epoch bumps invalidate all older in-flight results.
+  if (epoch < _epoch) return true;
+  const lastEpoch = model._lastCommitEpoch || 0;
+  const lastSeq = model._lastCommitSeq || 0;
+  if (epoch < lastEpoch) return true;
+  if (epoch === lastEpoch && seq <= lastSeq) return true;
+  return false;
+}
 
 /**
  * Single minimal chat-completion request to measure TTFB latency.
@@ -180,10 +209,18 @@ export async function pingAllOnce(
   async function runPing(m: any, timeoutMs: number) {
     const meta = PROVIDERS_META[m.providerKey];
     const apiKey = getApiKey(config, m.providerKey);
+    const commitEpoch = _epoch;
+    const commitSeq = nextSeqForEpoch(m, commitEpoch);
     const result = await ping(apiKey, m.id, meta.chatUrl, { timeoutMs });
 
-    m.pings.push(result);
-    if (m.pings.length > MAX_PINGS) m.pings.shift();
+    if (isStaleCommit(m, commitEpoch, commitSeq)) {
+      m._staleCommitDrops = (m._staleCommitDrops || 0) + 1;
+      return;
+    }
+
+    applyModelPingResult(m, result, MAX_PINGS);
+    m._lastCommitEpoch = commitEpoch;
+    m._lastCommitSeq = commitSeq;
 
     m.httpCode = result.code;
     m.status = STATUS_MAP[result.code] || "down";

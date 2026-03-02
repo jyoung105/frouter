@@ -4,6 +4,7 @@
 
 [![CI](https://github.com/jyoung105/frouter/actions/workflows/ci.yml/badge.svg)](https://github.com/jyoung105/frouter/actions/workflows/ci.yml)
 [![npm version](https://img.shields.io/npm/v/frouter-cli)](https://www.npmjs.com/package/frouter-cli)
+[![npm downloads](https://img.shields.io/npm/dm/frouter-cli)](https://www.npmjs.com/package/frouter-cli)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 
 Free model router CLI — discover, ping, and configure free AI models for OpenCode / OpenClaw.
@@ -71,6 +72,9 @@ OPENROUTER_API_KEY=sk-or-xxx frouter
 
 # Optional: pause auto re-sorting while you scroll (milliseconds)
 FROUTER_SCROLL_SORT_PAUSE_MS=2500 frouter
+
+# Optional: disable rolling metrics cache and force legacy recompute path
+FROUTER_METRICS_CACHE=0 frouter
 ```
 
 ## TUI

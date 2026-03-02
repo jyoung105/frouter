@@ -14,7 +14,7 @@
     "lint:fix": "eslint src --ext .ts --fix",
     "pretest": "npm run build",
     "test": "node --test dist/tests/unit/*.test.js dist/tests/integration/*.test.js dist/tests/security/*.test.js",
-    "test:perf": "npm run build && node --test dist/tests/perf/*.perf.test.js",
+    "test:perf": "npm run build && node --expose-gc --test dist/tests/perf/*.perf.test.js",
     "perf:baseline": "npm run build && node dist/tests/perf/collect-baseline.js",
     "models:sync": "npx tsx scripts/update-models.ts",
     "models:sync:apply": "npx tsx scripts/update-models.ts --apply",

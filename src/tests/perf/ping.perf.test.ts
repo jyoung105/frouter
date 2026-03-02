@@ -7,9 +7,18 @@ import { fileURLToPath } from "node:url";
 import { createHttpServer } from "../helpers/mock-http.js";
 import { pingAllOnce } from "../../lib/ping.js";
 import { PROVIDERS_META } from "../../lib/config.js";
+import { assertModelMetricsInvariant } from "../../lib/utils.js";
 
 const __dir = dirname(fileURLToPath(import.meta.url));
 const baselineFilePath = join(__dir, "baseline.json");
+const ABS_PING_AVG_CEILING_MS = Number(
+  process.env.PERF_PING_ABS_AVG_CEILING_MS ?? "6",
+);
+const ABS_PING_P95_CEILING_MS = Number(
+  process.env.PERF_PING_ABS_P95_CEILING_MS ?? "8",
+);
+const WARMUP_RUNS = Number(process.env.PERF_PING_WARMUP_RUNS ?? "3");
+const MEASURED_RUNS = Number(process.env.PERF_PING_MEASURED_RUNS ?? "30");
 
 function resolveBaselinePingMs(): number {
   const fromEnv = Number(process.env.BASELINE_PING_MS ?? "0");
@@ -36,12 +45,8 @@ function makeFixtureModels(count: number) {
   }));
 }
 
-test("perf: pingAllOnce regression <= 5% of baseline", async (t) => {
+test("perf: pingAllOnce stays within absolute and baseline budgets", async () => {
   const baselinePingMs = resolveBaselinePingMs();
-  if (!baselinePingMs || Number.isNaN(baselinePingMs)) {
-    t.skip("Set BASELINE_PING_MS or run `npm run perf:baseline` first.");
-    return;
-  }
 
   const server = await createHttpServer((req, res) => {
     req.on("data", () => {});
@@ -64,17 +69,41 @@ test("perf: pingAllOnce regression <= 5% of baseline", async (t) => {
 
   try {
     const models = makeFixtureModels(modelCount);
-    await pingAllOnce(models, config); // warm-up
+    for (let i = 0; i < WARMUP_RUNS; i++) {
+      await pingAllOnce(models, config);
+    }
 
-    const t0 = performance.now();
-    await pingAllOnce(models, config);
-    const elapsedMs = performance.now() - t0;
-    const budgetMs = Math.max(baselinePingMs * 1.05, baselinePingMs + 5);
+    const samples: number[] = [];
+    for (let i = 0; i < MEASURED_RUNS; i++) {
+      const t0 = performance.now();
+      await pingAllOnce(models, config);
+      samples.push(performance.now() - t0);
+    }
+    const avgMs = samples.reduce((sum, ms) => sum + ms, 0) / samples.length;
+    const sorted = [...samples].sort((a, b) => a - b);
+    const p95Ms = sorted[Math.max(0, Math.ceil(sorted.length * 0.95) - 1)];
 
     assert.ok(
-      elapsedMs <= budgetMs,
-      `ping regression: ${elapsedMs.toFixed(2)}ms > ${budgetMs.toFixed(2)}ms (baseline=${baselinePingMs}ms)`,
+      avgMs <= ABS_PING_AVG_CEILING_MS,
+      `ping avg absolute ceiling exceeded: ${avgMs.toFixed(2)}ms > ${ABS_PING_AVG_CEILING_MS.toFixed(2)}ms`,
     );
+    assert.ok(
+      p95Ms <= ABS_PING_P95_CEILING_MS,
+      `ping p95 absolute ceiling exceeded: ${p95Ms.toFixed(2)}ms > ${ABS_PING_P95_CEILING_MS.toFixed(2)}ms`,
+    );
+
+    if (baselinePingMs > 0 && Number.isFinite(baselinePingMs)) {
+      const relativeBudgetMs = Math.max(baselinePingMs * 1.05, baselinePingMs + 5);
+      assert.ok(
+        avgMs <= relativeBudgetMs,
+        `ping baseline regression: ${avgMs.toFixed(2)}ms > ${relativeBudgetMs.toFixed(2)}ms (baseline=${baselinePingMs}ms)`,
+      );
+    }
+
+    for (const model of models) {
+      const canary = assertModelMetricsInvariant(model);
+      assert.equal(canary.ok, true, canary.reason);
+    }
   } finally {
     PROVIDERS_META.nvidia.chatUrl = originalChatUrl;
     await server.close();

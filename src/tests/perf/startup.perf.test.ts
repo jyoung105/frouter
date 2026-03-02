@@ -9,6 +9,10 @@ import { BIN_PATH, ROOT_DIR } from "../helpers/test-paths.js";
 
 const __dir = dirname(fileURLToPath(import.meta.url));
 const baselineFilePath = join(__dir, "baseline.json");
+const ABS_STARTUP_CEILING_MS = Number(
+  process.env.PERF_STARTUP_ABS_CEILING_MS ?? "140",
+);
+const STARTUP_RUNS = Number(process.env.PERF_STARTUP_RUNS ?? "8");
 
 function resolveBaselineStartupMs(): number {
   const fromEnv = Number(process.env.BASELINE_STARTUP_MS ?? "0");
@@ -23,28 +27,38 @@ function resolveBaselineStartupMs(): number {
   }
 }
 
-test("perf: CLI --help startup regression <= 5% of baseline", async (t) => {
+test("perf: CLI --help startup stays under absolute ceiling and baseline budget", async () => {
   const baselineStartupMs = resolveBaselineStartupMs();
-  if (!baselineStartupMs || Number.isNaN(baselineStartupMs)) {
-    t.skip("Set BASELINE_STARTUP_MS or run `npm run perf:baseline` first.");
-    return;
+  const runs: number[] = [];
+  for (let i = 0; i < STARTUP_RUNS; i++) {
+    const t0 = performance.now();
+    const result = await runNode([BIN_PATH, "--help"], {
+      cwd: ROOT_DIR,
+      timeoutMs: 15_000,
+    });
+    const elapsedMs = performance.now() - t0;
+    assert.equal(
+      result.code,
+      0,
+      `expected exit 0, got ${result.code}\n${result.stderr}`,
+    );
+    runs.push(elapsedMs);
   }
 
-  const t0 = performance.now();
-  const result = await runNode([BIN_PATH, "--help"], {
-    cwd: ROOT_DIR,
-    timeoutMs: 15_000,
-  });
-  const elapsedMs = performance.now() - t0;
-  const budgetMs = Math.max(baselineStartupMs * 1.05, baselineStartupMs + 20);
-
-  assert.equal(
-    result.code,
-    0,
-    `expected exit 0, got ${result.code}\n${result.stderr}`,
-  );
+  const avgMs = runs.reduce((sum, ms) => sum + ms, 0) / runs.length;
   assert.ok(
-    elapsedMs <= budgetMs,
-    `startup regression: ${elapsedMs.toFixed(2)}ms > ${budgetMs.toFixed(2)}ms (baseline=${baselineStartupMs}ms)`,
+    avgMs <= ABS_STARTUP_CEILING_MS,
+    `startup absolute ceiling exceeded: ${avgMs.toFixed(2)}ms > ${ABS_STARTUP_CEILING_MS.toFixed(2)}ms`,
   );
+
+  if (baselineStartupMs > 0 && Number.isFinite(baselineStartupMs)) {
+    const relativeBudgetMs = Math.max(
+      baselineStartupMs * 1.05,
+      baselineStartupMs + 20,
+    );
+    assert.ok(
+      avgMs <= relativeBudgetMs,
+      `startup baseline regression: ${avgMs.toFixed(2)}ms > ${relativeBudgetMs.toFixed(2)}ms (baseline=${baselineStartupMs}ms)`,
+    );
+  }
 });

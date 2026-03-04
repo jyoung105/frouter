@@ -10,6 +10,7 @@ import {
   promptMasked,
   PROVIDERS_META,
   validateProviderApiKey,
+  openBrowser,
 } from "../lib/config.js";
 import { getAllModels } from "../lib/models.js";
 import {
@@ -347,6 +348,24 @@ function statusDot(model) {
   }
 }
 
+// ─── Expired key detection ───────────────────────────────────────────────────
+function isProviderKeyExpired(providerKey: string): boolean {
+  const provConf = config.providers?.[providerKey];
+  if (provConf?.enabled === false) return false;
+  const provModels = models.filter((m) => m.providerKey === providerKey);
+  if (provModels.length === 0) return false;
+  const pinged = provModels.filter((m) => m.status && m.status !== "pending");
+  if (pinged.length === 0) return false;
+  return pinged.every((m) => m.status === "noauth");
+}
+
+function findExpiredProvider(): string | null {
+  for (const pk of Object.keys(PROVIDERS_META)) {
+    if (isProviderKeyExpired(pk)) return pk;
+  }
+  return null;
+}
+
 // ─── Main TUI ──────────────────────────────────────────────────────────────────
 function renderMain() {
   const { c, r } = viewport();
@@ -357,7 +376,11 @@ function renderMain() {
   const provStatus = Object.entries(PROVIDERS_META)
     .map(([pk, m]) => {
       const on = config.providers?.[pk]?.enabled !== false;
-      return on ? `${GREEN}${m.name}${R}` : `${D}${m.name} off${R}`;
+      if (!on) return `${D}${m.name} off${R}`;
+      const key = getApiKey(config, pk);
+      if (!key) return `${YELLOW}${m.name} ○${R}`;
+      if (isProviderKeyExpired(pk)) return `${RED}${m.name} ✗${R}`;
+      return `${GREEN}${m.name} ✓${R}`;
     })
     .join("  ");
 
@@ -365,10 +388,19 @@ function renderMain() {
   const searchInput = searchMode
     ? `${CYAN}/${searchQuery}_${R}`
     : `${D}Press '/' to search models${R}`;
+  const keyBadges = Object.entries(PROVIDERS_META)
+    .filter(([pk]) => config.providers?.[pk]?.enabled !== false)
+    .map(([pk, m]) => {
+      const key = getApiKey(config, pk);
+      if (!key) return `${YELLOW}${m.name}:○${R}`;
+      if (isProviderKeyExpired(pk)) return `${RED}${m.name}:✗${R}`;
+      return `${GREEN}${m.name}:✓${R}`;
+    })
+    .join("  ");
   const searchHint = searchMode
     ? `${YELLOW}[ESC clear]${R} ${GREEN}[Enter apply]${R}`
     : `${CYAN}[/ start]${R}`;
-  const searchBar = `${searchLabel} ${searchInput} ${searchHint}`;
+  const searchBar = `${searchLabel} ${searchInput} ${keyBadges}  ${searchHint}`;
 
   const tierBar =
     tierFilter !== "All" ? `${YELLOW}tier:${tierFilter}${R}  ` : "";
@@ -434,7 +466,7 @@ function renderMain() {
       const avg = getAvg(m);
       const avgStr = fmtLatency(avg !== Infinity ? avg : null);
       const last = m.pings.at(-1);
-      const latMs = last?.code === "200" ? last.ms : null;
+      const latMs = Number.isFinite(last?.ms) ? last.ms : null;
       const latStr = fmtLatency(latMs);
       const up = getUptime(m);
       const upStr = uptimeColor(up) + fmtUp(up, m.pings.length > 0) + R;
@@ -492,6 +524,7 @@ function renderHelp() {
       `  Enter       Select model → target picker (OpenCode / OpenClaw disabled)\n` +
       `  /           Focus model search (filter by model name; Enter applies to OpenCode only)\n` +
       `  A           Quick API key add/change (opens key editor)\n` +
+      `  R           Change API key (auto-detects expired provider)\n` +
       `  T           Cycle tier filter (All → S+ → S → …)\n` +
       `  P           Settings (API keys, toggle providers)\n` +
       `  W / X       Faster / slower ping interval\n` +
@@ -723,46 +756,18 @@ function enterTargetPickerFromSelection() {
   selModel = filtered[cursor];
   searchMode = false;
   screen = "ink-subapp";
-  void openTargetPickerInk();
+  void launchOpenCodeDirect();
   return true;
 }
 
-async function openTargetPickerInk() {
-  const React = await import("react");
-  const { TargetPickerApp } = await import("../tui/TargetPickerApp.js");
-  const { runInkSubApp } = await import("../tui/ink-harness.js");
+async function launchOpenCodeDirect() {
+  prepareForInkSubApp();
 
-  const result = await runInkSubApp<import("../tui/TargetPickerApp.js").TargetPickerResult>(
-    (resolve) =>
-      React.createElement(TargetPickerApp, {
-        modelName: selModel?.displayName || selModel?.id || "?",
-        modelFullId: selModel ? `${selModel.providerKey}/${selModel.id}` : "",
-        targets: TARGETS,
-        onDone: resolve,
-      }),
-    {
-      beforeMount: () => prepareForInkSubApp(),
-      afterUnmount: () => {
-        // Minimal teardown — caller controls what happens next.
-        try { process.stdin.setRawMode(true); } catch { /* best-effort */ }
-        process.stdin.setEncoding("utf8");
-      },
-    },
-  );
-
-  // ── Cancelled ──
-  if (result.action !== "selected") {
-    restoreAfterInkSubApp("main");
-    restartLoop();
-    return;
-  }
-
-  // Write config and optionally launch
   const { openCodeModel, openCodePk, openCodeApiKey, notice: resolveNotice } =
     resolveOpenCodeApplySelection(selModel);
   if (resolveNotice) w(resolveNotice + "\n");
 
-  let launch = result.launch;
+  let launch = true;
 
   try {
     const writtenPath = writeOpenCode(openCodeModel, openCodePk, openCodeApiKey, {
@@ -777,18 +782,21 @@ async function openTargetPickerInk() {
     return;
   }
 
-  // Guard: missing API key → ask before launching
+  // Guard: missing API key → offer to add it
   if (launch && !openCodeApiKey) {
     const meta = PROVIDERS_META[openCodePk];
     const envVar = meta?.envVar || "API key";
     w(`\n${YELLOW} ! Missing ${meta?.name || openCodePk} API key (${envVar}).${R}\n`);
-    const proceed = await promptYesNoFromTarget(
-      `${D}   Launch opencode anyway? (Y/n, default: n): ${R}`,
+    const addKey = await promptYesNoFromTarget(
+      `${D}   Add API key now? (Y/n, default: Y): ${R}`,
+      true,
     );
-    if (!proceed) {
-      w(`${YELLOW} Launch cancelled. Set ${envVar} in Settings (P), then retry.${R}\n`);
-      launch = false;
+    if (addKey) {
+      openApiKeyEditorFromMain(openCodePk);
+      return;
     }
+    w(`${YELLOW} Launch cancelled. Set ${envVar} in Settings (P), then retry.${R}\n`);
+    launch = false;
   }
 
   if (launch) {
@@ -814,6 +822,7 @@ async function openTargetPickerInk() {
     restartLoop();
   }, 1400);
 }
+
 
 function resolveOpenCodeApplySelection(selectedModel) {
   const pk = selectedModel.providerKey;
@@ -857,10 +866,10 @@ function buildOpenCodeLaunchEnv(providerKey, apiKey) {
   return launchEnv;
 }
 
-async function promptYesNoFromTarget(question: string): Promise<boolean> {
+async function promptYesNoFromTarget(question: string, defaultValue = false): Promise<boolean> {
   process.stdin.removeListener("data", onData);
   try {
-    return await promptYesNo(question);
+    return await promptYesNo(question, defaultValue);
   } finally {
     process.stdin.on("data", onData);
   }
@@ -971,13 +980,15 @@ function resolveQuickApiKeyProviderIndex() {
   return 0;
 }
 
-function openApiKeyEditorFromMain() {
+function openApiKeyEditorFromMain(providerKey?: string) {
   searchMode = false;
   screen = "ink-subapp";
-  void openSettingsInk("editKey");
+  const pks = Object.keys(PROVIDERS_META);
+  const resolvedProviderKey = providerKey || pks[resolveQuickApiKeyProviderIndex()];
+  void openSettingsInk("editKey", resolvedProviderKey);
 }
 
-async function openSettingsInk(initialMode: "navigate" | "editKey" = "navigate") {
+async function openSettingsInk(initialMode: "navigate" | "editKey" = "navigate", providerKey?: string) {
   const React = await import("react");
   const { SettingsApp } = await import("../tui/SettingsApp.js");
   const { runInkSubApp } = await import("../tui/ink-harness.js");
@@ -991,7 +1002,9 @@ async function openSettingsInk(initialMode: "navigate" | "editKey" = "navigate")
         validateKey: validateProviderApiKey,
         saveConfig,
         ping,
+        openBrowser,
         initialMode,
+        initialProvider: providerKey,
         onDone: resolve,
       }),
     {
@@ -1067,6 +1080,17 @@ function handleMain(ch) {
     return;
   } else if (ch === "a" || ch === "A") {
     openApiKeyEditorFromMain();
+    return;
+  } else if (ch === "r" || ch === "R") {
+    const expired = findExpiredProvider();
+    if (expired) {
+      openApiKeyEditorFromMain(expired);
+    } else {
+      // Fall back to current model's provider or first provider
+      const sel = filtered[cursor];
+      const pk = sel?.providerKey || Object.keys(PROVIDERS_META)[0];
+      openApiKeyEditorFromMain(pk);
+    }
     return;
   } else if (ch === "?") {
     screen = "help";
@@ -1174,7 +1198,9 @@ function handleSettings(ch) {
     sTestRes[currentPk] = "testing…";
     renderWithAuthority("settings-test");
     void ping(key, currentMeta.testModel, currentMeta.chatUrl).then((r) => {
-      sTestRes[currentPk] = r.code === "200" ? `${r.ms}ms ✓` : `${r.code} ✗`;
+      const msPart = Number.isFinite(r.ms) ? `${r.ms}ms ` : "";
+      const ok = r.code === "200" || r.code === "401";
+      sTestRes[currentPk] = `${msPart}${r.code} ${ok ? "✓" : "✗"}`;
       renderWithAuthority("settings-test");
     });
     return;
@@ -1211,20 +1237,19 @@ async function handleTarget(ch) {
     if (launch && !openCodeApiKey) {
       const meta = PROVIDERS_META[openCodePk];
       const envVar = meta?.envVar || "API key";
-
-      w(
-        `\n${YELLOW} ! Missing ${meta?.name || openCodePk} API key (${envVar}).${R}\n`,
-      );
+      w(`\n${YELLOW} ! Missing ${meta?.name || openCodePk} API key (${envVar}).${R}\n`);
       if (notice) w(`${notice}\n`);
-
-      const proceed = await promptYesNoFromTarget(
-        `${D}   Launch opencode anyway? (Y/n, default: n): ${R}`,
+      const addKey = await promptYesNoFromTarget(
+        `${D}   Add API key now? (Y/n, default: Y): ${R}`,
+        true,
       );
-      if (!proceed) {
-        tNotice = `${YELLOW} Launch cancelled. Set ${envVar} in Settings (P), then retry.${R}`;
-        renderWithAuthority("target-prompt");
+      if (addKey) {
+        openApiKeyEditorFromMain(openCodePk);
         return;
       }
+      tNotice = `${YELLOW} Launch cancelled. Set ${envVar} in Settings (P), then retry.${R}`;
+      renderWithAuthority("target-prompt");
+      return;
     }
 
     if (launch && !isOpenCodeInstalled()) {

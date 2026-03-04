@@ -1,7 +1,7 @@
 // src/tui/SettingsApp.tsx — Ink-based settings screen with Select + PasswordInput + Spinner.
 // Uses ink-harness (runs mid-session from ALT_ON state).
 
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect, useRef } from "react";
 import { Text, Box, useInput } from "ink";
 import { Select, PasswordInput, StatusMessage } from "@inkjs/ui";
 
@@ -10,6 +10,7 @@ type ProviderMeta = {
   testModel: string;
   chatUrl: string;
   keyPrefix?: string;
+  signupUrl?: string;
 };
 
 export type SettingsResult = {
@@ -23,7 +24,9 @@ export type SettingsAppProps = {
   validateKey: (pk: string, raw: string) => { ok: boolean; key?: string; reason?: string };
   saveConfig: (config: any) => void;
   ping: (key: string | null, model: string, url: string) => Promise<{ code: string; ms?: number }>;
+  openBrowser?: (url: string) => void;
   initialMode?: "navigate" | "editKey";
+  initialProvider?: string;
   onDone: (result: SettingsResult) => void;
 };
 
@@ -36,16 +39,22 @@ export function SettingsApp({
   validateKey,
   saveConfig,
   ping,
+  openBrowser,
   initialMode = "navigate",
+  initialProvider,
   onDone,
 }: SettingsAppProps) {
   const [config, setConfig] = useState(() => JSON.parse(JSON.stringify(initialConfig)));
   const pks = Object.keys(providers);
-  const [selectedPk, setSelectedPk] = useState(pks[0] || "");
+  const [selectedPk, setSelectedPk] = useState(initialProvider && pks.includes(initialProvider) ? initialProvider : pks[0] || "");
   const [mode, setMode] = useState<Mode>(initialMode);
   const [testResults, setTestResults] = useState<Record<string, string>>({});
   const [notice, setNotice] = useState("");
   const [noticeVariant, setNoticeVariant] = useState<"success" | "error" | "warning">("success");
+  const [autoOpenedProviders, setAutoOpenedProviders] = useState<Record<string, boolean>>({});
+  const bootstrappedPingsRef = useRef(false);
+  const initializedEditModeRef = useRef(false);
+  const autoOpenedOnSelectionRef = useRef<string>("");
 
   const currentMeta = providers[selectedPk];
 
@@ -53,6 +62,66 @@ export function SettingsApp({
     setNotice(msg);
     setNoticeVariant(variant);
   }, []);
+
+  const formatPingResult = useCallback((r: { code: string; ms?: number }) => {
+    const msPart = Number.isFinite(r?.ms) ? `${r.ms}ms ` : "";
+    const ok = r?.code === "200" || r?.code === "401";
+    return `${msPart}${r?.code || "ERR"} ${ok ? "\u2713" : "\u2717"}`;
+  }, []);
+
+  const runProviderPing = useCallback(
+    (pk: string, cfgOverride?: any) => {
+      const meta = providers[pk];
+      if (!meta) return;
+      const cfg = cfgOverride ?? config;
+      const apiKey = getApiKey(cfg, pk);
+      setTestResults((prev) => ({ ...prev, [pk]: "testing\u2026" }));
+      void ping(apiKey, meta.testModel, meta.chatUrl)
+        .then((r) => {
+          setTestResults((prev) => ({ ...prev, [pk]: formatPingResult(r) }));
+        })
+        .catch(() => {
+          setTestResults((prev) => ({ ...prev, [pk]: "ERR \u2717" }));
+        });
+    },
+    [config, formatPingResult, getApiKey, ping, providers],
+  );
+
+  const maybeAutoOpenSignup = useCallback(
+    (pk: string, cfgOverride?: any) => {
+      const meta = providers[pk];
+      if (!meta?.signupUrl || !openBrowser) return;
+      if (autoOpenedProviders[pk]) return;
+      const cfg = cfgOverride ?? config;
+      if (getApiKey(cfg, pk)) return;
+      openBrowser(meta.signupUrl);
+      setAutoOpenedProviders((prev) => ({ ...prev, [pk]: true }));
+      showNotice(`Opened ${meta.name} key page in browser`, "success");
+    },
+    [autoOpenedProviders, config, getApiKey, openBrowser, providers, showNotice],
+  );
+
+  useEffect(() => {
+    if (bootstrappedPingsRef.current) return;
+    bootstrappedPingsRef.current = true;
+    for (const pk of pks) runProviderPing(pk);
+  }, [pks, runProviderPing]);
+
+  useEffect(() => {
+    if (initializedEditModeRef.current) return;
+    initializedEditModeRef.current = true;
+    if (initialMode === "editKey" && selectedPk) {
+      maybeAutoOpenSignup(selectedPk);
+      runProviderPing(selectedPk);
+    }
+  }, [initialMode, maybeAutoOpenSignup, runProviderPing, selectedPk]);
+
+  useEffect(() => {
+    if (!selectedPk || mode !== "navigate") return;
+    if (autoOpenedOnSelectionRef.current === selectedPk) return;
+    autoOpenedOnSelectionRef.current = selectedPk;
+    maybeAutoOpenSignup(selectedPk);
+  }, [maybeAutoOpenSignup, mode, selectedPk]);
 
   // Global key handler
   useInput((input, key) => {
@@ -84,6 +153,16 @@ export function SettingsApp({
       return;
     }
 
+    if (key.upArrow || lowerInput === "k") {
+      moveSelection(-1);
+      return;
+    }
+
+    if (key.downArrow || lowerInput === "j") {
+      moveSelection(1);
+      return;
+    }
+
     if (input === " ") {
       // Toggle provider
       const next = { ...config };
@@ -92,6 +171,7 @@ export function SettingsApp({
       next.providers[selectedPk].enabled = !(next.providers[selectedPk].enabled !== false);
       setConfig(next);
       saveConfig(next);
+      runProviderPing(selectedPk, next);
       showNotice("");
       return;
     }
@@ -103,6 +183,7 @@ export function SettingsApp({
         delete next.apiKeys[selectedPk];
         setConfig(next);
         saveConfig(next);
+        runProviderPing(selectedPk, next);
         showNotice(`Removed ${currentMeta.name} key`, "warning");
       }
       return;
@@ -110,18 +191,15 @@ export function SettingsApp({
 
     if (lowerInput === "t") {
       // Test key
-      const apiKey = getApiKey(config, selectedPk);
-      setTestResults((prev) => ({ ...prev, [selectedPk]: "testing\u2026" }));
-      void ping(apiKey, currentMeta.testModel, currentMeta.chatUrl).then((r) => {
-        const result = r.code === "200" ? `${r.ms}ms \u2713` : `${r.code} \u2717`;
-        setTestResults((prev) => ({ ...prev, [selectedPk]: result }));
-      });
+      runProviderPing(selectedPk);
       return;
     }
 
     if (key.return) {
-      setMode("editKey");
       showNotice("");
+      setMode("editKey");
+      maybeAutoOpenSignup(selectedPk);
+      runProviderPing(selectedPk);
       return;
     }
   });
@@ -139,6 +217,36 @@ export function SettingsApp({
     };
   });
 
+  function moveSelection(delta: number) {
+    if (!pks.length) return;
+    const currentIdx = Math.max(0, pks.indexOf(selectedPk));
+    const nextIdx = Math.max(0, Math.min(pks.length - 1, currentIdx + delta));
+    if (nextIdx !== currentIdx) {
+      setSelectedPk(pks[nextIdx]);
+    }
+  }
+
+  function handleKeySave(value: string) {
+    const next = { ...config };
+    next.apiKeys ??= {};
+    if (value) {
+      const checked = validateKey(selectedPk, value);
+      if (!checked.ok) {
+        showNotice(`Invalid key for ${currentMeta.name}: ${checked.reason}`, "error");
+        return;
+      }
+      next.apiKeys[selectedPk] = checked.key;
+      showNotice(`Saved ${currentMeta.name} key`, "success");
+    } else {
+      delete next.apiKeys[selectedPk];
+      showNotice(`Removed ${currentMeta.name} key`, "warning");
+    }
+    setConfig(next);
+    saveConfig(next);
+    runProviderPing(selectedPk, next);
+    setMode("navigate");
+  }
+
   return (
     <Box flexDirection="column" paddingLeft={1}>
       <Text bold inverse> frouter Settings </Text>
@@ -155,28 +263,16 @@ export function SettingsApp({
 
         {mode === "editKey" && (
           <Box flexDirection="column">
+            {currentMeta.signupUrl && (
+              <Text>
+                <Text dimColor>Get a key at: </Text>
+                <Text color="cyan">{currentMeta.signupUrl}</Text>
+              </Text>
+            )}
             <Text>Enter API key for <Text bold>{currentMeta.name}</Text>:</Text>
             <PasswordInput
               placeholder={currentMeta.keyPrefix ? `${currentMeta.keyPrefix}...` : "paste key here"}
-              onSubmit={(value) => {
-                const next = { ...config };
-                next.apiKeys ??= {};
-                if (value) {
-                  const checked = validateKey(selectedPk, value);
-                  if (!checked.ok) {
-                    showNotice(`Invalid key for ${currentMeta.name}: ${checked.reason}`, "error");
-                    return;
-                  }
-                  next.apiKeys[selectedPk] = checked.key;
-                  showNotice(`Saved ${currentMeta.name} key`, "success");
-                } else {
-                  delete next.apiKeys[selectedPk];
-                  showNotice(`Removed ${currentMeta.name} key`, "warning");
-                }
-                setConfig(next);
-                saveConfig(next);
-                setMode("navigate");
-              }}
+              onSubmit={handleKeySave}
             />
             <Text dimColor>Enter to save, Esc to cancel</Text>
           </Box>

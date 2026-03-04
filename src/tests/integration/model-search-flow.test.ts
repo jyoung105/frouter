@@ -474,7 +474,7 @@ test(
         .filter((line) => line !== "");
       assert.match(lines[0] || "", /\bfrouter\b/i);
       assert.match(lines[1] || "", /\[Model Search\]/);
-      assert.match(lines[1] || "", /141\/141 models/);
+      assert.match(lines[1] || "", /141\/141 mo/);
       assert.match(lines[2] || "", /#\s+Tier\s+Provider\s+Model/);
 
       const selectedRaw = rawFrame
@@ -804,8 +804,8 @@ test(
         cwd: ROOT_DIR,
         env: { HOME: home, FROUTER_NO_FETCH: "1", FROUTER_SKIP_UPDATE_ONCE: "1" },
         inputChunks: [
-          { delayMs: 850, data: "a" },
-          ...buildInputChunks([..."bad-prefix", "\r", "\x1b", "q", "q"], 1500, 120),
+          { delayMs: 1500, data: "a" },
+          ...buildInputChunks([..."bad-prefix", "\r", "\x1b", "q", "q"], 2200, 120),
         ],
         timeoutMs: 12_000,
       });

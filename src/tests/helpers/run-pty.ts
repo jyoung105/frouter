@@ -7,8 +7,11 @@ import os
 import pty
 import select
 import signal
+import struct
 import sys
+import termios
 import time
+import fcntl
 
 cmd = json.loads(os.environ["PTY_CMD"])
 chunks = json.loads(os.environ.get("PTY_INPUT", "[]"))
@@ -21,6 +24,15 @@ if pid == 0:
     for key in ("PTY_CMD", "PTY_INPUT", "PTY_TIMEOUT_MS"):
         os.environ.pop(key, None)
     os.execvp(cmd[0], cmd)
+
+# Set PTY window size to 80x24 for consistent rendering across platforms.
+# Without this, Linux CI PTYs may default to 0x0 causing the app to fall
+# back to DEFAULT_ROWS=12, which breaks pixel-title and layout assertions.
+winsize = struct.pack("HHHH", 24, 80, 0, 0)  # rows, cols, xpixels, ypixels
+try:
+    fcntl.ioctl(master_fd, termios.TIOCSWINSZ, winsize)
+except OSError:
+    pass
 
 start = time.monotonic()
 cursor = 0

@@ -188,7 +188,7 @@ test(
 
       const result = await runInPty(process.execPath, [BIN_PATH], {
         cwd: ROOT_DIR,
-        env: { HOME: home, FROUTER_NO_FETCH: "1" },
+        env: { HOME: home, FROUTER_NO_FETCH: "1", FROUTER_SKIP_UPDATE_ONCE: "1" },
         inputChunks,
         timeoutMs: 12_000,
       });
@@ -282,7 +282,7 @@ test(
 
       const result = await runInPty(process.execPath, [BIN_PATH], {
         cwd: ROOT_DIR,
-        env: { HOME: home, FROUTER_NO_FETCH: "1" },
+        env: { HOME: home, FROUTER_NO_FETCH: "1", FROUTER_SKIP_UPDATE_ONCE: "1" },
         inputChunks: [{ delayMs: 900, data: "q" }],
         timeoutMs: 12_000,
       });
@@ -449,6 +449,7 @@ test(
         env: {
           HOME: home,
           FROUTER_NO_FETCH: "1",
+          FROUTER_SKIP_UPDATE_ONCE: "1",
           FROUTER_TEST_DROP_MODEL_AFTER_CALL:
             "2:nvidia/deepseek-ai/deepseek-v3.2",
         },
@@ -801,7 +802,7 @@ test(
 
       const result = await runInPty(process.execPath, [BIN_PATH], {
         cwd: ROOT_DIR,
-        env: { HOME: home, FROUTER_NO_FETCH: "1" },
+        env: { HOME: home, FROUTER_NO_FETCH: "1", FROUTER_SKIP_UPDATE_ONCE: "1" },
         inputChunks: [
           { delayMs: 850, data: "a" },
           ...buildInputChunks([..."bad-prefix", "\r", "\x1b", "q", "q"], 1500, 120),

@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { runInPty, stripAnsi } from "../helpers/run-pty.js";
 import { BIN_PATH, ROOT_DIR } from "../helpers/test-paths.js";
@@ -37,6 +37,33 @@ function buildInputChunks(tokens, startDelayMs = 850, stepMs = 120) {
     delayMs += stepMs;
     return chunk;
   });
+}
+
+function prepareFakeBrowserLauncher(homePath: string) {
+  const cmd =
+    process.platform === "darwin"
+      ? "open"
+      : process.platform === "linux"
+        ? "xdg-open"
+        : null;
+
+  if (!cmd) return null;
+
+  const binDir = join(homePath, "fake-bin");
+  const logPath = join(homePath, "fake-browser.log");
+  mkdirSync(binDir, { recursive: true });
+
+  const launcher = join(binDir, cmd);
+  writeFileSync(
+    launcher,
+    `#!/bin/sh
+echo "$@" >> "${logPath}"
+exit 0
+`,
+    { mode: 0o755 },
+  );
+
+  return { binDir, logPath };
 }
 
 test(
@@ -567,6 +594,150 @@ test(
       const cfg = JSON.parse(readFileSync(join(home, ".frouter.json"), "utf8"));
       assert.equal(cfg.apiKeys.nvidia, "nvapi-added-main-tab");
       assert.equal(cfg.apiKeys.openrouter, "sk-or-test");
+    } finally {
+      cleanupTempHome(home);
+    }
+  },
+);
+
+test(
+  "main-tab quick API key flow auto-opens signup page for missing provider key",
+  { skip: SKIP && "PTY harness uses `script`, unavailable on Windows" },
+  async () => {
+    const home = makeTempHome();
+    try {
+      writeHomeConfig(
+        home,
+        defaultConfig({
+          apiKeys: { openrouter: "sk-or-test" },
+          providers: {
+            nvidia: { enabled: true },
+            openrouter: { enabled: false },
+          },
+        }),
+      );
+
+      const fakeBrowser = prepareFakeBrowserLauncher(home);
+      const env: NodeJS.ProcessEnv = { HOME: home, FROUTER_NO_FETCH: "1" };
+      if (fakeBrowser) {
+        env.PATH = `${fakeBrowser.binDir}:${process.env.PATH ?? ""}`;
+      }
+
+      const result = await runInPty(process.execPath, [BIN_PATH], {
+        cwd: ROOT_DIR,
+        env,
+        inputChunks: [
+          { delayMs: 850, data: "a" },
+          ...buildInputChunks([..."nvapi-added-from-auto-open", "\r", "q", "q"], 1500, 120),
+        ],
+        timeoutMs: 12_000,
+      });
+
+      assert.equal(result.timedOut, false);
+      assert.equal(result.code, 0);
+
+      const cfg = JSON.parse(readFileSync(join(home, ".frouter.json"), "utf8"));
+      assert.equal(cfg.apiKeys.nvidia, "nvapi-added-from-auto-open");
+
+      if (fakeBrowser) {
+        const browserLog = readFileSync(fakeBrowser.logPath, "utf8");
+        assert.match(browserLog, /https:\/\/build\.nvidia\.com\/settings\/api-keys/);
+      }
+    } finally {
+      cleanupTempHome(home);
+    }
+  },
+);
+
+test(
+  "settings navigate mode auto-opens signup page for first provider with missing key",
+  { skip: SKIP && "PTY harness uses `script`, unavailable on Windows" },
+  async () => {
+    const home = makeTempHome();
+    try {
+      writeHomeConfig(
+        home,
+        defaultConfig({
+          apiKeys: { openrouter: "sk-or-test" },
+          providers: {
+            nvidia: { enabled: true },
+            openrouter: { enabled: true },
+          },
+        }),
+      );
+
+      const fakeBrowser = prepareFakeBrowserLauncher(home);
+      const env: NodeJS.ProcessEnv = { HOME: home, FROUTER_NO_FETCH: "1" };
+      if (fakeBrowser) {
+        env.PATH = `${fakeBrowser.binDir}:${process.env.PATH ?? ""}`;
+      }
+
+      const result = await runInPty(process.execPath, [BIN_PATH], {
+        cwd: ROOT_DIR,
+        env,
+        inputChunks: [
+          { delayMs: 850, data: "P" }, // open full settings screen
+          { delayMs: 2300, data: "\x1b" }, // back to main
+          { delayMs: 3200, data: "q" }, // quit app
+        ],
+        timeoutMs: 12_000,
+      });
+
+      assert.equal(result.timedOut, false);
+      assert.equal(result.code, 0);
+
+      if (fakeBrowser) {
+        const browserLog = readFileSync(fakeBrowser.logPath, "utf8");
+        assert.match(browserLog, /https:\/\/build\.nvidia\.com\/settings\/api-keys/);
+      }
+    } finally {
+      cleanupTempHome(home);
+    }
+  },
+);
+
+test(
+  "settings navigate mode auto-opens signup page when moving to another missing-key provider",
+  { skip: SKIP && "PTY harness uses `script`, unavailable on Windows" },
+  async () => {
+    const home = makeTempHome();
+    try {
+      writeHomeConfig(
+        home,
+        defaultConfig({
+          apiKeys: { nvidia: "nvapi-test" },
+          providers: {
+            nvidia: { enabled: true },
+            openrouter: { enabled: true },
+          },
+        }),
+      );
+
+      const fakeBrowser = prepareFakeBrowserLauncher(home);
+      const env: NodeJS.ProcessEnv = { HOME: home, FROUTER_NO_FETCH: "1" };
+      if (fakeBrowser) {
+        env.PATH = `${fakeBrowser.binDir}:${process.env.PATH ?? ""}`;
+      }
+
+      const result = await runInPty(process.execPath, [BIN_PATH], {
+        cwd: ROOT_DIR,
+        env,
+        inputChunks: [
+          { delayMs: 850, data: "P" }, // open full settings screen
+          { delayMs: 1900, data: "j" }, // move selection to OpenRouter (missing key)
+          { delayMs: 2700, data: "\x1b" }, // back to main
+          { delayMs: 3500, data: "q" }, // quit app
+        ],
+        timeoutMs: 12_000,
+      });
+
+      assert.equal(result.timedOut, false);
+      assert.equal(result.code, 0);
+
+      if (fakeBrowser) {
+        const browserLog = readFileSync(fakeBrowser.logPath, "utf8");
+        assert.match(browserLog, /https:\/\/openrouter\.ai\/settings\/keys/);
+      }
     } finally {
       cleanupTempHome(home);
     }

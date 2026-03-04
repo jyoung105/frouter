@@ -50,9 +50,12 @@ function isFiniteMs(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value);
 }
 
-function isOkPing(ping: any): boolean {
-  return ping?.code === "200" && isFiniteMs(ping?.ms);
+function isReachablePing(ping: any): boolean {
+  return (ping?.code === "200" || ping?.code === "401") && isFiniteMs(ping?.ms);
 }
+
+/** @deprecated alias kept for clarity — use isReachablePing */
+const isOkPing = isReachablePing;
 
 function recomputeMetricsFromPings(pings: any[]): ModelMetrics {
   const metrics = emptyMetrics();
@@ -170,7 +173,7 @@ export function getAvg(model) {
     if (!metrics.okCount) return Infinity;
     return metrics.sumOkMs / metrics.okCount;
   }
-  const ok = model.pings.filter((p) => p.code === "200");
+  const ok = model.pings.filter((p) => p.code === "200" || p.code === "401");
   if (!ok.length) return Infinity;
   return ok.reduce((s, p) => s + p.ms, 0) / ok.length;
 }

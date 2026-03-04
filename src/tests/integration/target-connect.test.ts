@@ -259,11 +259,11 @@ exit 0
           PATH: `${fakeBin}:${process.env.PATH ?? ""}`,
         },
         inputChunks: [
-          { delayMs: 850, data: "\r" }, // model -> target screen
-          { delayMs: 1600, data: "\r" }, // select target OpenCode
-          { delayMs: 2000, data: "\x1b[B" }, // move to "Save only"
-          { delayMs: 2300, data: "\r" }, // confirm save-only
-          { delayMs: 3500, data: "q" }, // back on main screen, quit
+          { delayMs: 1200, data: "\r" }, // model -> target screen
+          { delayMs: 3000, data: "\r" }, // select target OpenCode
+          { delayMs: 4000, data: "\x1b[B" }, // move to "Save only"
+          { delayMs: 4500, data: "\r" }, // confirm save-only
+          { delayMs: 6500, data: "q" }, // back on main screen, quit
         ],
         timeoutMs: 15_000,
       });
@@ -321,11 +321,11 @@ exit 0
         },
         inputChunks: [
           { delayMs: 900, data: "\x1b[B".repeat(9) }, // select stepfun-ai/step-3.5-flash
-          { delayMs: 1200, data: "\r" }, // model -> target screen
-          { delayMs: 1600, data: "\r" }, // select target
-          { delayMs: 2100, data: "\r" }, // select "Save + Launch"
-          { delayMs: 3500, data: "\x1b" }, // ESC to exit
-          { delayMs: 4000, data: "q" }, // quit app
+          { delayMs: 1500, data: "\r" }, // model -> target screen
+          { delayMs: 3500, data: "\r" }, // select target
+          { delayMs: 4500, data: "\r" }, // select "Save + Launch"
+          { delayMs: 6500, data: "\x1b" }, // ESC to decline add-key prompt
+          { delayMs: 8000, data: "q" }, // quit app
         ],
         timeoutMs: 15_000,
       });

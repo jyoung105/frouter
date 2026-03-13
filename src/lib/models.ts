@@ -143,13 +143,13 @@ const NIM_MODELS = [
   makeModel("z-ai/glm4.7", "GLM 4.7", 204800, "nvidia"),
   makeModel("stepfun-ai/step-3.5-flash", "Step 3.5 Flash", 262144, "nvidia"),
   makeModel("minimaxai/minimax-m2.1", "MiniMax M2.1", 204800, "nvidia"),
+  makeModel("minimaxai/minimax-m2.5", "MiniMax M2.5", 204800, "nvidia"),
   makeModel(
     "mistralai/devstral-2-123b-instruct-2512",
     "Devstral 2 123B",
     262144,
     "nvidia",
   ),
-  makeModel("qwen/qwen3-235b-a22b", "Qwen3 235B", 131072, "nvidia"),
   makeModel(
     "qwen/qwen3-coder-480b-a35b-instruct",
     "Qwen3 Coder 480B",
@@ -177,7 +177,12 @@ const NIM_MODELS = [
     131072,
     "nvidia",
   ),
-  makeModel("minimaxai/minimax-m2", "MiniMax M2", 131072, "nvidia"),
+  makeModel(
+    "nvidia/nemotron-3-super-120b-a12b",
+    "Nemotron 3 Super 120B",
+    262144,
+    "nvidia",
+  ),
   makeModel("deepseek-ai/deepseek-v3.1", "DeepSeek V3.1", 131072, "nvidia"),
   makeModel(
     "deepseek-ai/deepseek-v3.1-terminus",
@@ -205,6 +210,7 @@ const NIM_MODELS = [
     "nvidia",
   ),
   makeModel("qwen/qwen3.5-397b-a17b", "Qwen3.5 400B", 131072, "nvidia"),
+  makeModel("qwen/qwen3.5-122b-a10b", "Qwen3.5 122B", 131072, "nvidia"),
 
   // ── A+ tier ────────────────────────────────────────────────────────────────
   makeModel(

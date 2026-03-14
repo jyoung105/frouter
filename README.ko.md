@@ -10,6 +10,7 @@
 [English](./README.md) | [한국어](./README.ko.md)
 
 [![CI](https://github.com/jyoung105/frouter/actions/workflows/ci.yml/badge.svg)](https://github.com/jyoung105/frouter/actions/workflows/ci.yml)
+[![release](https://img.shields.io/github/v/release/jyoung105/frouter?label=release)](https://github.com/jyoung105/frouter/releases)
 [![npm version](https://img.shields.io/npm/v/frouter-cli)](https://www.npmjs.com/package/frouter-cli)
 [![npm downloads](https://img.shields.io/npm/dm/frouter-cli)](https://www.npmjs.com/package/frouter-cli)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)

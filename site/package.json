@@ -2,12 +2,15 @@
   "name": "frouter-site",
   "type": "module",
   "version": "0.1.0",
+  "engines": {
+    "node": ">=22.12.0"
+  },
   "scripts": {
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview"
   },
   "dependencies": {
-    "astro": "^5.2.0"
+    "astro": "^6.0.4"
   }
 }

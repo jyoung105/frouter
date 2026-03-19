@@ -1,5 +1,5 @@
 // src/lib/targets.ts — write config to OpenCode and OpenClaw
-import { execSync, spawnSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import {
   readFileSync,
   writeFileSync,
@@ -97,7 +97,7 @@ function resolvePersistedApiKey(
 /** Check whether a binary is available on PATH. */
 function hasBinary(bin: string) {
   try {
-    execSync(IS_WIN ? `where ${bin}` : `which ${bin}`, { stdio: "ignore" });
+    execFileSync(IS_WIN ? "where" : "which", [bin], { stdio: "ignore" });
     return true;
   } catch {
     return false;

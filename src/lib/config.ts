@@ -8,7 +8,7 @@ import {
 } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { execSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
 import { R, B, D, RED, GREEN, CYAN } from "./utils.js";
 
 export const CONFIG_PATH = join(homedir(), ".frouter.json");
@@ -116,13 +116,13 @@ export function validateProviderApiKey(providerKey, rawValue) {
 // ─── Browser helper ───────────────────────────────────────────────────────────
 
 export function openBrowser(url: string) {
-  const commands = {
-    darwin: `open "${url}"`,
-    win32: `start "" "${url}"`,
+  const openers: Record<string, [string, string[]]> = {
+    darwin: ["open", [url]],
+    win32: ["cmd", ["/c", "start", "", url]],
   };
-  const cmd = commands[process.platform] ?? `xdg-open "${url}"`;
+  const [bin, args] = openers[process.platform] ?? ["xdg-open", [url]];
   try {
-    execSync(cmd, { stdio: "ignore" });
+    execFileSync(bin, args, { stdio: "ignore" });
   } catch {
     /* best-effort */
   }

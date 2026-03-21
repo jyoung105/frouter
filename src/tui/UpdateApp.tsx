@@ -1,7 +1,7 @@
 // src/tui/UpdateApp.tsx — Ink-based update flow with ProgressBar + Spinner.
 // Runs pre-ALT_ON (normal terminal), no harness needed.
 
-import React, { useState, useEffect } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { Text, Box } from "ink";
 import { ConfirmInput, Spinner, ProgressBar, StatusMessage } from "@inkjs/ui";
 import { spawn } from "node:child_process";
@@ -30,14 +30,17 @@ export function UpdateApp({
   const [phase, setPhase] = useState<Phase>("confirm");
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState("");
+  const cleanupRef = useRef<(() => void) | null>(null);
+  useEffect(() => () => { cleanupRef.current?.(); }, []);
 
-  useEffect(() => {
-    if (phase !== "installing") return;
+  const startInstall = useCallback(() => {
+    setPhase("installing");
 
     const command = detectInstallCommand();
     if (!command) {
       setError("No supported package manager found (npm or bun).");
       setPhase("done");
+      setTimeout(() => onDone("failed"), 500);
       return;
     }
 
@@ -60,6 +63,8 @@ export function UpdateApp({
       }
     }, 120);
 
+    cleanupRef.current = () => clearInterval(fallback);
+
     const onChunk = (chunk: Buffer) => {
       const highest = readHighestPercent(String(chunk));
       if (highest != null) {
@@ -78,36 +83,25 @@ export function UpdateApp({
       if (done) return;
       done = true;
       clearInterval(fallback);
+      cleanupRef.current = null;
       if (ok) {
         setProgress(100);
         setPhase("done");
+        setTimeout(() => {
+          restartAfterUpdate();
+          onDone("updated");
+        }, 500);
       } else {
-        setError("Update command failed.");
+        const errMsg = "Update command failed.";
+        setError(errMsg);
         setPhase("done");
+        setTimeout(() => onDone("failed"), 500);
       }
     }
 
     child.on("error", () => finish(false));
     child.on("close", (code) => finish(code === 0));
-
-    return () => {
-      clearInterval(fallback);
-    };
-  }, [phase]);
-
-  // After done phase renders, trigger callback
-  useEffect(() => {
-    if (phase !== "done") return;
-    const timer = setTimeout(() => {
-      if (!error && progress >= 100) {
-        restartAfterUpdate();
-        onDone("updated");
-      } else {
-        onDone(error ? "failed" : "skipped");
-      }
-    }, 500);
-    return () => clearTimeout(timer);
-  }, [phase, error]);
+  }, [detectInstallCommand, readHighestPercent, restartAfterUpdate, onDone]);
 
   if (phase === "confirm") {
     return (
@@ -122,7 +116,7 @@ export function UpdateApp({
           <Text>Update now? </Text>
           <ConfirmInput
             defaultChoice="cancel"
-            onConfirm={() => setPhase("installing")}
+            onConfirm={() => startInstall()}
             onCancel={() => onDone("skipped")}
           />
         </Box>

@@ -1,9 +1,10 @@
 // src/tui/FirstRunApp.tsx — Ink-based first-run wizard with Select + PasswordInput.
 // Runs pre-ALT_ON (normal terminal), no harness needed.
 
-import React, { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { Text, Box, useInput } from "ink";
 import { Select, PasswordInput, StatusMessage } from "@inkjs/ui";
+import { useMountEffect } from "./useMountEffect.js";
 
 type ProviderMeta = {
   name: string;
@@ -54,7 +55,7 @@ export function FirstRunApp({
     }
   }
 
-  useEffect(() => () => clearCompletionTimer(), []);
+  useMountEffect(() => () => clearCompletionTimer());
 
   function finalizeOnce(
     nextApiKeys: Record<string, string>,

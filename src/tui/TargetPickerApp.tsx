@@ -2,7 +2,7 @@
 // Uses ink-harness (runs mid-session from ALT_ON state).
 // Pure UI component — returns user's selection; business logic lives in frouter.ts.
 
-import React, { useState } from "react";
+import { useState } from "react";
 import { Text, Box, useInput } from "ink";
 import { Select, StatusMessage } from "@inkjs/ui";
 
@@ -29,8 +29,7 @@ export function TargetPickerApp({
 }: TargetPickerAppProps) {
   const [phase, setPhase] = useState<Phase>("selectTarget");
   const [selectedTarget, setSelectedTarget] = useState("");
-  const [notice, setNotice] = useState("");
-  const [noticeVariant, setNoticeVariant] = useState<"success" | "error" | "warning">("success");
+  const [notice, setNotice] = useState<{ message: string; variant: "success" | "error" | "warning" } | null>(null);
 
   useInput((_input, key) => {
     if (key.ctrl && _input === "c") {
@@ -67,10 +66,9 @@ export function TargetPickerApp({
               const target = targets.find((t) => t.id === val);
               setSelectedTarget(val);
               if (target && !target.enabled) {
-                setNotice(`${target.label} is currently disabled.`);
-                setNoticeVariant("warning");
+                setNotice({ message: `${target.label} is currently disabled.`, variant: "warning" });
               } else {
-                setNotice("");
+                setNotice(null);
                 setPhase("selectAction");
               }
             }}
@@ -78,7 +76,7 @@ export function TargetPickerApp({
         </Box>
         {notice && (
           <Box marginTop={1}>
-            <StatusMessage variant={noticeVariant}>{notice}</StatusMessage>
+            <StatusMessage variant={notice.variant}>{notice.message}</StatusMessage>
           </Box>
         )}
       </Box>
@@ -105,7 +103,7 @@ export function TargetPickerApp({
       </Box>
       {notice && (
         <Box marginTop={1}>
-          <StatusMessage variant={noticeVariant}>{notice}</StatusMessage>
+          <StatusMessage variant={notice.variant}>{notice.message}</StatusMessage>
         </Box>
       )}
     </Box>

@@ -1,9 +1,10 @@
 // src/tui/SettingsApp.tsx — Ink-based settings screen with PasswordInput + Spinner.
 // Uses ink-harness (runs mid-session from ALT_ON state).
 
-import React, { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useRef } from "react";
 import { Text, Box, useInput } from "ink";
 import { PasswordInput, StatusMessage } from "@inkjs/ui";
+import { useMountEffect } from "./useMountEffect.js";
 
 type ProviderMeta = {
   name: string;
@@ -50,71 +51,54 @@ export function SettingsApp({
   initialProvider,
   onDone,
 }: SettingsAppProps) {
-  const [config, setConfig] = useState(() => JSON.parse(JSON.stringify(initialConfig)));
+  const [config, setConfig] = useState(() => structuredClone(initialConfig));
   const pks = Object.keys(providers);
   const [selectedPk, setSelectedPk] = useState(initialProvider && pks.includes(initialProvider) ? initialProvider : pks[0] || "");
   const [mode, setMode] = useState<Mode>(initialMode);
   const [testResults, setTestResults] = useState<Record<string, string>>({});
-  const [notice, setNotice] = useState("");
-  const [noticeVariant, setNoticeVariant] = useState<"success" | "error" | "warning">("success");
+  const [notice, setNotice] = useState<{ message: string; variant: "success" | "error" | "warning" } | null>(null);
   const [autoOpenedProviders, setAutoOpenedProviders] = useState<Record<string, boolean>>({});
-  const mountedRef = useRef(false);
   const autoOpenedOnSelectionRef = useRef<string>("");
 
   const currentMeta = providers[selectedPk];
 
-  const showNotice = useCallback((msg: string, variant: "success" | "error" | "warning" = "success") => {
-    setNotice(msg);
-    setNoticeVariant(variant);
-  }, []);
+  function showNotice(msg: string, variant: "success" | "error" | "warning" = "success") {
+    setNotice(msg ? { message: msg, variant } : null);
+  }
 
-  const runProviderPing = useCallback(
-    (pk: string, cfgOverride?: any) => {
-      const meta = providers[pk];
-      if (!meta) return;
-      const cfg = cfgOverride ?? config;
-      const apiKey = getApiKey(cfg, pk);
-      setTestResults((prev) => ({ ...prev, [pk]: "testing\u2026" }));
-      void ping(apiKey, meta.testModel, meta.chatUrl)
-        .then((r) => {
-          setTestResults((prev) => ({ ...prev, [pk]: formatPingResult(r) }));
-        })
-        .catch(() => {
-          setTestResults((prev) => ({ ...prev, [pk]: "ERR \u2717" }));
-        });
-    },
-    [config, getApiKey, ping, providers],
-  );
+  function runProviderPing(pk: string, cfgOverride?: any) {
+    const meta = providers[pk];
+    if (!meta) return;
+    const cfg = cfgOverride ?? config;
+    const apiKey = getApiKey(cfg, pk);
+    setTestResults((prev) => ({ ...prev, [pk]: "testing\u2026" }));
+    void ping(apiKey, meta.testModel, meta.chatUrl)
+      .then((r) => {
+        setTestResults((prev) => ({ ...prev, [pk]: formatPingResult(r) }));
+      })
+      .catch(() => {
+        setTestResults((prev) => ({ ...prev, [pk]: "ERR \u2717" }));
+      });
+  }
 
-  const maybeAutoOpenSignup = useCallback(
-    (pk: string, cfgOverride?: any) => {
-      const meta = providers[pk];
-      if (!meta?.signupUrl || !openBrowser) return;
-      if (autoOpenedProviders[pk]) return;
-      const cfg = cfgOverride ?? config;
-      if (getApiKey(cfg, pk)) return;
-      openBrowser(meta.signupUrl);
-      setAutoOpenedProviders((prev) => ({ ...prev, [pk]: true }));
-      showNotice(`Opened ${meta.name} key page in browser`, "success");
-    },
-    [autoOpenedProviders, config, getApiKey, openBrowser, providers, showNotice],
-  );
+  function maybeAutoOpenSignup(pk: string, cfgOverride?: any) {
+    const meta = providers[pk];
+    if (!meta?.signupUrl || !openBrowser) return;
+    if (autoOpenedProviders[pk]) return;
+    const cfg = cfgOverride ?? config;
+    if (getApiKey(cfg, pk)) return;
+    openBrowser(meta.signupUrl);
+    setAutoOpenedProviders((prev) => ({ ...prev, [pk]: true }));
+    showNotice(`Opened ${meta.name} key page in browser`, "success");
+  }
 
-  useEffect(() => {
-    if (mountedRef.current) return;
-    mountedRef.current = true;
+  useMountEffect(() => {
     for (const pk of pks) runProviderPing(pk);
     if (initialMode === "editKey" && selectedPk) {
       maybeAutoOpenSignup(selectedPk);
+      autoOpenedOnSelectionRef.current = selectedPk;
     }
-  }, [pks, runProviderPing, initialMode, maybeAutoOpenSignup, selectedPk]);
-
-  useEffect(() => {
-    if (!selectedPk || mode !== "navigate") return;
-    if (autoOpenedOnSelectionRef.current === selectedPk) return;
-    autoOpenedOnSelectionRef.current = selectedPk;
-    maybeAutoOpenSignup(selectedPk);
-  }, [maybeAutoOpenSignup, mode, selectedPk]);
+  });
 
   // Global key handler
   useInput((input, key) => {
@@ -126,7 +110,7 @@ export function SettingsApp({
     // ESC in editKey mode: cancel back to navigate
     if (mode === "editKey" && key.escape) {
       setMode("navigate");
-      showNotice("");
+      setNotice(null);
       return;
     }
 
@@ -165,7 +149,7 @@ export function SettingsApp({
       setConfig(next);
       saveConfig(next);
       runProviderPing(selectedPk, next);
-      showNotice("");
+      setNotice(null);
       return;
     }
 
@@ -189,7 +173,7 @@ export function SettingsApp({
     }
 
     if (key.return) {
-      showNotice("");
+      setNotice(null);
       setMode("editKey");
       maybeAutoOpenSignup(selectedPk);
       runProviderPing(selectedPk);
@@ -212,7 +196,12 @@ export function SettingsApp({
     const currentIdx = Math.max(0, pks.indexOf(selectedPk));
     const nextIdx = Math.max(0, Math.min(pks.length - 1, currentIdx + delta));
     if (nextIdx !== currentIdx) {
-      setSelectedPk(pks[nextIdx]);
+      const nextPk = pks[nextIdx];
+      setSelectedPk(nextPk);
+      if (mode === "navigate" && autoOpenedOnSelectionRef.current !== nextPk) {
+        autoOpenedOnSelectionRef.current = nextPk;
+        maybeAutoOpenSignup(nextPk);
+      }
     }
   }
 
@@ -274,7 +263,7 @@ export function SettingsApp({
 
       {notice && (
         <Box marginTop={1}>
-          <StatusMessage variant={noticeVariant}>{notice}</StatusMessage>
+          <StatusMessage variant={notice.variant}>{notice.message}</StatusMessage>
         </Box>
       )}
     </Box>

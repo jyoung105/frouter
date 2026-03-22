@@ -1,5 +1,5 @@
 // src/lib/targets.ts — write config to OpenCode and OpenClaw
-import { execSync, spawnSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import {
   readFileSync,
   writeFileSync,
@@ -100,7 +100,7 @@ function hasBinary(bin: string) {
   if (binaryCache.has(bin)) return binaryCache.get(bin);
   let found: boolean;
   try {
-    execSync(IS_WIN ? `where ${bin}` : `which ${bin}`, { stdio: "ignore" });
+    execFileSync(IS_WIN ? "where" : "which", [bin], { stdio: "ignore" });
     found = true;
   } catch {
     found = false;

@@ -34,10 +34,13 @@ export default tseslint.config(
       "no-control-regex": "off",
       // Unicode emoji patterns use combining characters intentionally
       "no-misleading-character-class": "off",
-      "@typescript-eslint/consistent-type-imports": ["error", {
-        prefer: "type-imports",
-        fixStyle: "inline-type-imports",
-      }],
+      "@typescript-eslint/consistent-type-imports": [
+        "error",
+        {
+          prefer: "type-imports",
+          fixStyle: "inline-type-imports",
+        },
+      ],
       "@typescript-eslint/await-thenable": "error",
       "@typescript-eslint/no-unnecessary-type-assertion": "error",
     },

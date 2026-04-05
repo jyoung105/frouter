@@ -32,6 +32,10 @@ test-results/
 
 # Test code
 /tests/
+/site/.generated/
+/site/models/
+/site/public/robots.txt
+/site/public/sitemap.xml
 
 
 # Claude code settings

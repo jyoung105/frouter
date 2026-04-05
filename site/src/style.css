@@ -624,6 +624,17 @@ main {
 
 .td-src { color: #71717a; font-size: 0.7rem; }
 .td-name { color: #fafafa; }
+.model-link {
+  color: inherit;
+  text-decoration: none;
+  text-underline-offset: 0.18em;
+}
+
+.model-link:hover,
+.model-link:focus-visible {
+  text-decoration: underline;
+}
+
 .td-ctx,
 .td-swe,
 .td-intel,
@@ -634,6 +645,120 @@ main {
   text-align: center;
   padding: 2rem;
   color: #52525b;
+}
+
+.crawl-note {
+  padding: 0.9rem 1.5rem 1.1rem;
+  border-top: 1px solid #27272a;
+  color: #71717a;
+  font-size: 0.72rem;
+}
+
+/* ─── Model Detail Pages ──────────────────────────────────── */
+.model-page {
+  max-width: 1120px;
+}
+
+.breadcrumbs {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  padding: 2rem 0 1rem;
+  color: #71717a;
+  font-size: 0.8rem;
+}
+
+.breadcrumbs a {
+  color: #a1a1aa;
+  text-decoration: none;
+}
+
+.breadcrumbs a:hover,
+.breadcrumbs a:focus-visible {
+  color: #fafafa;
+  text-decoration: underline;
+}
+
+.detail-hero {
+  display: grid;
+  gap: 2rem;
+  padding: 1rem 0 2rem;
+}
+
+.detail-kicker {
+  color: #71717a;
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 0.8rem;
+}
+
+.detail-copy h1 {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-size: 2.5rem;
+  line-height: 1.05;
+  color: #fafafa;
+  letter-spacing: -0.03em;
+}
+
+.detail-summary {
+  margin-top: 1rem;
+  max-width: 60ch;
+  color: #a1a1aa;
+  line-height: 1.7;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+.detail-terminal .body {
+  min-height: 0;
+}
+
+.detail-grid {
+  display: grid;
+  gap: 1rem;
+  padding-bottom: 3rem;
+}
+
+.detail-card {
+  border: 1px solid #27272a;
+  background: #18181b;
+  padding: 1.25rem;
+}
+
+.detail-card h2 {
+  font-size: 0.95rem;
+  color: #fafafa;
+  margin-bottom: 1rem;
+}
+
+.stat-grid,
+.meta-list {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.stat-grid div,
+.meta-list div {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.stat-grid dt,
+.meta-list dt {
+  color: #71717a;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.stat-grid dd,
+.meta-list dd {
+  color: #fafafa;
+}
+
+.meta-list a {
+  color: #fafafa;
+  text-underline-offset: 0.18em;
 }
 
 /* ─── Responsive ───────────────────────────────────────────── */
@@ -681,5 +806,16 @@ main {
   .td-intel,
   .td-speed {
     display: none;
+  }
+}
+
+@media (min-width: 960px) {
+  .detail-hero {
+    grid-template-columns: minmax(0, 1.3fr) minmax(320px, 0.7fr);
+    align-items: start;
+  }
+
+  .detail-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }

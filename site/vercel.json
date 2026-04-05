@@ -1,6 +1,18 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "framework": "astro",
+  "framework": "vite",
   "buildCommand": "npm run build",
-  "outputDirectory": "dist"
+  "outputDirectory": "dist",
+  "redirects": [
+    {
+      "source": "/models/:slug/index.html",
+      "destination": "/models/:slug/",
+      "permanent": true
+    },
+    {
+      "source": "/models/:slug",
+      "destination": "/models/:slug/",
+      "permanent": true
+    }
+  ]
 }

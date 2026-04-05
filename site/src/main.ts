@@ -1,47 +1,3 @@
-import modelData from '../../data/model-rankings.json';
-
-// ─── Model Data ──────────────────────────────────────────────────────────────
-
-interface ModelEntry {
-  id: string;
-  name: string;
-  source: string;
-  tier: string;
-  swe: string;
-  context: string;
-  intel: number | null;
-  speed: number | null;
-}
-
-const MODELS: ModelEntry[] = modelData.models.map((m: any) => ({
-  id: m.model_id,
-  name: m.name,
-  source: m.source,
-  tier: m.tier,
-  swe: m.swe_bench,
-  context: m.context,
-  intel: m.aa_intelligence,
-  speed: m.aa_speed_tps,
-}));
-
-// ─── Typewriter ──────────────────────────────────────────────────────────────
-
-function typeText(el: HTMLElement, text: string, speed: number): Promise<void> {
-  return new Promise((resolve) => {
-    let i = 0;
-    const prefix = '> ';
-    el.textContent = prefix;
-    const interval = setInterval(() => {
-      el.textContent = prefix + text.slice(0, i + 1);
-      i++;
-      if (i >= text.length) {
-        clearInterval(interval);
-        resolve();
-      }
-    }, speed);
-  });
-}
-
 // ─── Tab Switching ───────────────────────────────────────────────────────────
 
 function activateTab(index: number) {
@@ -75,76 +31,40 @@ function startTabCycle() {
   });
 }
 
-// ─── Run Typewriter → Then Tab Cycle ─────────────────────────────────────────
-
-async function run() {
-  const tagline = document.getElementById('tagline')!;
-  const subtitle = document.getElementById('subtitle')!;
-  await typeText(tagline, 'Free model router for AI coding tools', 35);
-  await new Promise((r) => setTimeout(r, 300));
-  await typeText(subtitle, 'Compare providers, benchmark latency, start building.', 25);
-  startTabCycle();
-}
-
-run();
+startTabCycle();
 
 // ─── Model Explorer ──────────────────────────────────────────────────────────
 
-const TIER_CLASS: Record<string, string> = {
-  'S+': 'tier-sp',
-  S: 'tier-s',
-  'A+': 'tier-ap',
-  A: 'tier-a',
-  'A-': 'tier-am',
-  'B+': 'tier-bp',
-  B: 'tier-b',
-  C: 'tier-c',
-};
-
 const tbody = document.getElementById('model-tbody')!;
+const allRows = Array.from(
+  tbody.querySelectorAll<HTMLTableRowElement>('tr[data-model-row]'),
+);
 const searchInput = document.getElementById('model-search') as HTMLInputElement;
 const countEl = document.getElementById('model-count')!;
+const noResultsRow = document.getElementById('no-results-row') as HTMLTableRowElement | null;
 let activeTier = 'All';
 let query = '';
 
 function renderModels() {
   const q = query.toLowerCase();
-  const filtered = MODELS.filter((m) => {
-    if (activeTier !== 'All' && m.tier !== activeTier) return false;
-    if (
-      q &&
-      !m.id.toLowerCase().includes(q) &&
-      !m.name.toLowerCase().includes(q) &&
-      !m.source.toLowerCase().includes(q) &&
-      !m.tier.toLowerCase().includes(q)
-    )
-      return false;
-    return true;
-  });
+  let visibleCount = 0;
 
-  countEl.textContent = `${filtered.length}/${MODELS.length}`;
-
-  if (filtered.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="7" class="no-results">No models found</td></tr>';
-    return;
+  for (const row of allRows) {
+    const rowTier = row.dataset.tier || '';
+    const rowSearch = row.dataset.search || '';
+    const matchesTier = activeTier === 'All' || rowTier === activeTier;
+    const matchesQuery = !q || rowSearch.includes(q);
+    const visible = matchesTier && matchesQuery;
+    row.hidden = !visible;
+    if (visible) {
+      visibleCount++;
+    }
   }
 
-  const html = filtered
-    .map((m) => {
-      const tierCls = TIER_CLASS[m.tier] || '';
-      const srcLabel = m.source === 'nim' ? 'NIM' : 'OR';
-      return `<tr>
-      <td class="td-tier ${tierCls}">${m.tier}</td>
-      <td class="td-src">${srcLabel}</td>
-      <td class="td-name" title="${m.id}">${m.name}</td>
-      <td class="td-ctx">${m.context}</td>
-      <td class="td-swe">${m.swe || '—'}</td>
-      <td class="td-intel">${m.intel ?? '—'}</td>
-      <td class="td-speed">${m.speed ? m.speed.toFixed(0) : '—'}</td>
-    </tr>`;
-    })
-    .join('');
-  tbody.innerHTML = html;
+  countEl.textContent = `${visibleCount}/${allRows.length}`;
+  if (noResultsRow) {
+    noResultsRow.hidden = visibleCount !== 0;
+  }
 }
 
 searchInput.addEventListener('input', () => {

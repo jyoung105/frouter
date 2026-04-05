@@ -1,0 +1,1309 @@
+{
+  "version": 1,
+  "models": [
+    {
+      "key": "nim:01-ai/yi-large",
+      "source": "nim",
+      "modelId": "01-ai/yi-large",
+      "slug": "yi-large",
+      "canonicalPath": "/models/yi-large/",
+      "name": "Yi Large"
+    },
+    {
+      "key": "nim:abacusai/dracarys-llama-3.1-70b-instruct",
+      "source": "nim",
+      "modelId": "abacusai/dracarys-llama-3.1-70b-instruct",
+      "slug": "dracarys-70b",
+      "canonicalPath": "/models/dracarys-70b/",
+      "name": "Dracarys 70B"
+    },
+    {
+      "key": "nim:ai21labs/jamba-1.5-large-instruct",
+      "source": "nim",
+      "modelId": "ai21labs/jamba-1.5-large-instruct",
+      "slug": "jamba-1-5-large",
+      "canonicalPath": "/models/jamba-1-5-large/",
+      "name": "Jamba 1.5 Large"
+    },
+    {
+      "key": "nim:ai21labs/jamba-1.5-mini-instruct",
+      "source": "nim",
+      "modelId": "ai21labs/jamba-1.5-mini-instruct",
+      "slug": "jamba-1-5-mini",
+      "canonicalPath": "/models/jamba-1-5-mini/",
+      "name": "Jamba 1.5 Mini"
+    },
+    {
+      "key": "nim:aisingapore/sea-lion-7b-instruct",
+      "source": "nim",
+      "modelId": "aisingapore/sea-lion-7b-instruct",
+      "slug": "sea-lion-7b",
+      "canonicalPath": "/models/sea-lion-7b/",
+      "name": "SEA-LION 7B"
+    },
+    {
+      "key": "nim:baichuan-inc/baichuan2-13b-chat",
+      "source": "nim",
+      "modelId": "baichuan-inc/baichuan2-13b-chat",
+      "slug": "baichuan2-13b",
+      "canonicalPath": "/models/baichuan2-13b/",
+      "name": "Baichuan2 13B"
+    },
+    {
+      "key": "nim:bytedance/seed-oss-36b-instruct",
+      "source": "nim",
+      "modelId": "bytedance/seed-oss-36b-instruct",
+      "slug": "seed-oss-36b",
+      "canonicalPath": "/models/seed-oss-36b/",
+      "name": "Seed OSS 36B"
+    },
+    {
+      "key": "nim:databricks/dbrx-instruct",
+      "source": "nim",
+      "modelId": "databricks/dbrx-instruct",
+      "slug": "dbrx-instruct",
+      "canonicalPath": "/models/dbrx-instruct/",
+      "name": "DBRX Instruct"
+    },
+    {
+      "key": "nim:deepseek-ai/deepseek-coder-6.7b-instruct",
+      "source": "nim",
+      "modelId": "deepseek-ai/deepseek-coder-6.7b-instruct",
+      "slug": "deepseek-coder-6-7b",
+      "canonicalPath": "/models/deepseek-coder-6-7b/",
+      "name": "DeepSeek Coder 6.7B"
+    },
+    {
+      "key": "nim:deepseek-ai/deepseek-r1-distill-llama-8b",
+      "source": "nim",
+      "modelId": "deepseek-ai/deepseek-r1-distill-llama-8b",
+      "slug": "r1-distill-8b",
+      "canonicalPath": "/models/r1-distill-8b/",
+      "name": "R1 Distill 8B"
+    },
+    {
+      "key": "nim:deepseek-ai/deepseek-r1-distill-qwen-14b",
+      "source": "nim",
+      "modelId": "deepseek-ai/deepseek-r1-distill-qwen-14b",
+      "slug": "r1-distill-14b",
+      "canonicalPath": "/models/r1-distill-14b/",
+      "name": "R1 Distill 14B"
+    },
+    {
+      "key": "nim:deepseek-ai/deepseek-r1-distill-qwen-32b",
+      "source": "nim",
+      "modelId": "deepseek-ai/deepseek-r1-distill-qwen-32b",
+      "slug": "deepseek-r1-distill-qwen-32b",
+      "canonicalPath": "/models/deepseek-r1-distill-qwen-32b/",
+      "name": "R1 Distill 32B"
+    },
+    {
+      "key": "nim:deepseek-ai/deepseek-r1-distill-qwen-7b",
+      "source": "nim",
+      "modelId": "deepseek-ai/deepseek-r1-distill-qwen-7b",
+      "slug": "r1-distill-7b",
+      "canonicalPath": "/models/r1-distill-7b/",
+      "name": "R1 Distill 7B"
+    },
+    {
+      "key": "nim:deepseek-ai/deepseek-v3.1",
+      "source": "nim",
+      "modelId": "deepseek-ai/deepseek-v3.1",
+      "slug": "deepseek-v3-1",
+      "canonicalPath": "/models/deepseek-v3-1/",
+      "name": "DeepSeek V3.1"
+    },
+    {
+      "key": "nim:deepseek-ai/deepseek-v3.1-terminus",
+      "source": "nim",
+      "modelId": "deepseek-ai/deepseek-v3.1-terminus",
+      "slug": "deepseek-v3-1-terminus",
+      "canonicalPath": "/models/deepseek-v3-1-terminus/",
+      "name": "DeepSeek V3.1 Term."
+    },
+    {
+      "key": "nim:deepseek-ai/deepseek-v3.2",
+      "source": "nim",
+      "modelId": "deepseek-ai/deepseek-v3.2",
+      "slug": "deepseek-v3-2",
+      "canonicalPath": "/models/deepseek-v3-2/",
+      "name": "DeepSeek V3.2"
+    },
+    {
+      "key": "nim:google/codegemma-1.1-7b",
+      "source": "nim",
+      "modelId": "google/codegemma-1.1-7b",
+      "slug": "codegemma-7b",
+      "canonicalPath": "/models/codegemma-7b/",
+      "name": "CodeGemma 7B"
+    },
+    {
+      "key": "nim:google/gemma-2-27b-it",
+      "source": "nim",
+      "modelId": "google/gemma-2-27b-it",
+      "slug": "gemma-2-27b",
+      "canonicalPath": "/models/gemma-2-27b/",
+      "name": "Gemma 2 27B"
+    },
+    {
+      "key": "nim:google/gemma-2-2b-it",
+      "source": "nim",
+      "modelId": "google/gemma-2-2b-it",
+      "slug": "gemma-2-2b",
+      "canonicalPath": "/models/gemma-2-2b/",
+      "name": "Gemma 2 2B"
+    },
+    {
+      "key": "nim:google/gemma-2-9b-it",
+      "source": "nim",
+      "modelId": "google/gemma-2-9b-it",
+      "slug": "gemma-2-9b",
+      "canonicalPath": "/models/gemma-2-9b/",
+      "name": "Gemma 2 9B"
+    },
+    {
+      "key": "nim:google/gemma-3-12b-it",
+      "source": "nim",
+      "modelId": "google/gemma-3-12b-it",
+      "slug": "gemma-3-12b",
+      "canonicalPath": "/models/gemma-3-12b/",
+      "name": "Gemma 3 12B"
+    },
+    {
+      "key": "nim:google/gemma-3-1b-it",
+      "source": "nim",
+      "modelId": "google/gemma-3-1b-it",
+      "slug": "gemma-3-1b",
+      "canonicalPath": "/models/gemma-3-1b/",
+      "name": "Gemma 3 1B"
+    },
+    {
+      "key": "nim:google/gemma-3-4b-it",
+      "source": "nim",
+      "modelId": "google/gemma-3-4b-it",
+      "slug": "gemma-3-4b",
+      "canonicalPath": "/models/gemma-3-4b/",
+      "name": "Gemma 3 4B"
+    },
+    {
+      "key": "nim:google/gemma-3n-e2b-it",
+      "source": "nim",
+      "modelId": "google/gemma-3n-e2b-it",
+      "slug": "gemma-3n-2b",
+      "canonicalPath": "/models/gemma-3n-2b/",
+      "name": "Gemma 3n 2B"
+    },
+    {
+      "key": "nim:google/gemma-3n-e4b-it",
+      "source": "nim",
+      "modelId": "google/gemma-3n-e4b-it",
+      "slug": "gemma-3n-4b",
+      "canonicalPath": "/models/gemma-3n-4b/",
+      "name": "Gemma 3n 4B"
+    },
+    {
+      "key": "nim:gotocompany/gemma-2-9b-cpt-sahabatai-instruct",
+      "source": "nim",
+      "modelId": "gotocompany/gemma-2-9b-cpt-sahabatai-instruct",
+      "slug": "sahabat-ai-9b",
+      "canonicalPath": "/models/sahabat-ai-9b/",
+      "name": "Sahabat-AI 9B"
+    },
+    {
+      "key": "nim:ibm/granite-3.0-3b-a800m-instruct",
+      "source": "nim",
+      "modelId": "ibm/granite-3.0-3b-a800m-instruct",
+      "slug": "granite-3-0-3b",
+      "canonicalPath": "/models/granite-3-0-3b/",
+      "name": "Granite 3.0 3B"
+    },
+    {
+      "key": "nim:ibm/granite-3.0-8b-instruct",
+      "source": "nim",
+      "modelId": "ibm/granite-3.0-8b-instruct",
+      "slug": "granite-3-0-8b",
+      "canonicalPath": "/models/granite-3-0-8b/",
+      "name": "Granite 3.0 8B"
+    },
+    {
+      "key": "nim:ibm/granite-3.3-8b-instruct",
+      "source": "nim",
+      "modelId": "ibm/granite-3.3-8b-instruct",
+      "slug": "granite-3-3-8b",
+      "canonicalPath": "/models/granite-3-3-8b/",
+      "name": "Granite 3.3 8B"
+    },
+    {
+      "key": "nim:ibm/granite-34b-code-instruct",
+      "source": "nim",
+      "modelId": "ibm/granite-34b-code-instruct",
+      "slug": "granite-34b-code",
+      "canonicalPath": "/models/granite-34b-code/",
+      "name": "Granite 34B Code"
+    },
+    {
+      "key": "nim:ibm/granite-8b-code-instruct",
+      "source": "nim",
+      "modelId": "ibm/granite-8b-code-instruct",
+      "slug": "granite-8b-code",
+      "canonicalPath": "/models/granite-8b-code/",
+      "name": "Granite 8B Code"
+    },
+    {
+      "key": "nim:igenius/colosseum_355b_instruct_16k",
+      "source": "nim",
+      "modelId": "igenius/colosseum_355b_instruct_16k",
+      "slug": "colosseum-355b",
+      "canonicalPath": "/models/colosseum-355b/",
+      "name": "Colosseum 355B"
+    },
+    {
+      "key": "nim:igenius/italia_10b_instruct_16k",
+      "source": "nim",
+      "modelId": "igenius/italia_10b_instruct_16k",
+      "slug": "italia-10b",
+      "canonicalPath": "/models/italia-10b/",
+      "name": "Italia 10B"
+    },
+    {
+      "key": "nim:institute-of-science-tokyo/llama-3.1-swallow-70b-instruct-v0.1",
+      "source": "nim",
+      "modelId": "institute-of-science-tokyo/llama-3.1-swallow-70b-instruct-v0.1",
+      "slug": "swallow-70b",
+      "canonicalPath": "/models/swallow-70b/",
+      "name": "Swallow 70B"
+    },
+    {
+      "key": "nim:institute-of-science-tokyo/llama-3.1-swallow-8b-instruct-v0.1",
+      "source": "nim",
+      "modelId": "institute-of-science-tokyo/llama-3.1-swallow-8b-instruct-v0.1",
+      "slug": "swallow-8b",
+      "canonicalPath": "/models/swallow-8b/",
+      "name": "Swallow 8B"
+    },
+    {
+      "key": "nim:marin/marin-8b-instruct",
+      "source": "nim",
+      "modelId": "marin/marin-8b-instruct",
+      "slug": "marin-8b",
+      "canonicalPath": "/models/marin-8b/",
+      "name": "Marin 8B"
+    },
+    {
+      "key": "nim:mediatek/breeze-7b-instruct",
+      "source": "nim",
+      "modelId": "mediatek/breeze-7b-instruct",
+      "slug": "breeze-7b",
+      "canonicalPath": "/models/breeze-7b/",
+      "name": "Breeze 7B"
+    },
+    {
+      "key": "nim:meta/codellama-70b",
+      "source": "nim",
+      "modelId": "meta/codellama-70b",
+      "slug": "code-llama-70b",
+      "canonicalPath": "/models/code-llama-70b/",
+      "name": "Code Llama 70B"
+    },
+    {
+      "key": "nim:meta/llama-3.1-405b-instruct",
+      "source": "nim",
+      "modelId": "meta/llama-3.1-405b-instruct",
+      "slug": "llama-3-1-405b",
+      "canonicalPath": "/models/llama-3-1-405b/",
+      "name": "Llama 3.1 405B"
+    },
+    {
+      "key": "nim:meta/llama-3.1-70b-instruct",
+      "source": "nim",
+      "modelId": "meta/llama-3.1-70b-instruct",
+      "slug": "llama-3-1-70b",
+      "canonicalPath": "/models/llama-3-1-70b/",
+      "name": "Llama 3.1 70B"
+    },
+    {
+      "key": "nim:meta/llama-3.1-8b-instruct",
+      "source": "nim",
+      "modelId": "meta/llama-3.1-8b-instruct",
+      "slug": "llama-3-1-8b",
+      "canonicalPath": "/models/llama-3-1-8b/",
+      "name": "Llama 3.1 8B"
+    },
+    {
+      "key": "nim:meta/llama-3.2-11b-vision-instruct",
+      "source": "nim",
+      "modelId": "meta/llama-3.2-11b-vision-instruct",
+      "slug": "llama-3-2-11b-vision",
+      "canonicalPath": "/models/llama-3-2-11b-vision/",
+      "name": "Llama 3.2 11B Vision"
+    },
+    {
+      "key": "nim:meta/llama-3.2-1b-instruct",
+      "source": "nim",
+      "modelId": "meta/llama-3.2-1b-instruct",
+      "slug": "llama-3-2-1b",
+      "canonicalPath": "/models/llama-3-2-1b/",
+      "name": "Llama 3.2 1B"
+    },
+    {
+      "key": "nim:meta/llama-3.2-3b-instruct",
+      "source": "nim",
+      "modelId": "meta/llama-3.2-3b-instruct",
+      "slug": "llama-3-2-3b",
+      "canonicalPath": "/models/llama-3-2-3b/",
+      "name": "Llama 3.2 3B"
+    },
+    {
+      "key": "nim:meta/llama-3.2-90b-vision-instruct",
+      "source": "nim",
+      "modelId": "meta/llama-3.2-90b-vision-instruct",
+      "slug": "llama-3-2-90b-vision",
+      "canonicalPath": "/models/llama-3-2-90b-vision/",
+      "name": "Llama 3.2 90B Vision"
+    },
+    {
+      "key": "nim:meta/llama-3.3-70b-instruct",
+      "source": "nim",
+      "modelId": "meta/llama-3.3-70b-instruct",
+      "slug": "llama-3-3-70b",
+      "canonicalPath": "/models/llama-3-3-70b/",
+      "name": "Llama 3.3 70B"
+    },
+    {
+      "key": "nim:meta/llama-4-maverick-17b-128e-instruct",
+      "source": "nim",
+      "modelId": "meta/llama-4-maverick-17b-128e-instruct",
+      "slug": "llama-4-maverick",
+      "canonicalPath": "/models/llama-4-maverick/",
+      "name": "Llama 4 Maverick"
+    },
+    {
+      "key": "nim:meta/llama-4-scout-17b-16e-instruct",
+      "source": "nim",
+      "modelId": "meta/llama-4-scout-17b-16e-instruct",
+      "slug": "llama-4-scout",
+      "canonicalPath": "/models/llama-4-scout/",
+      "name": "Llama 4 Scout"
+    },
+    {
+      "key": "nim:meta/llama2-70b",
+      "source": "nim",
+      "modelId": "meta/llama2-70b",
+      "slug": "llama-2-70b",
+      "canonicalPath": "/models/llama-2-70b/",
+      "name": "Llama 2 70B"
+    },
+    {
+      "key": "nim:meta/llama3-70b-instruct",
+      "source": "nim",
+      "modelId": "meta/llama3-70b-instruct",
+      "slug": "llama-3-70b",
+      "canonicalPath": "/models/llama-3-70b/",
+      "name": "Llama 3 70B"
+    },
+    {
+      "key": "nim:meta/llama3-8b-instruct",
+      "source": "nim",
+      "modelId": "meta/llama3-8b-instruct",
+      "slug": "llama-3-8b",
+      "canonicalPath": "/models/llama-3-8b/",
+      "name": "Llama 3 8B"
+    },
+    {
+      "key": "nim:microsoft/phi-3-medium-128k-instruct",
+      "source": "nim",
+      "modelId": "microsoft/phi-3-medium-128k-instruct",
+      "slug": "phi-3-medium-128k",
+      "canonicalPath": "/models/phi-3-medium-128k/",
+      "name": "Phi 3 Medium 128K"
+    },
+    {
+      "key": "nim:microsoft/phi-3-medium-4k-instruct",
+      "source": "nim",
+      "modelId": "microsoft/phi-3-medium-4k-instruct",
+      "slug": "phi-3-medium-4k",
+      "canonicalPath": "/models/phi-3-medium-4k/",
+      "name": "Phi 3 Medium 4K"
+    },
+    {
+      "key": "nim:microsoft/phi-3-mini-128k-instruct",
+      "source": "nim",
+      "modelId": "microsoft/phi-3-mini-128k-instruct",
+      "slug": "phi-3-mini-128k",
+      "canonicalPath": "/models/phi-3-mini-128k/",
+      "name": "Phi 3 Mini 128K"
+    },
+    {
+      "key": "nim:microsoft/phi-3-mini-4k-instruct",
+      "source": "nim",
+      "modelId": "microsoft/phi-3-mini-4k-instruct",
+      "slug": "phi-3-mini-4k",
+      "canonicalPath": "/models/phi-3-mini-4k/",
+      "name": "Phi 3 Mini 4K"
+    },
+    {
+      "key": "nim:microsoft/phi-3-small-128k-instruct",
+      "source": "nim",
+      "modelId": "microsoft/phi-3-small-128k-instruct",
+      "slug": "phi-3-small-128k",
+      "canonicalPath": "/models/phi-3-small-128k/",
+      "name": "Phi 3 Small 128K"
+    },
+    {
+      "key": "nim:microsoft/phi-3-small-8k-instruct",
+      "source": "nim",
+      "modelId": "microsoft/phi-3-small-8k-instruct",
+      "slug": "phi-3-small-8k",
+      "canonicalPath": "/models/phi-3-small-8k/",
+      "name": "Phi 3 Small 8K"
+    },
+    {
+      "key": "nim:microsoft/phi-3-vision-128k-instruct",
+      "source": "nim",
+      "modelId": "microsoft/phi-3-vision-128k-instruct",
+      "slug": "phi-3-vision",
+      "canonicalPath": "/models/phi-3-vision/",
+      "name": "Phi 3 Vision"
+    },
+    {
+      "key": "nim:microsoft/phi-3.5-mini-instruct",
+      "source": "nim",
+      "modelId": "microsoft/phi-3.5-mini-instruct",
+      "slug": "phi-3-mini",
+      "canonicalPath": "/models/phi-3-mini/",
+      "name": "Phi 3.5 Mini"
+    },
+    {
+      "key": "nim:microsoft/phi-3.5-moe-instruct",
+      "source": "nim",
+      "modelId": "microsoft/phi-3.5-moe-instruct",
+      "slug": "phi-3-5-moe",
+      "canonicalPath": "/models/phi-3-5-moe/",
+      "name": "Phi 3.5 MoE"
+    },
+    {
+      "key": "nim:microsoft/phi-3.5-vision-instruct",
+      "source": "nim",
+      "modelId": "microsoft/phi-3.5-vision-instruct",
+      "slug": "phi-3-5-vision",
+      "canonicalPath": "/models/phi-3-5-vision/",
+      "name": "Phi 3.5 Vision"
+    },
+    {
+      "key": "nim:microsoft/phi-4-mini-flash-reasoning",
+      "source": "nim",
+      "modelId": "microsoft/phi-4-mini-flash-reasoning",
+      "slug": "phi-4-mini-flash",
+      "canonicalPath": "/models/phi-4-mini-flash/",
+      "name": "Phi 4 Mini Flash"
+    },
+    {
+      "key": "nim:microsoft/phi-4-mini-instruct",
+      "source": "nim",
+      "modelId": "microsoft/phi-4-mini-instruct",
+      "slug": "phi-4-mini",
+      "canonicalPath": "/models/phi-4-mini/",
+      "name": "Phi 4 Mini"
+    },
+    {
+      "key": "nim:microsoft/phi-4-multimodal-instruct",
+      "source": "nim",
+      "modelId": "microsoft/phi-4-multimodal-instruct",
+      "slug": "phi-4-multimodal",
+      "canonicalPath": "/models/phi-4-multimodal/",
+      "name": "Phi 4 Multimodal"
+    },
+    {
+      "key": "nim:minimaxai/minimax-m2",
+      "source": "nim",
+      "modelId": "minimaxai/minimax-m2",
+      "slug": "minimax-m2",
+      "canonicalPath": "/models/minimax-m2/",
+      "name": "MiniMax M2"
+    },
+    {
+      "key": "nim:minimaxai/minimax-m2.1",
+      "source": "nim",
+      "modelId": "minimaxai/minimax-m2.1",
+      "slug": "minimax-m2-1",
+      "canonicalPath": "/models/minimax-m2-1/",
+      "name": "MiniMax M2.1"
+    },
+    {
+      "key": "nim:minimaxai/minimax-m2.5",
+      "source": "nim",
+      "modelId": "minimaxai/minimax-m2.5",
+      "slug": "minimax-m2-5",
+      "canonicalPath": "/models/minimax-m2-5/",
+      "name": "MiniMax M2.5"
+    },
+    {
+      "key": "nim:mistralai/codestral-22b-instruct-v0.1",
+      "source": "nim",
+      "modelId": "mistralai/codestral-22b-instruct-v0.1",
+      "slug": "codestral-22b",
+      "canonicalPath": "/models/codestral-22b/",
+      "name": "Codestral 22B"
+    },
+    {
+      "key": "nim:mistralai/devstral-2-123b-instruct-2512",
+      "source": "nim",
+      "modelId": "mistralai/devstral-2-123b-instruct-2512",
+      "slug": "devstral-2",
+      "canonicalPath": "/models/devstral-2/",
+      "name": "Devstral 2 123B"
+    },
+    {
+      "key": "nim:mistralai/magistral-small-2506",
+      "source": "nim",
+      "modelId": "mistralai/magistral-small-2506",
+      "slug": "magistral-small",
+      "canonicalPath": "/models/magistral-small/",
+      "name": "Magistral Small"
+    },
+    {
+      "key": "nim:mistralai/mamba-codestral-7b-v0.1",
+      "source": "nim",
+      "modelId": "mistralai/mamba-codestral-7b-v0.1",
+      "slug": "mamba-codestral-7b",
+      "canonicalPath": "/models/mamba-codestral-7b/",
+      "name": "Mamba Codestral 7B"
+    },
+    {
+      "key": "nim:mistralai/mathstral-7b-v0.1",
+      "source": "nim",
+      "modelId": "mistralai/mathstral-7b-v0.1",
+      "slug": "mathstral-7b",
+      "canonicalPath": "/models/mathstral-7b/",
+      "name": "Mathstral 7B"
+    },
+    {
+      "key": "nim:mistralai/ministral-14b-instruct-2512",
+      "source": "nim",
+      "modelId": "mistralai/ministral-14b-instruct-2512",
+      "slug": "ministral-14b",
+      "canonicalPath": "/models/ministral-14b/",
+      "name": "Ministral 14B"
+    },
+    {
+      "key": "nim:mistralai/mistral-7b-instruct-v0.2",
+      "source": "nim",
+      "modelId": "mistralai/mistral-7b-instruct-v0.2",
+      "slug": "mistral-7b-v0-2",
+      "canonicalPath": "/models/mistral-7b-v0-2/",
+      "name": "Mistral 7B v0.2"
+    },
+    {
+      "key": "nim:mistralai/mistral-7b-instruct-v0.3",
+      "source": "nim",
+      "modelId": "mistralai/mistral-7b-instruct-v0.3",
+      "slug": "mistral-7b-v0-3",
+      "canonicalPath": "/models/mistral-7b-v0-3/",
+      "name": "Mistral 7B v0.3"
+    },
+    {
+      "key": "nim:mistralai/mistral-large",
+      "source": "nim",
+      "modelId": "mistralai/mistral-large",
+      "slug": "mistral-large",
+      "canonicalPath": "/models/mistral-large/",
+      "name": "Mistral Large"
+    },
+    {
+      "key": "nim:mistralai/mistral-large-2-instruct",
+      "source": "nim",
+      "modelId": "mistralai/mistral-large-2-instruct",
+      "slug": "mistral-large-2",
+      "canonicalPath": "/models/mistral-large-2/",
+      "name": "Mistral Large 2"
+    },
+    {
+      "key": "nim:mistralai/mistral-large-3-675b-instruct-2512",
+      "source": "nim",
+      "modelId": "mistralai/mistral-large-3-675b-instruct-2512",
+      "slug": "mistral-large-3",
+      "canonicalPath": "/models/mistral-large-3/",
+      "name": "Mistral Large 675B"
+    },
+    {
+      "key": "nim:mistralai/mistral-medium-3-instruct",
+      "source": "nim",
+      "modelId": "mistralai/mistral-medium-3-instruct",
+      "slug": "mistral-medium-3",
+      "canonicalPath": "/models/mistral-medium-3/",
+      "name": "Mistral Medium 3"
+    },
+    {
+      "key": "nim:mistralai/mistral-nemotron",
+      "source": "nim",
+      "modelId": "mistralai/mistral-nemotron",
+      "slug": "mistral-nemotron",
+      "canonicalPath": "/models/mistral-nemotron/",
+      "name": "Mistral Nemotron"
+    },
+    {
+      "key": "nim:mistralai/mistral-small-24b-instruct",
+      "source": "nim",
+      "modelId": "mistralai/mistral-small-24b-instruct",
+      "slug": "mistral-small-24b",
+      "canonicalPath": "/models/mistral-small-24b/",
+      "name": "Mistral Small 24B"
+    },
+    {
+      "key": "nim:mistralai/mistral-small-3.1-24b-instruct-2503",
+      "source": "nim",
+      "modelId": "mistralai/mistral-small-3.1-24b-instruct-2503",
+      "slug": "mistral-small-3-1",
+      "canonicalPath": "/models/mistral-small-3-1/",
+      "name": "Mistral Small 3.1 24B"
+    },
+    {
+      "key": "nim:mistralai/mixtral-8x22b-instruct-v0.1",
+      "source": "nim",
+      "modelId": "mistralai/mixtral-8x22b-instruct-v0.1",
+      "slug": "mixtral-8x22b",
+      "canonicalPath": "/models/mixtral-8x22b/",
+      "name": "Mixtral 8x22B"
+    },
+    {
+      "key": "nim:mistralai/mixtral-8x7b-instruct-v0.1",
+      "source": "nim",
+      "modelId": "mistralai/mixtral-8x7b-instruct-v0.1",
+      "slug": "mixtral-8x7b-instruct",
+      "canonicalPath": "/models/mixtral-8x7b-instruct/",
+      "name": "Mixtral 8x7B"
+    },
+    {
+      "key": "nim:moonshotai/kimi-k2-instruct",
+      "source": "nim",
+      "modelId": "moonshotai/kimi-k2-instruct",
+      "slug": "kimi-k2--nim-moonshotai-kimi-k2-instruct",
+      "canonicalPath": "/models/kimi-k2--nim-moonshotai-kimi-k2-instruct/",
+      "name": "Kimi K2 Instruct"
+    },
+    {
+      "key": "nim:moonshotai/kimi-k2-instruct-0905",
+      "source": "nim",
+      "modelId": "moonshotai/kimi-k2-instruct-0905",
+      "slug": "kimi-k2",
+      "canonicalPath": "/models/kimi-k2/",
+      "name": "Kimi K2 0905"
+    },
+    {
+      "key": "nim:moonshotai/kimi-k2-thinking",
+      "source": "nim",
+      "modelId": "moonshotai/kimi-k2-thinking",
+      "slug": "kimi-k2-thinking",
+      "canonicalPath": "/models/kimi-k2-thinking/",
+      "name": "Kimi K2 Thinking"
+    },
+    {
+      "key": "nim:moonshotai/kimi-k2.5",
+      "source": "nim",
+      "modelId": "moonshotai/kimi-k2.5",
+      "slug": "kimi-k2-5",
+      "canonicalPath": "/models/kimi-k2-5/",
+      "name": "Kimi K2.5"
+    },
+    {
+      "key": "nim:nv-mistralai/mistral-nemo-12b-instruct",
+      "source": "nim",
+      "modelId": "nv-mistralai/mistral-nemo-12b-instruct",
+      "slug": "mistral-nemo-12b",
+      "canonicalPath": "/models/mistral-nemo-12b/",
+      "name": "Mistral Nemo 12B"
+    },
+    {
+      "key": "nim:nvidia/cosmos-reason2-8b",
+      "source": "nim",
+      "modelId": "nvidia/cosmos-reason2-8b",
+      "slug": "cosmos-reason2-8b",
+      "canonicalPath": "/models/cosmos-reason2-8b/",
+      "name": "Cosmos Reason2 8B"
+    },
+    {
+      "key": "nim:nvidia/gliner-pii",
+      "source": "nim",
+      "modelId": "nvidia/gliner-pii",
+      "slug": "gliner-pii",
+      "canonicalPath": "/models/gliner-pii/",
+      "name": "GLiNER PII"
+    },
+    {
+      "key": "nim:nvidia/llama-3.1-nemotron-51b-instruct",
+      "source": "nim",
+      "modelId": "nvidia/llama-3.1-nemotron-51b-instruct",
+      "slug": "nemotron-51b",
+      "canonicalPath": "/models/nemotron-51b/",
+      "name": "Nemotron 51B"
+    },
+    {
+      "key": "nim:nvidia/llama-3.1-nemotron-70b-instruct",
+      "source": "nim",
+      "modelId": "nvidia/llama-3.1-nemotron-70b-instruct",
+      "slug": "nemotron-70b",
+      "canonicalPath": "/models/nemotron-70b/",
+      "name": "Nemotron 70B"
+    },
+    {
+      "key": "nim:nvidia/llama-3.1-nemotron-nano-4b-v1.1",
+      "source": "nim",
+      "modelId": "nvidia/llama-3.1-nemotron-nano-4b-v1.1",
+      "slug": "nemotron-nano-4b",
+      "canonicalPath": "/models/nemotron-nano-4b/",
+      "name": "Nemotron Nano 4B"
+    },
+    {
+      "key": "nim:nvidia/llama-3.1-nemotron-nano-8b-v1",
+      "source": "nim",
+      "modelId": "nvidia/llama-3.1-nemotron-nano-8b-v1",
+      "slug": "nemotron-nano-8b",
+      "canonicalPath": "/models/nemotron-nano-8b/",
+      "name": "Nemotron Nano 8B"
+    },
+    {
+      "key": "nim:nvidia/llama-3.1-nemotron-nano-vl-8b-v1",
+      "source": "nim",
+      "modelId": "nvidia/llama-3.1-nemotron-nano-vl-8b-v1",
+      "slug": "nemotron-nano-vl-8b",
+      "canonicalPath": "/models/nemotron-nano-vl-8b/",
+      "name": "Nemotron Nano VL 8B"
+    },
+    {
+      "key": "nim:nvidia/llama-3.1-nemotron-ultra-253b-v1",
+      "source": "nim",
+      "modelId": "nvidia/llama-3.1-nemotron-ultra-253b-v1",
+      "slug": "nemotron-ultra-253b",
+      "canonicalPath": "/models/nemotron-ultra-253b/",
+      "name": "Nemotron Ultra 253B"
+    },
+    {
+      "key": "nim:nvidia/llama-3.3-nemotron-super-49b-v1",
+      "source": "nim",
+      "modelId": "nvidia/llama-3.3-nemotron-super-49b-v1",
+      "slug": "nemotron-super-49b-v1",
+      "canonicalPath": "/models/nemotron-super-49b-v1/",
+      "name": "Nemotron Super 49B v1"
+    },
+    {
+      "key": "nim:nvidia/llama-3.3-nemotron-super-49b-v1.5",
+      "source": "nim",
+      "modelId": "nvidia/llama-3.3-nemotron-super-49b-v1.5",
+      "slug": "nemotron-super-49b",
+      "canonicalPath": "/models/nemotron-super-49b/",
+      "name": "Nemotron Super 49B"
+    },
+    {
+      "key": "nim:nvidia/llama3-chatqa-1.5-70b",
+      "source": "nim",
+      "modelId": "nvidia/llama3-chatqa-1.5-70b",
+      "slug": "chatqa-1-5-70b",
+      "canonicalPath": "/models/chatqa-1-5-70b/",
+      "name": "ChatQA 1.5 70B"
+    },
+    {
+      "key": "nim:nvidia/llama3-chatqa-1.5-8b",
+      "source": "nim",
+      "modelId": "nvidia/llama3-chatqa-1.5-8b",
+      "slug": "chatqa-1-5-8b",
+      "canonicalPath": "/models/chatqa-1-5-8b/",
+      "name": "ChatQA 1.5 8B"
+    },
+    {
+      "key": "nim:nvidia/mistral-nemo-minitron-8b-8k-instruct",
+      "source": "nim",
+      "modelId": "nvidia/mistral-nemo-minitron-8b-8k-instruct",
+      "slug": "minitron-8b",
+      "canonicalPath": "/models/minitron-8b/",
+      "name": "Minitron 8B"
+    },
+    {
+      "key": "nim:nvidia/nemotron-3-nano-30b-a3b",
+      "source": "nim",
+      "modelId": "nvidia/nemotron-3-nano-30b-a3b",
+      "slug": "nemotron-nano-30b",
+      "canonicalPath": "/models/nemotron-nano-30b/",
+      "name": "Nemotron Nano 30B"
+    },
+    {
+      "key": "nim:nvidia/nemotron-3-super-120b-a12b",
+      "source": "nim",
+      "modelId": "nvidia/nemotron-3-super-120b-a12b",
+      "slug": "nvidia-nemotron-3-super-120b-a12b",
+      "canonicalPath": "/models/nvidia-nemotron-3-super-120b-a12b/",
+      "name": "Nemotron 3 Super 120B"
+    },
+    {
+      "key": "nim:nvidia/nemotron-4-340b-instruct",
+      "source": "nim",
+      "modelId": "nvidia/nemotron-4-340b-instruct",
+      "slug": "nemotron-4-340b",
+      "canonicalPath": "/models/nemotron-4-340b/",
+      "name": "Nemotron 4 340B"
+    },
+    {
+      "key": "nim:nvidia/nemotron-4-mini-hindi-4b-instruct",
+      "source": "nim",
+      "modelId": "nvidia/nemotron-4-mini-hindi-4b-instruct",
+      "slug": "nemotron-hindi-4b",
+      "canonicalPath": "/models/nemotron-hindi-4b/",
+      "name": "Nemotron Hindi 4B"
+    },
+    {
+      "key": "nim:nvidia/nemotron-mini-4b-instruct",
+      "source": "nim",
+      "modelId": "nvidia/nemotron-mini-4b-instruct",
+      "slug": "nemotron-mini-4b",
+      "canonicalPath": "/models/nemotron-mini-4b/",
+      "name": "Nemotron Mini 4B"
+    },
+    {
+      "key": "nim:nvidia/nemotron-nano-12b-v2-vl",
+      "source": "nim",
+      "modelId": "nvidia/nemotron-nano-12b-v2-vl",
+      "slug": "nemotron-nano-12b-vl--nim-nvidia-nemotron-nano-12b-v2-vl",
+      "canonicalPath": "/models/nemotron-nano-12b-vl--nim-nvidia-nemotron-nano-12b-v2-vl/",
+      "name": "Nemotron Nano 12B VL"
+    },
+    {
+      "key": "nim:nvidia/nemotron-nano-3-30b-a3b",
+      "source": "nim",
+      "modelId": "nvidia/nemotron-nano-3-30b-a3b",
+      "slug": "nemotron-nano-3-30b",
+      "canonicalPath": "/models/nemotron-nano-3-30b/",
+      "name": "Nemotron Nano 3 30B"
+    },
+    {
+      "key": "nim:nvidia/nvidia-nemotron-nano-9b-v2",
+      "source": "nim",
+      "modelId": "nvidia/nvidia-nemotron-nano-9b-v2",
+      "slug": "nemotron-nano-9b-v2",
+      "canonicalPath": "/models/nemotron-nano-9b-v2/",
+      "name": "Nemotron Nano 9B v2"
+    },
+    {
+      "key": "nim:nvidia/usdcode-llama-3.1-70b-instruct",
+      "source": "nim",
+      "modelId": "nvidia/usdcode-llama-3.1-70b-instruct",
+      "slug": "usdcode-70b",
+      "canonicalPath": "/models/usdcode-70b/",
+      "name": "USDCode 70B"
+    },
+    {
+      "key": "nim:openai/gpt-oss-120b",
+      "source": "nim",
+      "modelId": "openai/gpt-oss-120b",
+      "slug": "gpt-oss-120b",
+      "canonicalPath": "/models/gpt-oss-120b/",
+      "name": "GPT OSS 120B"
+    },
+    {
+      "key": "nim:openai/gpt-oss-20b",
+      "source": "nim",
+      "modelId": "openai/gpt-oss-20b",
+      "slug": "gpt-oss-20b",
+      "canonicalPath": "/models/gpt-oss-20b/",
+      "name": "GPT OSS 20B"
+    },
+    {
+      "key": "nim:opengpt-x/teuken-7b-instruct-commercial-v0.4",
+      "source": "nim",
+      "modelId": "opengpt-x/teuken-7b-instruct-commercial-v0.4",
+      "slug": "teuken-7b",
+      "canonicalPath": "/models/teuken-7b/",
+      "name": "Teuken 7B"
+    },
+    {
+      "key": "nim:qwen/qwen2-7b-instruct",
+      "source": "nim",
+      "modelId": "qwen/qwen2-7b-instruct",
+      "slug": "qwen2-7b",
+      "canonicalPath": "/models/qwen2-7b/",
+      "name": "Qwen2 7B"
+    },
+    {
+      "key": "nim:qwen/qwen2.5-7b-instruct",
+      "source": "nim",
+      "modelId": "qwen/qwen2.5-7b-instruct",
+      "slug": "qwen2-5-7b",
+      "canonicalPath": "/models/qwen2-5-7b/",
+      "name": "Qwen2.5 7B"
+    },
+    {
+      "key": "nim:qwen/qwen2.5-coder-32b-instruct",
+      "source": "nim",
+      "modelId": "qwen/qwen2.5-coder-32b-instruct",
+      "slug": "qwen2-5-coder-32b",
+      "canonicalPath": "/models/qwen2-5-coder-32b/",
+      "name": "Qwen2.5 Coder 32B"
+    },
+    {
+      "key": "nim:qwen/qwen2.5-coder-7b-instruct",
+      "source": "nim",
+      "modelId": "qwen/qwen2.5-coder-7b-instruct",
+      "slug": "qwen2-5-coder-7b",
+      "canonicalPath": "/models/qwen2-5-coder-7b/",
+      "name": "Qwen2.5 Coder 7B"
+    },
+    {
+      "key": "nim:qwen/qwen3-235b-a22b",
+      "source": "nim",
+      "modelId": "qwen/qwen3-235b-a22b",
+      "slug": "qwen3-235b",
+      "canonicalPath": "/models/qwen3-235b/",
+      "name": "Qwen3 235B"
+    },
+    {
+      "key": "nim:qwen/qwen3-coder-480b-a35b-instruct",
+      "source": "nim",
+      "modelId": "qwen/qwen3-coder-480b-a35b-instruct",
+      "slug": "qwen3-coder-480b",
+      "canonicalPath": "/models/qwen3-coder-480b/",
+      "name": "Qwen3 Coder 480B"
+    },
+    {
+      "key": "nim:qwen/qwen3-next-80b-a3b-instruct",
+      "source": "nim",
+      "modelId": "qwen/qwen3-next-80b-a3b-instruct",
+      "slug": "qwen3-80b-instruct",
+      "canonicalPath": "/models/qwen3-80b-instruct/",
+      "name": "Qwen3 80B Instruct"
+    },
+    {
+      "key": "nim:qwen/qwen3-next-80b-a3b-thinking",
+      "source": "nim",
+      "modelId": "qwen/qwen3-next-80b-a3b-thinking",
+      "slug": "qwen3-80b-thinking",
+      "canonicalPath": "/models/qwen3-80b-thinking/",
+      "name": "Qwen3 80B Thinking"
+    },
+    {
+      "key": "nim:qwen/qwen3.5-122b-a10b",
+      "source": "nim",
+      "modelId": "qwen/qwen3.5-122b-a10b",
+      "slug": "qwen3-5-122b",
+      "canonicalPath": "/models/qwen3-5-122b/",
+      "name": "Qwen3.5 122B"
+    },
+    {
+      "key": "nim:qwen/qwen3.5-397b-a17b",
+      "source": "nim",
+      "modelId": "qwen/qwen3.5-397b-a17b",
+      "slug": "qwen3-5-400b",
+      "canonicalPath": "/models/qwen3-5-400b/",
+      "name": "Qwen3.5 400B"
+    },
+    {
+      "key": "nim:qwen/qwq-32b",
+      "source": "nim",
+      "modelId": "qwen/qwq-32b",
+      "slug": "qwq-32b",
+      "canonicalPath": "/models/qwq-32b/",
+      "name": "QwQ 32B"
+    },
+    {
+      "key": "nim:rakuten/rakutenai-7b-chat",
+      "source": "nim",
+      "modelId": "rakuten/rakutenai-7b-chat",
+      "slug": "rakutenai-7b-chat",
+      "canonicalPath": "/models/rakutenai-7b-chat/",
+      "name": "RakutenAI 7B Chat"
+    },
+    {
+      "key": "nim:rakuten/rakutenai-7b-instruct",
+      "source": "nim",
+      "modelId": "rakuten/rakutenai-7b-instruct",
+      "slug": "rakutenai-7b",
+      "canonicalPath": "/models/rakutenai-7b/",
+      "name": "RakutenAI 7B"
+    },
+    {
+      "key": "nim:sarvamai/sarvam-m",
+      "source": "nim",
+      "modelId": "sarvamai/sarvam-m",
+      "slug": "sarvam-m",
+      "canonicalPath": "/models/sarvam-m/",
+      "name": "Sarvam M"
+    },
+    {
+      "key": "nim:speakleash/bielik-11b-v2.3-instruct",
+      "source": "nim",
+      "modelId": "speakleash/bielik-11b-v2.3-instruct",
+      "slug": "bielik-11b-v2-3",
+      "canonicalPath": "/models/bielik-11b-v2-3/",
+      "name": "Bielik 11B v2.3"
+    },
+    {
+      "key": "nim:speakleash/bielik-11b-v2.6-instruct",
+      "source": "nim",
+      "modelId": "speakleash/bielik-11b-v2.6-instruct",
+      "slug": "bielik-11b-v2-6",
+      "canonicalPath": "/models/bielik-11b-v2-6/",
+      "name": "Bielik 11B v2.6"
+    },
+    {
+      "key": "nim:stepfun-ai/step-3.5-flash",
+      "source": "nim",
+      "modelId": "stepfun-ai/step-3.5-flash",
+      "slug": "step-3-5-flash",
+      "canonicalPath": "/models/step-3-5-flash/",
+      "name": "Step 3.5 Flash"
+    },
+    {
+      "key": "nim:stockmark/stockmark-2-100b-instruct",
+      "source": "nim",
+      "modelId": "stockmark/stockmark-2-100b-instruct",
+      "slug": "stockmark-100b",
+      "canonicalPath": "/models/stockmark-100b/",
+      "name": "Stockmark 100B"
+    },
+    {
+      "key": "nim:thudm/chatglm3-6b",
+      "source": "nim",
+      "modelId": "thudm/chatglm3-6b",
+      "slug": "chatglm3-6b",
+      "canonicalPath": "/models/chatglm3-6b/",
+      "name": "ChatGLM3 6B"
+    },
+    {
+      "key": "nim:tiiuae/falcon3-7b-instruct",
+      "source": "nim",
+      "modelId": "tiiuae/falcon3-7b-instruct",
+      "slug": "falcon3-7b",
+      "canonicalPath": "/models/falcon3-7b/",
+      "name": "Falcon3 7B"
+    },
+    {
+      "key": "nim:tokyotech-llm/llama-3-swallow-70b-instruct-v0.1",
+      "source": "nim",
+      "modelId": "tokyotech-llm/llama-3-swallow-70b-instruct-v0.1",
+      "slug": "swallow-3-70b",
+      "canonicalPath": "/models/swallow-3-70b/",
+      "name": "Swallow 3 70B"
+    },
+    {
+      "key": "nim:upstage/solar-10.7b-instruct",
+      "source": "nim",
+      "modelId": "upstage/solar-10.7b-instruct",
+      "slug": "solar-10-7b",
+      "canonicalPath": "/models/solar-10-7b/",
+      "name": "Solar 10.7B"
+    },
+    {
+      "key": "nim:utter-project/eurollm-9b-instruct",
+      "source": "nim",
+      "modelId": "utter-project/eurollm-9b-instruct",
+      "slug": "eurollm-9b",
+      "canonicalPath": "/models/eurollm-9b/",
+      "name": "EuroLLM 9B"
+    },
+    {
+      "key": "nim:writer/palmyra-creative-122b",
+      "source": "nim",
+      "modelId": "writer/palmyra-creative-122b",
+      "slug": "palmyra-creative-122b",
+      "canonicalPath": "/models/palmyra-creative-122b/",
+      "name": "Palmyra Creative 122B"
+    },
+    {
+      "key": "nim:writer/palmyra-fin-70b-32k",
+      "source": "nim",
+      "modelId": "writer/palmyra-fin-70b-32k",
+      "slug": "palmyra-fin-70b",
+      "canonicalPath": "/models/palmyra-fin-70b/",
+      "name": "Palmyra Fin 70B"
+    },
+    {
+      "key": "nim:writer/palmyra-med-70b",
+      "source": "nim",
+      "modelId": "writer/palmyra-med-70b",
+      "slug": "palmyra-med-70b",
+      "canonicalPath": "/models/palmyra-med-70b/",
+      "name": "Palmyra Med 70B"
+    },
+    {
+      "key": "nim:writer/palmyra-med-70b-32k",
+      "source": "nim",
+      "modelId": "writer/palmyra-med-70b-32k",
+      "slug": "palmyra-med-70b-32k",
+      "canonicalPath": "/models/palmyra-med-70b-32k/",
+      "name": "Palmyra Med 70B 32K"
+    },
+    {
+      "key": "nim:yentinglin/llama-3-taiwan-70b-instruct",
+      "source": "nim",
+      "modelId": "yentinglin/llama-3-taiwan-70b-instruct",
+      "slug": "taiwan-70b",
+      "canonicalPath": "/models/taiwan-70b/",
+      "name": "Taiwan 70B"
+    },
+    {
+      "key": "nim:z-ai/glm4.7",
+      "source": "nim",
+      "modelId": "z-ai/glm4.7",
+      "slug": "glm-4-7",
+      "canonicalPath": "/models/glm-4-7/",
+      "name": "GLM 4.7"
+    },
+    {
+      "key": "nim:z-ai/glm5",
+      "source": "nim",
+      "modelId": "z-ai/glm5",
+      "slug": "glm-5",
+      "canonicalPath": "/models/glm-5/",
+      "name": "GLM 5"
+    },
+    {
+      "key": "nim:zyphra/zamba2-7b-instruct",
+      "source": "nim",
+      "modelId": "zyphra/zamba2-7b-instruct",
+      "slug": "zamba2-7b",
+      "canonicalPath": "/models/zamba2-7b/",
+      "name": "Zamba2 7B"
+    },
+    {
+      "key": "openrouter:arcee-ai/trinity-large-preview:free",
+      "source": "openrouter",
+      "modelId": "arcee-ai/trinity-large-preview:free",
+      "slug": "trinity-large-preview",
+      "canonicalPath": "/models/trinity-large-preview/",
+      "name": "Trinity Large Preview"
+    },
+    {
+      "key": "openrouter:arcee-ai/trinity-mini:free",
+      "source": "openrouter",
+      "modelId": "arcee-ai/trinity-mini:free",
+      "slug": "trinity-mini",
+      "canonicalPath": "/models/trinity-mini/",
+      "name": "Trinity Mini"
+    },
+    {
+      "key": "openrouter:google/gemma-3-27b-it:free",
+      "source": "openrouter",
+      "modelId": "google/gemma-3-27b-it:free",
+      "slug": "gemma-3-27b",
+      "canonicalPath": "/models/gemma-3-27b/",
+      "name": "Gemma 3 27B"
+    },
+    {
+      "key": "openrouter:meta-llama/llama-3.3-70b-instruct:free",
+      "source": "openrouter",
+      "modelId": "meta-llama/llama-3.3-70b-instruct:free",
+      "slug": "llama-3-3-70b--openrouter-meta-llama-llama-3-3-70b-instruct-free",
+      "canonicalPath": "/models/llama-3-3-70b--openrouter-meta-llama-llama-3-3-70b-instruct-free/",
+      "name": "Llama 3.3 70B"
+    },
+    {
+      "key": "openrouter:mistralai/mistral-small-3.1-24b-instruct:free",
+      "source": "openrouter",
+      "modelId": "mistralai/mistral-small-3.1-24b-instruct:free",
+      "slug": "mistral-small-3-1--openrouter-mistralai-mistral-small-3-1-24b-instruct-free",
+      "canonicalPath": "/models/mistral-small-3-1--openrouter-mistralai-mistral-small-3-1-24b-instruct-free/",
+      "name": "Mistral Small 3.1 24B"
+    },
+    {
+      "key": "openrouter:nvidia/nemotron-3-nano-30b-a3b:free",
+      "source": "openrouter",
+      "modelId": "nvidia/nemotron-3-nano-30b-a3b:free",
+      "slug": "nemotron-nano-30b--openrouter-nvidia-nemotron-3-nano-30b-a3b-free",
+      "canonicalPath": "/models/nemotron-nano-30b--openrouter-nvidia-nemotron-3-nano-30b-a3b-free/",
+      "name": "Nemotron Nano 30B"
+    },
+    {
+      "key": "openrouter:nvidia/nemotron-3-super-120b-a12b:free",
+      "source": "openrouter",
+      "modelId": "nvidia/nemotron-3-super-120b-a12b:free",
+      "slug": "nvidia-nemotron-3-super-120b-a12b--openrouter-nvidia-nemotron-3-super-120b-a12b-free",
+      "canonicalPath": "/models/nvidia-nemotron-3-super-120b-a12b--openrouter-nvidia-nemotron-3-super-120b-a12b-free/",
+      "name": "NVIDIA: Nemotron 3 Super (free)"
+    },
+    {
+      "key": "openrouter:nvidia/nemotron-nano-12b-v2-vl:free",
+      "source": "openrouter",
+      "modelId": "nvidia/nemotron-nano-12b-v2-vl:free",
+      "slug": "nemotron-nano-12b-vl",
+      "canonicalPath": "/models/nemotron-nano-12b-vl/",
+      "name": "Nemotron Nano 12B VL"
+    },
+    {
+      "key": "openrouter:nvidia/nemotron-nano-9b-v2:free",
+      "source": "openrouter",
+      "modelId": "nvidia/nemotron-nano-9b-v2:free",
+      "slug": "nemotron-nano-9b",
+      "canonicalPath": "/models/nemotron-nano-9b/",
+      "name": "Nemotron Nano 9B"
+    },
+    {
+      "key": "openrouter:openai/gpt-oss-120b:free",
+      "source": "openrouter",
+      "modelId": "openai/gpt-oss-120b:free",
+      "slug": "gpt-oss-120b--openrouter-openai-gpt-oss-120b-free",
+      "canonicalPath": "/models/gpt-oss-120b--openrouter-openai-gpt-oss-120b-free/",
+      "name": "GPT OSS 120B"
+    },
+    {
+      "key": "openrouter:openai/gpt-oss-20b:free",
+      "source": "openrouter",
+      "modelId": "openai/gpt-oss-20b:free",
+      "slug": "gpt-oss-20b--openrouter-openai-gpt-oss-20b-free",
+      "canonicalPath": "/models/gpt-oss-20b--openrouter-openai-gpt-oss-20b-free/",
+      "name": "GPT OSS 20B"
+    },
+    {
+      "key": "openrouter:openrouter/healer-alpha",
+      "source": "openrouter",
+      "modelId": "openrouter/healer-alpha",
+      "slug": "healer-alpha",
+      "canonicalPath": "/models/healer-alpha/",
+      "name": "Healer Alpha"
+    },
+    {
+      "key": "openrouter:openrouter/hunter-alpha",
+      "source": "openrouter",
+      "modelId": "openrouter/hunter-alpha",
+      "slug": "hunter-alpha",
+      "canonicalPath": "/models/hunter-alpha/",
+      "name": "Hunter Alpha"
+    },
+    {
+      "key": "openrouter:qwen/qwen3-4b:free",
+      "source": "openrouter",
+      "modelId": "qwen/qwen3-4b:free",
+      "slug": "qwen3-4b",
+      "canonicalPath": "/models/qwen3-4b/",
+      "name": "Qwen3 4B"
+    },
+    {
+      "key": "openrouter:qwen/qwen3-coder:free",
+      "source": "openrouter",
+      "modelId": "qwen/qwen3-coder:free",
+      "slug": "qwen3-coder-480b--openrouter-qwen-qwen3-coder-free",
+      "canonicalPath": "/models/qwen3-coder-480b--openrouter-qwen-qwen3-coder-free/",
+      "name": "Qwen3 Coder 480B"
+    },
+    {
+      "key": "openrouter:qwen/qwen3-next-80b-a3b-instruct:free",
+      "source": "openrouter",
+      "modelId": "qwen/qwen3-next-80b-a3b-instruct:free",
+      "slug": "qwen3-80b-instruct--openrouter-qwen-qwen3-next-80b-a3b-instruct-free",
+      "canonicalPath": "/models/qwen3-80b-instruct--openrouter-qwen-qwen3-next-80b-a3b-instruct-free/",
+      "name": "Qwen3 80B Instruct"
+    },
+    {
+      "key": "openrouter:stepfun/step-3.5-flash:free",
+      "source": "openrouter",
+      "modelId": "stepfun/step-3.5-flash:free",
+      "slug": "step-3-5-flash--openrouter-stepfun-step-3-5-flash-free",
+      "canonicalPath": "/models/step-3-5-flash--openrouter-stepfun-step-3-5-flash-free/",
+      "name": "Step 3.5 Flash"
+    },
+    {
+      "key": "openrouter:z-ai/glm-4.5-air:free",
+      "source": "openrouter",
+      "modelId": "z-ai/glm-4.5-air:free",
+      "slug": "glm-4-5-air",
+      "canonicalPath": "/models/glm-4-5-air/",
+      "name": "GLM 4.5 Air"
+    }
+  ]
+}

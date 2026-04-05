@@ -3,6 +3,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 TMP_HOME="$(mktemp -d "${TMPDIR:-/tmp}/frouter-onboarding.XXXXXX")"
+TMP_BIN_DIR="${TMP_HOME}/.local-bin"
 KEEP_HOME=0
 
 if [[ "${1:-}" == "--keep-home" ]]; then
@@ -34,7 +35,16 @@ if [[ ! -f "${BIN_PATH}" ]]; then
   exit 1
 fi
 
-HOME="${TMP_HOME}" node "${BIN_PATH}" "$@"
+mkdir -p "${TMP_BIN_DIR}"
+cat > "${TMP_BIN_DIR}/frouter" <<EOF
+#!/usr/bin/env bash
+exec node "${BIN_PATH}" "\$@"
+EOF
+chmod +x "${TMP_BIN_DIR}/frouter"
+
+printf 'Using local command shim: %s\n\n' "${TMP_BIN_DIR}/frouter"
+
+PATH="${TMP_BIN_DIR}:$PATH" HOME="${TMP_HOME}" frouter "$@"
 
 CONFIG_PATH="${TMP_HOME}/.frouter.json"
 if [[ -f "${CONFIG_PATH}" ]]; then

@@ -409,7 +409,7 @@ function renderMain() {
       `${D}  FROUTER · Free Model Router${R}`,
       `${D}  Loading models…${R}`,
     ];
-    const topPad = Math.max(0, Math.floor((r - splashLines.length) / 3));
+    const topPad = Math.max(0, Math.floor((r - splashLines.length) / 3) - 3);
     let out = (FORCE_FRAME_CLEAR ? CLEAR : CURSOR_HOME) + HIDEC + "\x1b[J";
     for (let i = 0; i < topPad; i++) out += "\n";
     for (const line of splashLines) out += truncAnsi(line, c) + "\n";

@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Validate branch flow
-        if: github.actor != 'github-actions[bot]' && github.actor != 'dependabot[bot]'
+        if: github.event.pull_request.user.login != 'github-actions[bot]' && github.event.pull_request.user.login != 'dependabot[bot]'
         env:
           BASE: ${{ github.event.pull_request.base.ref }}
           HEAD: ${{ github.event.pull_request.head.ref }}
@@ -39,7 +39,7 @@ jobs:
           fi
 
       - name: Validate PR title (Conventional Commits)
-        if: github.actor != 'github-actions[bot]' && github.actor != 'dependabot[bot]'
+        if: github.event.pull_request.user.login != 'github-actions[bot]' && github.event.pull_request.user.login != 'dependabot[bot]'
         env:
           TITLE: ${{ github.event.pull_request.title }}
         run: |
@@ -51,7 +51,7 @@ jobs:
           fi
 
       - name: Validate linked issue
-        if: github.actor != 'github-actions[bot]' && github.actor != 'dependabot[bot]'
+        if: github.event.pull_request.user.login != 'github-actions[bot]' && github.event.pull_request.user.login != 'dependabot[bot]'
         env:
           BODY: ${{ github.event.pull_request.body }}
         run: |

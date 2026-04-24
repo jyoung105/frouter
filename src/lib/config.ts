@@ -11,7 +11,8 @@ import { join } from "node:path";
 import { execSync } from "node:child_process";
 import { R, B, D, RED, GREEN, CYAN } from "./utils.js";
 
-export const CONFIG_PATH = join(homedir(), ".frouter.json");
+export const CONFIG_PATH = join(homedir(), ".free-router.json");
+export const LEGACY_CONFIG_PATH = join(homedir(), ".frouter.json");
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -30,6 +31,8 @@ export type FrouterConfig = {
   providers: Record<string, { enabled: boolean }>;
   ui: { scrollSortPauseMs: number };
 };
+
+export type FreeRouterConfig = FrouterConfig;
 
 // ─── Provider metadata ────────────────────────────────────────────────────────
 export const PROVIDERS_META: Record<string, ProviderMeta> = {
@@ -55,6 +58,48 @@ export const PROVIDERS_META: Record<string, ProviderMeta> = {
 
 // ─── Config I/O ───────────────────────────────────────────────────────────────
 
+function readConfigFile(path: string, defaults: FrouterConfig): FrouterConfig {
+  try {
+    const parsed = JSON.parse(readFileSync(path, "utf8"));
+    return {
+      apiKeys: parsed.apiKeys || {},
+      providers: parsed.providers || defaults.providers,
+      ui: parsed.ui && typeof parsed.ui === "object" ? parsed.ui : defaults.ui,
+    };
+  } catch {
+    try {
+      const backupPath = `${path}.corrupt-${Date.now()}`;
+      copyFileSync(path, backupPath);
+      try {
+        chmodSync(backupPath, 0o600);
+      } catch {
+        /* best-effort */
+      }
+      process.stderr.write(
+        `Warning: malformed config at ${path}; backup saved to ${backupPath}\n`,
+      );
+    } catch {
+      /* best-effort */
+    }
+    return defaults;
+  }
+}
+
+function migrateLegacyConfigIfNeeded(defaults: FrouterConfig): FrouterConfig {
+  const config = readConfigFile(LEGACY_CONFIG_PATH, defaults);
+  if (existsSync(CONFIG_PATH)) return config;
+
+  try {
+    writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2) + "\n", {
+      mode: 0o600,
+    });
+    chmodSync(CONFIG_PATH, 0o600);
+  } catch {
+    /* best-effort: current process can still use the legacy config */
+  }
+  return config;
+}
+
 export function loadConfig(): FrouterConfig {
   const defaults = {
     apiKeys: {},
@@ -66,31 +111,9 @@ export function loadConfig(): FrouterConfig {
       scrollSortPauseMs: 1500,
     },
   };
-  if (!existsSync(CONFIG_PATH)) return defaults;
-  try {
-    const parsed = JSON.parse(readFileSync(CONFIG_PATH, "utf8"));
-    return {
-      apiKeys: parsed.apiKeys || {},
-      providers: parsed.providers || defaults.providers,
-      ui: parsed.ui && typeof parsed.ui === "object" ? parsed.ui : defaults.ui,
-    };
-  } catch {
-    try {
-      const backupPath = `${CONFIG_PATH}.corrupt-${Date.now()}`;
-      copyFileSync(CONFIG_PATH, backupPath);
-      try {
-        chmodSync(backupPath, 0o600);
-      } catch {
-        /* best-effort */
-      }
-      process.stderr.write(
-        `Warning: malformed config at ${CONFIG_PATH}; backup saved to ${backupPath}\n`,
-      );
-    } catch {
-      /* best-effort */
-    }
-    return defaults;
-  }
+  if (existsSync(CONFIG_PATH)) return readConfigFile(CONFIG_PATH, defaults);
+  if (existsSync(LEGACY_CONFIG_PATH)) return migrateLegacyConfigIfNeeded(defaults);
+  return defaults;
 }
 
 export function saveConfig(config: FrouterConfig): void {
@@ -214,7 +237,7 @@ export async function runFirstRunWizard(config: FrouterConfig) {
   const w = (s: string) => process.stdout.write(s);
 
   w("\x1b[2J\x1b[H");
-  w(`${B}  frouter — Free Model Router${R}\n`);
+  w(`${B}  free-router — Free Model Router${R}\n`);
   w(`${D}  Let's set up your API keys (ESC to skip any provider)${R}\n\n`);
 
   for (const [pk, meta] of Object.entries(PROVIDERS_META)) {
@@ -257,7 +280,7 @@ export async function runFirstRunWizard(config: FrouterConfig) {
 
   saveConfig(config);
   const n = Object.keys(config.apiKeys).length;
-  w(`${GREEN}  ${n} key(s) saved → ~/.frouter.json${R}\n`);
+  w(`${GREEN}  ${n} key(s) saved → ~/.free-router.json${R}\n`);
   await new Promise((r) => setTimeout(r, 1200));
   return config;
 }

@@ -8,11 +8,11 @@ const getAllModels = getAllModelsImpl as (
 async function withCleanEnv(run: () => Promise<void>) {
   const prevNv = process.env.NVIDIA_API_KEY;
   const prevOr = process.env.OPENROUTER_API_KEY;
-  const prevNoFetch = process.env.FROUTER_NO_FETCH;
+  const prevNoFetch = process.env.FREE_ROUTER_NO_FETCH;
 
   delete process.env.NVIDIA_API_KEY;
   delete process.env.OPENROUTER_API_KEY;
-  process.env.FROUTER_NO_FETCH = "1";
+  process.env.FREE_ROUTER_NO_FETCH = "1";
 
   try {
     await run();
@@ -23,8 +23,8 @@ async function withCleanEnv(run: () => Promise<void>) {
     if (prevOr == null) delete process.env.OPENROUTER_API_KEY;
     else process.env.OPENROUTER_API_KEY = prevOr;
 
-    if (prevNoFetch == null) delete process.env.FROUTER_NO_FETCH;
-    else process.env.FROUTER_NO_FETCH = prevNoFetch;
+    if (prevNoFetch == null) delete process.env.FREE_ROUTER_NO_FETCH;
+    else process.env.FREE_ROUTER_NO_FETCH = prevNoFetch;
   }
 }
 

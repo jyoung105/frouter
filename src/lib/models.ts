@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 import { join, dirname } from "node:path";
 import { getApiKey } from "./config.js";
 import { type FrouterConfig } from "./config.js";
-import { type Model } from "./utils.js";
+import { readEnv, type Model } from "./utils.js";
 
 // ─── model-rankings.json lookup ────────────────────────────────────────────────
 
@@ -136,10 +136,13 @@ function parseTestDropSpec(raw: string | undefined): TestDropSpec | null {
 
 function applyTestDrops(models: Model[]): Model[] {
   // Integration-test hook:
-  // FROUTER_TEST_DROP_MODEL_AFTER_CALL='2:nvidia/deepseek-ai/deepseek-v3.2'
+  // FREE_ROUTER_TEST_DROP_MODEL_AFTER_CALL='2:nvidia/deepseek-ai/deepseek-v3.2'
   // or multiple targets via comma separation.
   const spec = parseTestDropSpec(
-    process.env.FROUTER_TEST_DROP_MODEL_AFTER_CALL,
+    readEnv(
+      "FREE_ROUTER_TEST_DROP_MODEL_AFTER_CALL",
+      "FROUTER_TEST_DROP_MODEL_AFTER_CALL",
+    ),
   );
   if (!spec) return models;
   if (_getAllModelsCallCount < spec.afterCall) return models;
@@ -781,7 +784,7 @@ function fetchJsonArray<T>(
   fallback: T,
 ): Promise<any[] | T> {
   return new Promise((resolve) => {
-    const headers: Record<string, string> = { "User-Agent": "frouter/1.0" };
+    const headers: Record<string, string> = { "User-Agent": "free-router/1.0" };
     if (apiKey) headers["Authorization"] = `Bearer ${apiKey}`;
 
     const req = https.request(
@@ -876,7 +879,7 @@ async function fetchOpenRouterModels(apiKey: string | null): Promise<Model[]> {
  */
 export async function getAllModels(config: FrouterConfig): Promise<Model[]> {
   _getAllModelsCallCount++;
-  const noFetch = process.env.FROUTER_NO_FETCH === "1";
+  const noFetch = readEnv("FREE_ROUTER_NO_FETCH", "FROUTER_NO_FETCH") === "1";
   const results: Model[] = [];
 
   // Phase 1C: fetch from both providers in parallel

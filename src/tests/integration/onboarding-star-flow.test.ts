@@ -102,7 +102,7 @@ test("FirstRunApp star yes opens GitHub repo URL", async () => {
 
     const browserLog = readFileSync(browserLogPath, "utf8");
     assert.match(browserLog, /https:\/\/build\.nvidia\.com\/settings\/api-key/);
-    assert.match(browserLog, /https:\/\/github\.com\/jyoung105\/frouter/);
+    assert.match(browserLog, /https:\/\/github\.com\/jyoung105\/free-router/);
   } finally {
     cleanupTempHome(home);
   }
@@ -143,7 +143,7 @@ test("FirstRunApp star no does not open GitHub repo URL", async () => {
     assert.match(browserLog, /https:\/\/build\.nvidia\.com\/settings\/api-key/);
     assert.doesNotMatch(
       browserLog,
-      /https:\/\/github\.com\/jyoung105\/frouter/,
+      /https:\/\/github\.com\/jyoung105\/free-router/,
     );
   } finally {
     cleanupTempHome(home);

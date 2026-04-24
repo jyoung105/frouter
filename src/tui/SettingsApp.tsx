@@ -229,7 +229,7 @@ export function SettingsApp({
 
   return (
     <Box flexDirection="column" paddingLeft={1}>
-      <Text bold inverse> frouter Settings </Text>
+      <Text bold inverse> free-router Settings </Text>
       <Text dimColor>{"\n"}  {"\u2191\u2193"}:navigate  Enter:edit key  Space:toggle  T:test  D:delete  ESC/Q:back</Text>
 
       <Box marginTop={1} flexDirection="column">

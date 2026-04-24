@@ -97,7 +97,7 @@ test(
 
       const result = await runInPty(process.execPath, [BIN_PATH], {
         cwd: ROOT_DIR,
-        env: { HOME: home, FROUTER_NO_FETCH: "1" },
+        env: { HOME: home, FREE_ROUTER_NO_FETCH: "1" },
         inputChunks: sequence,
         timeoutMs: 12_000,
       });
@@ -135,7 +135,7 @@ test(
 
       const result = await runInPty(process.execPath, [BIN_PATH], {
         cwd: ROOT_DIR,
-        env: { HOME: home, FROUTER_NO_FETCH: "1" },
+        env: { HOME: home, FREE_ROUTER_NO_FETCH: "1" },
         inputChunks: [
           { delayMs: 850, data: "/" },
           { delayMs: 980, data: "z" },
@@ -190,8 +190,8 @@ test(
         cwd: ROOT_DIR,
         env: {
           HOME: home,
-          FROUTER_NO_FETCH: "1",
-          FROUTER_SKIP_UPDATE_ONCE: "1",
+          FREE_ROUTER_NO_FETCH: "1",
+          FREE_ROUTER_SKIP_UPDATE_ONCE: "1",
         },
         inputChunks,
         timeoutMs: 12_000,
@@ -238,7 +238,7 @@ test(
 
       const result = await runInPty(process.execPath, [BIN_PATH], {
         cwd: ROOT_DIR,
-        env: { HOME: home, FROUTER_NO_FETCH: "1" },
+        env: { HOME: home, FREE_ROUTER_NO_FETCH: "1" },
         inputChunks: [
           { delayMs: 850, data: "/" },
           { delayMs: 1050, data: "\x1b[B" },
@@ -288,8 +288,8 @@ test(
         cwd: ROOT_DIR,
         env: {
           HOME: home,
-          FROUTER_NO_FETCH: "1",
-          FROUTER_SKIP_UPDATE_ONCE: "1",
+          FREE_ROUTER_NO_FETCH: "1",
+          FREE_ROUTER_SKIP_UPDATE_ONCE: "1",
         },
         inputChunks: [{ delayMs: 900, data: "q" }],
         timeoutMs: 12_000,
@@ -303,10 +303,10 @@ test(
       const lines = frame.split("\n").filter((line) => line !== "");
       const outputText = stripAnsi(result.stdout);
 
-      assert.match(lines[0] || "", /\bfrouter\b/i);
+      assert.match(lines[0] || "", /\bfree-router\b/i);
       assert.match(lines[1] || "", /\[Model Search\]/);
       assert.match(lines[2] || "", /#\s+Tier\s+Provider\s+Model/);
-      assert.match(outputText, /FROUTER · Free Model Router/);
+      assert.match(outputText, /FREE-ROUTER · Free Model Router/);
       assert.ok(
         lines.some((line) => line.includes("↑↓/jk:nav")),
         "expected footer to remain visible",
@@ -342,8 +342,8 @@ test(
         cwd: ROOT_DIR,
         env: {
           HOME: home,
-          FROUTER_NO_FETCH: "1",
-          FROUTER_TUI_FORCE_CLEAR: "0",
+          FREE_ROUTER_NO_FETCH: "1",
+          FREE_ROUTER_TUI_FORCE_CLEAR: "0",
         },
         inputChunks: [{ delayMs: 3200, data: "q" }],
         timeoutMs: 12_000,
@@ -384,7 +384,7 @@ test(
 
       const result = await runInPty(process.execPath, [BIN_PATH], {
         cwd: ROOT_DIR,
-        env: { HOME: home, FROUTER_NO_FETCH: "1" },
+        env: { HOME: home, FREE_ROUTER_NO_FETCH: "1" },
         inputChunks: [
           { delayMs: 850, data: "j" },
           { delayMs: 980, data: "j" }, // rank 3 in top section
@@ -406,7 +406,7 @@ test(
       const lines = stripAnsi(rawFrame)
         .split("\n")
         .filter((line) => line !== "");
-      assert.match(lines[0] || "", /\bfrouter\b/i);
+      assert.match(lines[0] || "", /\bfree-router\b/i);
       assert.match(lines[1] || "", /\[Model Search\]/);
       assert.match(lines[2] || "", /#\s+Tier\s+Provider\s+Model/);
 
@@ -456,9 +456,9 @@ test(
         cwd: ROOT_DIR,
         env: {
           HOME: home,
-          FROUTER_NO_FETCH: "1",
-          FROUTER_SKIP_UPDATE_ONCE: "1",
-          FROUTER_TEST_DROP_MODEL_AFTER_CALL:
+          FREE_ROUTER_NO_FETCH: "1",
+          FREE_ROUTER_SKIP_UPDATE_ONCE: "1",
+          FREE_ROUTER_TEST_DROP_MODEL_AFTER_CALL:
             "2:nvidia/deepseek-ai/deepseek-v3.2",
         },
         inputChunks: [
@@ -480,7 +480,7 @@ test(
       const lines = stripAnsi(rawFrame)
         .split("\n")
         .filter((line) => line !== "");
-      assert.match(lines[0] || "", /\bfrouter\b/i);
+      assert.match(lines[0] || "", /\bfree-router\b/i);
       assert.match(lines[1] || "", /\[Model Search\]/);
       assert.match(lines[1] || "", /\d+\/\d+ mo/);
       assert.match(lines[2] || "", /#\s+Tier\s+Provider\s+Model/);
@@ -561,7 +561,7 @@ exit 0
         cwd: ROOT_DIR,
         env: {
           HOME: home,
-          FROUTER_NO_FETCH: "1",
+          FREE_ROUTER_NO_FETCH: "1",
           PATH: `${fakeBin}:${process.env.PATH ?? ""}`,
         },
         inputChunks: [
@@ -623,7 +623,7 @@ test(
 
       const result = await runInPty(process.execPath, [BIN_PATH], {
         cwd: ROOT_DIR,
-        env: { HOME: home, FROUTER_NO_FETCH: "1" },
+        env: { HOME: home, FREE_ROUTER_NO_FETCH: "1" },
         inputChunks: [
           { delayMs: 850, data: "a" },
           ...buildInputChunks(
@@ -638,7 +638,7 @@ test(
       assert.equal(result.timedOut, false);
       assert.equal(result.code, 0);
 
-      const cfg = JSON.parse(readFileSync(join(home, ".frouter.json"), "utf8"));
+      const cfg = JSON.parse(readFileSync(join(home, ".free-router.json"), "utf8"));
       assert.equal(cfg.apiKeys.nvidia, "nvapi-added-main-tab");
       assert.equal(cfg.apiKeys.openrouter, "sk-or-test");
     } finally {
@@ -665,7 +665,7 @@ test(
       );
 
       const fakeBrowser = prepareFakeBrowserLauncher(home);
-      const env: NodeJS.ProcessEnv = { HOME: home, FROUTER_NO_FETCH: "1" };
+      const env: NodeJS.ProcessEnv = { HOME: home, FREE_ROUTER_NO_FETCH: "1" };
       if (fakeBrowser) {
         env.PATH = `${fakeBrowser.binDir}:${process.env.PATH ?? ""}`;
       }
@@ -687,7 +687,7 @@ test(
       assert.equal(result.timedOut, false);
       assert.equal(result.code, 0);
 
-      const cfg = JSON.parse(readFileSync(join(home, ".frouter.json"), "utf8"));
+      const cfg = JSON.parse(readFileSync(join(home, ".free-router.json"), "utf8"));
       assert.equal(cfg.apiKeys.nvidia, "nvapi-added-from-auto-open");
 
       if (fakeBrowser) {
@@ -721,7 +721,7 @@ test(
       );
 
       const fakeBrowser = prepareFakeBrowserLauncher(home);
-      const env: NodeJS.ProcessEnv = { HOME: home, FROUTER_NO_FETCH: "1" };
+      const env: NodeJS.ProcessEnv = { HOME: home, FREE_ROUTER_NO_FETCH: "1" };
       if (fakeBrowser) {
         env.PATH = `${fakeBrowser.binDir}:${process.env.PATH ?? ""}`;
       }
@@ -771,7 +771,7 @@ test(
       );
 
       const fakeBrowser = prepareFakeBrowserLauncher(home);
-      const env: NodeJS.ProcessEnv = { HOME: home, FROUTER_NO_FETCH: "1" };
+      const env: NodeJS.ProcessEnv = { HOME: home, FREE_ROUTER_NO_FETCH: "1" };
       if (fakeBrowser) {
         env.PATH = `${fakeBrowser.binDir}:${process.env.PATH ?? ""}`;
       }
@@ -820,7 +820,7 @@ test(
 
       const result = await runInPty(process.execPath, [BIN_PATH], {
         cwd: ROOT_DIR,
-        env: { HOME: home, FROUTER_NO_FETCH: "1" },
+        env: { HOME: home, FREE_ROUTER_NO_FETCH: "1" },
         inputChunks: [
           { delayMs: 850, data: "A" },
           ...buildInputChunks(
@@ -835,7 +835,7 @@ test(
       assert.equal(result.timedOut, false);
       assert.equal(result.code, 0);
 
-      const cfg = JSON.parse(readFileSync(join(home, ".frouter.json"), "utf8"));
+      const cfg = JSON.parse(readFileSync(join(home, ".free-router.json"), "utf8"));
       assert.equal(cfg.apiKeys.nvidia, "nvapi-new-main-tab");
     } finally {
       cleanupTempHome(home);
@@ -866,8 +866,8 @@ test(
         cwd: ROOT_DIR,
         env: {
           HOME: home,
-          FROUTER_NO_FETCH: "1",
-          FROUTER_SKIP_UPDATE_ONCE: "1",
+          FREE_ROUTER_NO_FETCH: "1",
+          FREE_ROUTER_SKIP_UPDATE_ONCE: "1",
         },
         inputChunks: [
           { delayMs: 2000, data: "a" },
@@ -887,7 +887,7 @@ test(
       assert.match(text, /Invalid key for NVIDIA NIM/);
       assert.match(text, /Expected prefix "nvapi-"/);
 
-      const cfg = JSON.parse(readFileSync(join(home, ".frouter.json"), "utf8"));
+      const cfg = JSON.parse(readFileSync(join(home, ".free-router.json"), "utf8"));
       assert.equal(cfg.apiKeys.nvidia, "nvapi-keep-me");
     } finally {
       cleanupTempHome(home);

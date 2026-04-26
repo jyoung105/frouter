@@ -1,10 +1,10 @@
 ```
- ███████╗ ██████╗   ██████╗  ██╗   ██╗ ████████╗ ███████╗ ██████╗
- ██╔════╝ ██╔══██╗ ██╔═══██╗ ██║   ██║ ╚══██╔══╝ ██╔════╝ ██╔══██╗
- █████╗   ██████╔╝ ██║   ██║ ██║   ██║    ██║    █████╗   ██████╔╝
- ██╔══╝   ██╔══██╗ ██║   ██║ ██║   ██║    ██║    ██╔══╝   ██╔══██╗
- ██║      ██║  ██║ ╚██████╔╝ ╚██████╔╝    ██║    ███████╗ ██║  ██║
- ╚═╝      ╚═╝  ╚═╝  ╚═════╝   ╚═════╝     ╚═╝    ╚══════╝ ╚═╝  ╚═╝
+ ███████╗ ██████╗  ███████╗ ███████╗          ██████╗   ██████╗  ██╗   ██╗ ████████╗ ███████╗ ██████╗
+ ██╔════╝ ██╔══██╗ ██╔════╝ ██╔════╝          ██╔══██╗ ██╔═══██╗ ██║   ██║ ╚══██╔══╝ ██╔════╝ ██╔══██╗
+ █████╗   ██████╔╝ █████╗   █████╗   ██████╗  ██████╔╝ ██║   ██║ ██║   ██║    ██║    █████╗   ██████╔╝
+ ██╔══╝   ██╔══██╗ ██╔══╝   ██╔══╝   ╚═════╝  ██╔══██╗ ██║   ██║ ██║   ██║    ██║    ██╔══╝   ██╔══██╗
+ ██║      ██║  ██║ ███████╗ ███████╗          ██║  ██║ ╚██████╔╝ ╚██████╔╝    ██║    ███████╗ ██║  ██║
+ ╚═╝      ╚═╝  ╚═╝ ╚══════╝ ╚══════╝          ╚═╝  ╚═╝  ╚═════╝   ╚═════╝     ╚═╝    ╚══════╝ ╚═╝  ╚═╝
 ```
 
 [English](./README.md) | [한국어](./README.ko.md)
@@ -37,11 +37,6 @@ free-router
 ```
 
 On first run, a setup wizard prompts for API keys (ESC to skip any provider).
-
-Legacy `frouter` installs and config are still supported during migration:
-the package ships a `frouter` command alias, imports `~/.frouter.json` into
-`~/.free-router.json` on first launch, and accepts old `FROUTER_*` environment
-variables as fallbacks for the new `FREE_ROUTER_*` names.
 
 If you accept the in-app update prompt (`Y`), free-router now updates globally and
 restarts automatically, so you can continue without running `free-router` again.

@@ -1,18 +1,38 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "vite",
-  "buildCommand": "bun run build",
+  "buildCommand": "BASE_PATH=/free-router bun run build",
   "outputDirectory": "dist",
   "ignoreCommand": "exit 1",
+  "rewrites": [
+    {
+      "source": "/free-router",
+      "destination": "/"
+    },
+    {
+      "source": "/free-router/:path*",
+      "destination": "/:path*"
+    }
+  ],
   "redirects": [
     {
+      "source": "/free-router/models/:slug/index.html",
+      "destination": "/free-router/models/:slug/",
+      "permanent": true
+    },
+    {
+      "source": "/free-router/models/:slug",
+      "destination": "/free-router/models/:slug/",
+      "permanent": true
+    },
+    {
       "source": "/models/:slug/index.html",
-      "destination": "/models/:slug/",
+      "destination": "/free-router/models/:slug/",
       "permanent": true
     },
     {
       "source": "/models/:slug",
-      "destination": "/models/:slug/",
+      "destination": "/free-router/models/:slug/",
       "permanent": true
     }
   ]

@@ -164,13 +164,11 @@ function buildFaviconMarkup(prefix = '/') {
   const iconPath = (theme, file) => `${normalizedPrefix}logo/${theme}/${file}`;
 
   return [
-    `<link rel="icon" type="image/x-icon" href="${iconPath('light', 'favicon.ico')}" media="(prefers-color-scheme: light)" data-favicon="ico" />`,
-    `<link rel="icon" type="image/x-icon" href="${iconPath('dark', 'favicon.ico')}" media="(prefers-color-scheme: dark)" data-favicon="ico" />`,
-    `<link rel="icon" type="image/png" sizes="32x32" href="${iconPath('light', 'favicon-32x32.png')}" media="(prefers-color-scheme: light)" data-favicon="32" />`,
-    `<link rel="icon" type="image/png" sizes="32x32" href="${iconPath('dark', 'favicon-32x32.png')}" media="(prefers-color-scheme: dark)" data-favicon="32" />`,
-    `<link rel="icon" type="image/png" sizes="16x16" href="${iconPath('light', 'favicon-16x16.png')}" media="(prefers-color-scheme: light)" data-favicon="16" />`,
-    `<link rel="icon" type="image/png" sizes="16x16" href="${iconPath('dark', 'favicon-16x16.png')}" media="(prefers-color-scheme: dark)" data-favicon="16" />`,
-    `<link rel="apple-touch-icon" sizes="180x180" href="${iconPath('light', 'apple-touch-icon.png')}" data-favicon="apple" />`,
+    `<link id="favicon-ico" rel="icon" type="image/x-icon" href="${iconPath('light', 'favicon.ico')}" sizes="any" />`,
+    `<link id="favicon-32" rel="icon" type="image/png" sizes="32x32" href="${iconPath('light', 'favicon-32x32.png')}" />`,
+    `<link id="favicon-16" rel="icon" type="image/png" sizes="16x16" href="${iconPath('light', 'favicon-16x16.png')}" />`,
+    `<link id="apple-touch-icon" rel="apple-touch-icon" sizes="180x180" href="${iconPath('light', 'apple-touch-icon.png')}" />`,
+    `<link id="site-webmanifest" rel="manifest" href="${iconPath('light', 'site.webmanifest')}" />`,
   ].join('\n    ');
 }
 
@@ -314,7 +312,7 @@ function buildRobotsTxt(context) {
   lines.push('User-agent: *');
   lines.push('Allow: /');
   lines.push('');
-  lines.push(`# Preview and local builds use page-level ${context.robotsContent} directives.`);
+  lines.push(`# Generated pages use page-level ${context.robotsContent} directives.`);
   lines.push(`# User-triggered fetchers such as Perplexity-User may not honor robots.txt consistently.`);
   lines.push(`Sitemap: ${sitemapUrlBuilder('/sitemap.xml', context)}`);
 
@@ -468,10 +466,10 @@ async function writeHomepage(template, records, context, redirectCount) {
   await writeFile(GENERATED_INDEX_PATH, html, 'utf8');
 }
 
-export async function generateSite({ env = process.env, writeManifest = false } = {}) {
+export async function generateSite({ writeManifest = false } = {}) {
   await removeGeneratedArtifacts();
 
-  const context = resolveBuildContext(env);
+  const context = resolveBuildContext();
   const contextErrors = validateBuildContext(context);
   if (contextErrors.length > 0) {
     throw new Error(contextErrors.join('\n'));

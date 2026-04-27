@@ -32,8 +32,8 @@ async function verifyArtifacts() {
   ]);
 
   const requiredIndexFragments = [
-    'Free model router for AI coding tools',
-    'Compare providers, benchmark latency, start building.',
+    'Free model router for AI agents',
+    'Route through the fastest free models. Start building in seconds.',
     'href="models/',
     'model-link',
   ];

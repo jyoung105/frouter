@@ -13,25 +13,25 @@ import { runNode } from "../helpers/spawn-cli.js";
 test("CLI --help prints usage and exits with code 0", async () => {
   const result = await runNode([BIN_PATH, "--help"], { cwd: ROOT_DIR });
   assert.equal(result.code, 0);
-  assert.match(result.stdout, /Usage: frouter/);
+  assert.match(result.stdout, /Usage: free-router/);
 });
 
 test("CLI -h (edge alias) prints usage and exits with code 0", async () => {
   const result = await runNode([BIN_PATH, "-h"], { cwd: ROOT_DIR });
   assert.equal(result.code, 0);
-  assert.match(result.stdout, /frouter — Free Model Router/);
+  assert.match(result.stdout, /free-router — Free Model Router/);
 });
 
 test("CLI --version prints semver and exits with code 0", async () => {
   const result = await runNode([BIN_PATH, "--version"], { cwd: ROOT_DIR });
   assert.equal(result.code, 0);
-  assert.match(result.stdout, /^frouter \d+\.\d+\.\d+/);
+  assert.match(result.stdout, /^free-router \d+\.\d+\.\d+/);
 });
 
 test("CLI -v (edge alias) prints semver and exits with code 0", async () => {
   const result = await runNode([BIN_PATH, "-v"], { cwd: ROOT_DIR });
   assert.equal(result.code, 0);
-  assert.match(result.stdout, /^frouter \d+\.\d+\.\d+/);
+  assert.match(result.stdout, /^free-router \d+\.\d+\.\d+/);
 });
 
 test("CLI --best exits with code 1 when no API keys are configured", async () => {

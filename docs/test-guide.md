@@ -1,15 +1,15 @@
-# frouter Test Guide
+# free-router Test Guide
 
 This guide explains two different test modes:
 
-1. Local development test through the `frouter` command name (unpublished code)
+1. Local development test through the `free-router` command name (unpublished code)
 2. Real-user test using the published npm package
 
 Use both. They validate different risks.
 
 ## 1) Local command-path test (unpublished build)
 
-Goal: verify current repo code can launch through `frouter` command semantics without installing from npm.
+Goal: verify current repo code can launch through `free-router` command semantics without installing from npm.
 
 Run:
 
@@ -22,8 +22,8 @@ What this does:
 
 - builds current local source to `dist/`
 - runs onboarding with isolated `HOME`
-- starts via a temporary local `frouter` command shim on `PATH`
-- keeps your real `~/.frouter.json` untouched
+- starts via a temporary local `free-router` command shim on `PATH`
+- keeps your real `~/.free-router.json` untouched
 
 Optional:
 
@@ -44,17 +44,17 @@ Follow the full procedure in:
 Quick smoke:
 
 ```bash
-export FROUTER_REAL_TEST_DIR="$PWD/.real-testing"
-mkdir -p "$FROUTER_REAL_TEST_DIR/home" "$FROUTER_REAL_TEST_DIR/prefix" "$FROUTER_REAL_TEST_DIR/logs"
-chmod 700 "$FROUTER_REAL_TEST_DIR/home"
+export FREE_ROUTER_REAL_TEST_DIR="$PWD/.real-testing"
+mkdir -p "$FREE_ROUTER_REAL_TEST_DIR/home" "$FREE_ROUTER_REAL_TEST_DIR/prefix" "$FREE_ROUTER_REAL_TEST_DIR/logs"
+chmod 700 "$FREE_ROUTER_REAL_TEST_DIR/home"
 
 env -u NVIDIA_API_KEY -u OPENROUTER_API_KEY \
-  HOME="$FROUTER_REAL_TEST_DIR/home" \
-  npx -y frouter-cli@latest --version
+  HOME="$FREE_ROUTER_REAL_TEST_DIR/home" \
+  npx -y free-router@latest --version
 
 env -u NVIDIA_API_KEY -u OPENROUTER_API_KEY \
-  HOME="$FROUTER_REAL_TEST_DIR/home" \
-  npx -y frouter-cli@latest
+  HOME="$FREE_ROUTER_REAL_TEST_DIR/home" \
+  npx -y free-router@latest
 ```
 
 ## Recommended routine before release

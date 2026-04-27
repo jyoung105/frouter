@@ -116,7 +116,9 @@ export function ping(
   return new Promise((resolve) => {
     const requestedTimeout = options.timeoutMs;
     const timeoutMs =
-      requestedTimeout != null && Number.isFinite(requestedTimeout) && requestedTimeout > 0
+      requestedTimeout != null &&
+      Number.isFinite(requestedTimeout) &&
+      requestedTimeout > 0
         ? Math.round(requestedTimeout)
         : TIMEOUT_MS;
     const url = new URL(chatUrl);
@@ -278,7 +280,8 @@ export function startPingLoop(
   onUpdate?: () => void,
   onEachPing?: () => void,
 ) {
-  const ref: { running: boolean; timer: ReturnType<typeof setTimeout> | null } = { running: true, timer: null };
+  const ref: { running: boolean; timer: ReturnType<typeof setTimeout> | null } =
+    { running: true, timer: null };
 
   async function tick() {
     if (!ref.running) return;

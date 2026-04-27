@@ -14,7 +14,24 @@ CLAUDE.md
 # OMX local state
 .omx/
 .omc/
+
+# Secrets / env / credentials
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+*.local
+
+# free-router runtime config (defense in depth — normally lives in $HOME)
 .frouter.json
+.free-router.json
+
+# Vercel CLI local cache (may contain auth tokens)
+.vercel
 
 # Dependencies
 node_modules/

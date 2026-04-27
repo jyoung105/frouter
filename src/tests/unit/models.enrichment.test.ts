@@ -1,16 +1,18 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { getAllModels as getAllModelsImpl } from "../../lib/models.js";
-const getAllModels = getAllModelsImpl as (config: any) => ReturnType<typeof getAllModelsImpl>;
+const getAllModels = getAllModelsImpl as (
+  config: any,
+) => ReturnType<typeof getAllModelsImpl>;
 
 async function withCleanEnv(run: () => Promise<void>) {
   const prevNv = process.env.NVIDIA_API_KEY;
   const prevOr = process.env.OPENROUTER_API_KEY;
-  const prevNoFetch = process.env.FROUTER_NO_FETCH;
+  const prevNoFetch = process.env.FREE_ROUTER_NO_FETCH;
 
   delete process.env.NVIDIA_API_KEY;
   delete process.env.OPENROUTER_API_KEY;
-  process.env.FROUTER_NO_FETCH = "1";
+  process.env.FREE_ROUTER_NO_FETCH = "1";
 
   try {
     await run();
@@ -21,8 +23,8 @@ async function withCleanEnv(run: () => Promise<void>) {
     if (prevOr == null) delete process.env.OPENROUTER_API_KEY;
     else process.env.OPENROUTER_API_KEY = prevOr;
 
-    if (prevNoFetch == null) delete process.env.FROUTER_NO_FETCH;
-    else process.env.FROUTER_NO_FETCH = prevNoFetch;
+    if (prevNoFetch == null) delete process.env.FREE_ROUTER_NO_FETCH;
+    else process.env.FREE_ROUTER_NO_FETCH = prevNoFetch;
   }
 }
 
@@ -210,7 +212,10 @@ test("hardcoded NIM list includes key models from each tier", async () => {
     const ids = new Set(models.map((m) => m.id));
 
     // S+ tier
-    assert.ok(ids.has("qwen/qwen3-coder-480b-a35b-instruct"), "Missing Qwen3 Coder 480B");
+    assert.ok(
+      ids.has("qwen/qwen3-coder-480b-a35b-instruct"),
+      "Missing Qwen3 Coder 480B",
+    );
     // S tier
     assert.ok(ids.has("deepseek-ai/deepseek-v3.1"), "Missing DeepSeek V3.1");
     // A tier

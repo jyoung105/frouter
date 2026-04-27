@@ -12,6 +12,10 @@ export const WHITE = "\x1b[37m";
 export const ORANGE = "\x1b[38;5;208m";
 export const BG_SEL = "\x1b[48;5;235m"; // subtle selection highlight
 
+export function readEnv(name: string, legacyName?: string): string | undefined {
+  return process.env[name] ?? (legacyName ? process.env[legacyName] : undefined);
+}
+
 // ─── Shared types ─────────────────────────────────────────────────────────────
 
 export type PingEntry = { code: string; ms: number; detail?: string };
@@ -62,7 +66,8 @@ export const TIER_ORDER: Record<string, number> = {
 // ─── Rolling metrics cache ────────────────────────────────────────────────────
 
 const METRICS_CACHE_VERSION = 1;
-const METRICS_CACHE_ENABLED = process.env.FROUTER_METRICS_CACHE !== "0";
+const METRICS_CACHE_ENABLED =
+  readEnv("FREE_ROUTER_METRICS_CACHE", "FROUTER_METRICS_CACHE") !== "0";
 
 function emptyMetrics(): ModelMetrics {
   return {
@@ -202,7 +207,9 @@ export function getAvg(model: Model): number {
     if (!metrics.okCount) return Infinity;
     return metrics.sumOkMs / metrics.okCount;
   }
-  const ok = model.pings.filter((p: PingEntry) => p.code === "200" || p.code === "401");
+  const ok = model.pings.filter(
+    (p: PingEntry) => p.code === "200" || p.code === "401",
+  );
   if (!ok.length) return Infinity;
   return ok.reduce((s: number, p: PingEntry) => s + p.ms, 0) / ok.length;
 }

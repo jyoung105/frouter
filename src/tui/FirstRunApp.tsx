@@ -3,7 +3,7 @@
 
 import { useRef, useState } from "react";
 import { Text, Box, useInput } from "ink";
-import { Select, PasswordInput, StatusMessage } from "@inkjs/ui";
+import { Select, PasswordInput, StatusMessage } from "./primitives.js";
 import { useMountEffect } from "./useMountEffect.js";
 
 type ProviderMeta = {
@@ -27,7 +27,7 @@ export type FirstRunAppProps = {
 
 type Step = "choose" | "input" | "starConfirm" | "saving";
 
-const GITHUB_REPO_URL = "https://github.com/jyoung105/frouter";
+const GITHUB_REPO_URL = "https://github.com/jyoung105/free-router";
 
 export function FirstRunApp({
   providers,
@@ -91,7 +91,7 @@ export function FirstRunApp({
         setError("");
         setStep("starConfirm");
       } else {
-        setError("At least one API key is required to use frouter.");
+        setError("At least one API key is required to use free-router.");
         setProviderIdx(0);
         setStep("choose");
       }
@@ -106,7 +106,7 @@ export function FirstRunApp({
       return;
     }
     if (Object.keys(nextApiKeys).length === 0) {
-      setError("At least one API key is required to use frouter.");
+      setError("At least one API key is required to use free-router.");
       setProviderIdx(0);
       setStep("choose");
       return;
@@ -119,10 +119,10 @@ export function FirstRunApp({
   if (saving) {
     return (
       <Box flexDirection="column" paddingLeft={1}>
-        <Text bold>frouter — Free Model Router</Text>
+        <Text bold>free-router — Free Model Router</Text>
         <Box marginTop={1}>
           <StatusMessage variant="success">
-            {Object.keys(apiKeys).length} key(s) configured. Starting frouter…
+            {Object.keys(apiKeys).length} key(s) configured. Starting free-router…
           </StatusMessage>
         </Box>
       </Box>
@@ -133,14 +133,14 @@ export function FirstRunApp({
 
   return (
     <Box flexDirection="column" paddingLeft={1}>
-      <Text bold>frouter — Free Model Router</Text>
+      <Text bold>free-router — Free Model Router</Text>
       <Text dimColor>Set up your API keys (step {providerIdx + 1}/{pks.length})</Text>
 
       <Box marginTop={1} flexDirection="column">
         {step === "starConfirm" ? (
           <Box flexDirection="column">
             <Text>Support for github star: [Y/n]</Text>
-            <Text dimColor>Yes opens the repo in your browser and starts frouter in model search.</Text>
+            <Text dimColor>Yes opens the repo in your browser and starts free-router in model search.</Text>
             <Box marginTop={1}>
               <Select
                 options={[

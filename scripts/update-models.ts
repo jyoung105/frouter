@@ -111,7 +111,7 @@ function fetchJson(
 ): Promise<any> {
   return new Promise((resolve, reject) => {
     const headers: Record<string, string> = {
-      "User-Agent": "frouter-updater/2.0",
+      "User-Agent": "free-router-updater/2.0",
       Accept: options.raw ? "text/plain" : "application/json",
       ...(options.headers || {}),
     };
@@ -159,7 +159,7 @@ function loadApiKey(provider: string): string | null {
   if (envKey) return envKey;
 
   try {
-    const configPath = join(process.env.HOME || "", ".frouter.json");
+    const configPath = join(process.env.HOME || "", ".free-router.json");
     const cfg = JSON.parse(readFileSync(configPath, "utf8"));
     return cfg.apiKeys?.[provider] || null;
   } catch {
@@ -666,7 +666,7 @@ function mergeAAMeta(target: any, meta: AAMeta | null): boolean {
 // ─── Main ────────────────────────────────────────────────────────────────────
 
 async function main() {
-  console.log("frouter model updater\n");
+  console.log("free-router model updater\n");
 
   const report: Report = {
     generated_at: new Date().toISOString(),

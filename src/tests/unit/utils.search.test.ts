@@ -1,7 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { filterBySearch as filterBySearchImpl } from "../../lib/utils.js";
-const filterBySearch = filterBySearchImpl as (models: any[], query: string) => any[];
+const filterBySearch = filterBySearchImpl as (
+  models: any[],
+  query: string,
+) => any[];
 
 const MODELS = [
   {

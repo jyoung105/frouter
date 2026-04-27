@@ -1,50 +1,50 @@
 ```
- ███████╗ ██████╗   ██████╗  ██╗   ██╗ ████████╗ ███████╗ ██████╗
- ██╔════╝ ██╔══██╗ ██╔═══██╗ ██║   ██║ ╚══██╔══╝ ██╔════╝ ██╔══██╗
- █████╗   ██████╔╝ ██║   ██║ ██║   ██║    ██║    █████╗   ██████╔╝
- ██╔══╝   ██╔══██╗ ██║   ██║ ██║   ██║    ██║    ██╔══╝   ██╔══██╗
- ██║      ██║  ██║ ╚██████╔╝ ╚██████╔╝    ██║    ███████╗ ██║  ██║
- ╚═╝      ╚═╝  ╚═╝  ╚═════╝   ╚═════╝     ╚═╝    ╚══════╝ ╚═╝  ╚═╝
+ ███████╗ ██████╗  ███████╗ ███████╗          ██████╗   ██████╗  ██╗   ██╗ ████████╗ ███████╗ ██████╗
+ ██╔════╝ ██╔══██╗ ██╔════╝ ██╔════╝          ██╔══██╗ ██╔═══██╗ ██║   ██║ ╚══██╔══╝ ██╔════╝ ██╔══██╗
+ █████╗   ██████╔╝ █████╗   █████╗   ██████╗  ██████╔╝ ██║   ██║ ██║   ██║    ██║    █████╗   ██████╔╝
+ ██╔══╝   ██╔══██╗ ██╔══╝   ██╔══╝   ╚═════╝  ██╔══██╗ ██║   ██║ ██║   ██║    ██║    ██╔══╝   ██╔══██╗
+ ██║      ██║  ██║ ███████╗ ███████╗          ██║  ██║ ╚██████╔╝ ╚██████╔╝    ██║    ███████╗ ██║  ██║
+ ╚═╝      ╚═╝  ╚═╝ ╚══════╝ ╚══════╝          ╚═╝  ╚═╝  ╚═════╝   ╚═════╝     ╚═╝    ╚══════╝ ╚═╝  ╚═╝
 ```
 
 [English](./README.md) | [한국어](./README.ko.md)
 
-![Version](https://img.shields.io/badge/version-1.1.15-333333?style=flat-square)
+![Version](https://img.shields.io/badge/version-1.2.0-333333?style=flat-square)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
-[![npm downloads](https://img.shields.io/npm/dm/frouter-cli)](https://www.npmjs.com/package/frouter-cli)
-[![CI](https://github.com/jyoung105/frouter/actions/workflows/ci.yml/badge.svg)](https://github.com/jyoung105/frouter/actions/workflows/ci.yml)
+[![npm downloads](https://img.shields.io/npm/dm/free-router)](https://www.npmjs.com/package/free-router)
+[![CI](https://github.com/jyoung105/free-router/actions/workflows/ci.yml/badge.svg)](https://github.com/jyoung105/free-router/actions/workflows/ci.yml)
 
 Free model router CLI — discover, ping, and configure free AI models for OpenCode / OpenClaw.
 
-![frouter-gif](./public/example.gif)
+![free-router-gif](./public/example.gif)
 
 ## Install
 
 ```bash
-npx frouter-cli
+npx free-router
 # or
-npm i -g frouter-cli
+npm i -g free-router
 # or
-bunx frouter-cli
+bunx free-router
 # or
-bun install -g frouter-cli
+bun install -g free-router
 ```
 
 ## Run
 
 ```bash
-frouter
+free-router
 ```
 
 On first run, a setup wizard prompts for API keys (ESC to skip any provider).
 
-If you accept the in-app update prompt (`Y`), frouter now updates globally and
-restarts automatically, so you can continue without running `frouter` again.
+If you accept the in-app update prompt (`Y`), free-router now updates globally and
+restarts automatically, so you can continue without running `free-router` again.
 
-## Ways to use frouter
+## Ways to use free-router
 
 1. **First-run onboarding wizard**
-   Launch `frouter`, open provider websites in-browser from the wizard, paste keys, and start.
+   Launch `free-router`, open provider websites in-browser from the wizard, paste keys, and start.
 2. **Interactive model search + launch**
    Use `/` to filter models, then `Enter` to update OpenCode config and open `opencode`.
 3. **Quick API key rescue from main screen**
@@ -52,7 +52,7 @@ restarts automatically, so you can continue without running `frouter` again.
 4. **Full settings workflow**
    Press `P` to edit keys, toggle providers, run live key tests, and onboard missing keys provider-by-provider.
 5. **Non-interactive best-model selection**
-   Run `frouter --best` to print the best responding model ID for scripts.
+   Run `free-router --best` to print the best responding model ID for scripts.
 
 ## First-run onboarding test (clean state)
 
@@ -65,9 +65,9 @@ npm run test:fresh-start
 
 `test:fresh-start` launches interactive onboarding with:
 
-- no `~/.frouter.json` in the temp home
+- no `~/.free-router.json` in the temp home
 - provider env keys unset (`NVIDIA_API_KEY`, `OPENROUTER_API_KEY`)
-- your real `~/.frouter.json` untouched
+- your real `~/.free-router.json` untouched
 
 Optional:
 
@@ -84,17 +84,17 @@ This keeps the temp `HOME` path after exit for inspection.
 | **NVIDIA NIM** | [build.nvidia.com](https://build.nvidia.com/settings/api-keys) — prefix `nvapi-`     |
 | **OpenRouter** | [openrouter.ai/settings/keys](https://openrouter.ai/settings/keys) — prefix `sk-or-` |
 
-API key priority: environment variable → `~/.frouter.json` → keyless ping (latency still shown).
+API key priority: environment variable → `~/.free-router.json` → keyless ping (latency still shown).
 
 ```bash
-NVIDIA_API_KEY=nvapi-xxx frouter
-OPENROUTER_API_KEY=sk-or-xxx frouter
+NVIDIA_API_KEY=nvapi-xxx free-router
+OPENROUTER_API_KEY=sk-or-xxx free-router
 
 # Optional: pause auto re-sorting while you scroll (milliseconds)
-FROUTER_SCROLL_SORT_PAUSE_MS=2500 frouter
+FREE_ROUTER_SCROLL_SORT_PAUSE_MS=2500 free-router
 
 # Optional: disable rolling metrics cache and force legacy recompute path
-FROUTER_METRICS_CACHE=0 frouter
+FREE_ROUTER_METRICS_CACHE=0 free-router
 ```
 
 ## TUI
@@ -138,17 +138,17 @@ Search bar provider badges:
 
 **Actions**
 
-| Key            | Action                                                            |
-| -------------- | ----------------------------------------------------------------- |
-| `Enter`        | Save config + open current model in `opencode`                    |
-| `/`            | Search / filter models (Enter in search = open `opencode`)        |
-| `A`            | Quick API key add/change (opens key editor in Settings)           |
-| `R`            | Edit API key for likely expired/missing provider                  |
-| `T`            | Cycle tier filter: All → S+ → S → A+ → …                          |
-| `P`            | Settings screen (edit keys, toggle providers, test)               |
-| `W` / `X`      | Faster / slower ping interval                                     |
-| `?`            | Help overlay                                                      |
-| `q` / `Ctrl+C` | Quit                                                              |
+| Key            | Action                                                     |
+| -------------- | ---------------------------------------------------------- |
+| `Enter`        | Save config + open current model in `opencode`             |
+| `/`            | Search / filter models (Enter in search = open `opencode`) |
+| `A`            | Quick API key add/change (opens key editor in Settings)    |
+| `R`            | Edit API key for likely expired/missing provider           |
+| `T`            | Cycle tier filter: All → S+ → S → A+ → …                   |
+| `P`            | Settings screen (edit keys, toggle providers, test)        |
+| `W` / `X`      | Faster / slower ping interval                              |
+| `?`            | Help overlay                                               |
+| `q` / `Ctrl+C` | Quit                                                       |
 
 **Sort** (press to sort, press again to reverse)
 
@@ -170,7 +170,7 @@ Search bar provider badges:
 Pressing `Enter` on a model writes the OpenCode config and immediately opens `opencode`.
 
 If OpenCode fallback remaps the provider (for example NIM Stepfun → OpenRouter)
-and the effective provider key is missing, frouter asks:
+and the effective provider key is missing, free-router asks:
 `Add API key now? (Y/n, default: Y)`.
 
 Configs written:
@@ -180,20 +180,20 @@ Configs written:
 
 Existing configs are backed up before writing.
 
-When frouter launches OpenCode, it now sets `OPENCODE_CLI_RUN_MODE=true`
+When free-router launches OpenCode, it now sets `OPENCODE_CLI_RUN_MODE=true`
 by default (unless you already set it) to reduce startup log noise from
 plugin auto-update checks in the OpenCode TUI.
 
-If you want OpenCode's default startup hook behavior instead, launch frouter with:
+If you want OpenCode's default startup hook behavior instead, launch free-router with:
 
 ```bash
-OPENCODE_CLI_RUN_MODE=false frouter
+OPENCODE_CLI_RUN_MODE=false free-router
 ```
 
 ### Settings screen (`P`)
 
 Tip: press `A` from the main list to jump directly into API key editing.
-Tip: if a selected provider has no key, frouter auto-opens that provider key page
+Tip: if a selected provider has no key, free-router auto-opens that provider key page
 in browser (once per provider per settings session), including when you move selection.
 
 | Key                   | Action                             |
@@ -217,10 +217,10 @@ in browser (once per provider per settings session), including when you move sel
 
 ```bash
 # Print best model ID after ~10 s analysis
-frouter --best
+free-router --best
 
 # Capture in a variable
-MODEL=$(frouter --best)
+MODEL=$(free-router --best)
 echo "Best model: $MODEL"
 ```
 
@@ -228,7 +228,7 @@ Requires at least one API key to be configured. Selection tri-key sort: status=u
 
 ## Config
 
-Stored at `~/.frouter.json` (permissions `0600`).
+Stored at `~/.free-router.json` (permissions `0600`).
 
 ```json
 {
@@ -247,7 +247,7 @@ Stored at `~/.frouter.json` (permissions `0600`).
 ```
 
 `ui.scrollSortPauseMs` sets how long (ms) auto re-sorting stays paused after navigation input.
-`FROUTER_SCROLL_SORT_PAUSE_MS` overrides config. Set to `0` to disable pause.
+`FREE_ROUTER_SCROLL_SORT_PAUSE_MS` overrides config. Set to `0` to disable pause.
 
 ## Tier scale (SWE-bench Verified)
 
@@ -295,7 +295,7 @@ For branch strategy (`dev`/`main`), SemVer rules, PR/issue governance, and relea
 
 ## Model catalog auto-sync (GitHub Actions)
 
-`frouter` includes a scheduled workflow to keep model metadata current:
+`free-router` includes a scheduled workflow to keep model metadata current:
 
 - Workflow: `.github/workflows/model-catalog-sync.yml`
 - Triggers:

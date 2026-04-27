@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   chmodSync,
+  existsSync,
   readFileSync,
   statSync,
   writeFileSync,
@@ -41,7 +42,7 @@ async function withTempConfigModule(fn: (mod: any) => Promise<void>) {
   }
 }
 
-test("saveConfig writes ~/.frouter.json with 0600 permissions", async () => {
+test("saveConfig writes ~/.free-router.json with 0600 permissions", async () => {
   await withTempConfigModule(async ({ saveConfig, CONFIG_PATH }) => {
     saveConfig({
       apiKeys: { nvidia: "nvapi-demo" },
@@ -100,7 +101,7 @@ test("loadConfig preserves malformed config via a timestamped backup", async () 
     loadConfig();
 
     const backups = readdirSync(home).filter((name) =>
-      name.startsWith(".frouter.json.corrupt-"),
+      name.startsWith(".free-router.json.corrupt-"),
     );
     assert.equal(backups.length, 1);
     assert.equal(readFileSync(join(home, backups[0]), "utf8"), "{ broken json");
@@ -116,6 +117,38 @@ test("loadConfig returns defaults when config file does not exist", async () => 
     assert.equal(cfg.providers.openrouter.enabled, true);
     assert.equal(cfg.ui.scrollSortPauseMs, 1500);
   });
+});
+
+test("loadConfig migrates legacy ~/.frouter.json to ~/.free-router.json", async () => {
+  await withTempConfigModule(
+    async ({ loadConfig, CONFIG_PATH, LEGACY_CONFIG_PATH }) => {
+      writeFileSync(
+        LEGACY_CONFIG_PATH,
+        JSON.stringify(
+          {
+            apiKeys: { nvidia: "nvapi-legacy" },
+            providers: {
+              nvidia: { enabled: true },
+              openrouter: { enabled: false },
+            },
+            ui: { scrollSortPauseMs: 2600 },
+          },
+          null,
+          2,
+        ),
+        "utf8",
+      );
+
+      const cfg = loadConfig();
+
+      assert.equal(cfg.apiKeys.nvidia, "nvapi-legacy");
+      assert.equal(cfg.providers.openrouter.enabled, false);
+      assert.equal(cfg.ui.scrollSortPauseMs, 2600);
+      assert.equal(existsSync(LEGACY_CONFIG_PATH), true);
+      assert.equal(existsSync(CONFIG_PATH), true);
+      assert.equal(statSync(CONFIG_PATH).mode & 0o777, 0o600);
+    },
+  );
 });
 
 test("loadConfig preserves ui.scrollSortPauseMs when provided", async () => {

@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-TMP_HOME="$(mktemp -d "${TMPDIR:-/tmp}/frouter-onboarding.XXXXXX")"
+TMP_HOME="$(mktemp -d "${TMPDIR:-/tmp}/free-router-onboarding.XXXXXX")"
 TMP_BIN_DIR="${TMP_HOME}/.local-bin"
 KEEP_HOME=0
 
@@ -22,31 +22,31 @@ trap cleanup EXIT INT TERM
 
 unset NVIDIA_API_KEY OPENROUTER_API_KEY
 
-printf 'Running frouter in clean first-run mode.\n'
+printf 'Running free-router in clean first-run mode.\n'
 printf 'Isolated HOME: %s\n' "${TMP_HOME}"
-printf 'Your real ~/.frouter.json is not touched.\n\n'
+printf 'Your real ~/.free-router.json is not touched.\n\n'
 printf 'Onboarding tips:\n'
 printf '  - Press ESC to skip a provider.\n'
 printf '  - Enter y to open signup page for a provider key.\n\n'
 
-BIN_PATH="${ROOT_DIR}/dist/bin/frouter.js"
+BIN_PATH="${ROOT_DIR}/dist/bin/free-router.js"
 if [[ ! -f "${BIN_PATH}" ]]; then
   printf 'Missing %s. Run `npm run build` first.\n' "${BIN_PATH}" >&2
   exit 1
 fi
 
 mkdir -p "${TMP_BIN_DIR}"
-cat > "${TMP_BIN_DIR}/frouter" <<EOF
+cat > "${TMP_BIN_DIR}/free-router" <<EOF
 #!/usr/bin/env bash
 exec node "${BIN_PATH}" "\$@"
 EOF
-chmod +x "${TMP_BIN_DIR}/frouter"
+chmod +x "${TMP_BIN_DIR}/free-router"
 
-printf 'Using local command shim: %s\n\n' "${TMP_BIN_DIR}/frouter"
+printf 'Using local command shim: %s\n\n' "${TMP_BIN_DIR}/free-router"
 
-PATH="${TMP_BIN_DIR}:$PATH" HOME="${TMP_HOME}" frouter "$@"
+PATH="${TMP_BIN_DIR}:$PATH" HOME="${TMP_HOME}" free-router "$@"
 
-CONFIG_PATH="${TMP_HOME}/.frouter.json"
+CONFIG_PATH="${TMP_HOME}/.free-router.json"
 if [[ -f "${CONFIG_PATH}" ]]; then
   printf '\nTemp config written to %s\n' "${CONFIG_PATH}"
   cat "${CONFIG_PATH}"

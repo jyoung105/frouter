@@ -1,8 +1,15 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import type { PingEntry } from "../../lib/utils.js";
-import { sortModels as sortModelsImpl, findBestModel as findBestModelImpl } from "../../lib/utils.js";
-const sortModels = sortModelsImpl as (models: any[], col: string, asc?: boolean) => any[];
+import {
+  sortModels as sortModelsImpl,
+  findBestModel as findBestModelImpl,
+} from "../../lib/utils.js";
+const sortModels = sortModelsImpl as (
+  models: any[],
+  col: string,
+  asc?: boolean,
+) => any[];
 const findBestModel = findBestModelImpl as (models: any[]) => any;
 
 function model({

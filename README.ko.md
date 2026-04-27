@@ -1,50 +1,50 @@
 ```
- ███████╗ ██████╗   ██████╗  ██╗   ██╗ ████████╗ ███████╗ ██████╗
- ██╔════╝ ██╔══██╗ ██╔═══██╗ ██║   ██║ ╚══██╔══╝ ██╔════╝ ██╔══██╗
- █████╗   ██████╔╝ ██║   ██║ ██║   ██║    ██║    █████╗   ██████╔╝
- ██╔══╝   ██╔══██╗ ██║   ██║ ██║   ██║    ██║    ██╔══╝   ██╔══██╗
- ██║      ██║  ██║ ╚██████╔╝ ╚██████╔╝    ██║    ███████╗ ██║  ██║
- ╚═╝      ╚═╝  ╚═╝  ╚═════╝   ╚═════╝     ╚═╝    ╚══════╝ ╚═╝  ╚═╝
+ ███████╗ ██████╗  ███████╗ ███████╗          ██████╗   ██████╗  ██╗   ██╗ ████████╗ ███████╗ ██████╗
+ ██╔════╝ ██╔══██╗ ██╔════╝ ██╔════╝          ██╔══██╗ ██╔═══██╗ ██║   ██║ ╚══██╔══╝ ██╔════╝ ██╔══██╗
+ █████╗   ██████╔╝ █████╗   █████╗   ██████╗  ██████╔╝ ██║   ██║ ██║   ██║    ██║    █████╗   ██████╔╝
+ ██╔══╝   ██╔══██╗ ██╔══╝   ██╔══╝   ╚═════╝  ██╔══██╗ ██║   ██║ ██║   ██║    ██║    ██╔══╝   ██╔══██╗
+ ██║      ██║  ██║ ███████╗ ███████╗          ██║  ██║ ╚██████╔╝ ╚██████╔╝    ██║    ███████╗ ██║  ██║
+ ╚═╝      ╚═╝  ╚═╝ ╚══════╝ ╚══════╝          ╚═╝  ╚═╝  ╚═════╝   ╚═════╝     ╚═╝    ╚══════╝ ╚═╝  ╚═╝
 ```
 
 [English](./README.md) | [한국어](./README.ko.md)
 
-![Version](https://img.shields.io/badge/version-1.1.15-333333?style=flat-square)
+![Version](https://img.shields.io/badge/version-1.2.0-333333?style=flat-square)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
-[![npm downloads](https://img.shields.io/npm/dm/frouter-cli)](https://www.npmjs.com/package/frouter-cli)
-[![CI](https://github.com/jyoung105/frouter/actions/workflows/ci.yml/badge.svg)](https://github.com/jyoung105/frouter/actions/workflows/ci.yml)
+[![npm downloads](https://img.shields.io/npm/dm/free-router)](https://www.npmjs.com/package/free-router)
+[![CI](https://github.com/jyoung105/free-router/actions/workflows/ci.yml/badge.svg)](https://github.com/jyoung105/free-router/actions/workflows/ci.yml)
 
 무료 AI 모델 라우터 CLI — OpenCode / OpenClaw용 무료 모델을 탐색, 핑 테스트, 설정합니다.
 
-![frouter-gif](./public/example.gif)
+![free-router-gif](./public/example.gif)
 
 ## 설치
 
 ```bash
-npx frouter-cli
+npx free-router
 # 또는
-npm i -g frouter-cli
+npm i -g free-router
 # 또는
-bunx frouter-cli
+bunx free-router
 # 또는
-bun install -g frouter-cli
+bun install -g free-router
 ```
 
 ## 실행
 
 ```bash
-frouter
+free-router
 ```
 
 최초 실행 시 API 키 설정 마법사가 시작됩니다 (ESC로 각 프로바이더를 건너뛸 수 있습니다).
 
-앱 내 업데이트 프롬프트에서 `Y`를 선택하면 전역 업데이트 후 frouter가 자동으로
-재시작되어, `frouter`를 다시 입력하지 않아도 바로 이어서 사용할 수 있습니다.
+앱 내 업데이트 프롬프트에서 `Y`를 선택하면 전역 업데이트 후 free-router가 자동으로
+재시작되어, `free-router`를 다시 입력하지 않아도 바로 이어서 사용할 수 있습니다.
 
-## frouter 사용하는 방법
+## free-router 사용하는 방법
 
 1. **최초 실행 온보딩 마법사**
-   `frouter` 실행 → 브라우저로 키 발급 페이지 열기 → API 키 입력 → 바로 시작.
+   `free-router` 실행 → 브라우저로 키 발급 페이지 열기 → API 키 입력 → 바로 시작.
 2. **대화형 모델 검색 + 즉시 실행**
    `/`로 모델을 필터링하고 `Enter`로 OpenCode 설정을 갱신한 뒤 `opencode`를 바로 엽니다.
 3. **메인 화면 빠른 API 키 수정**
@@ -52,7 +52,7 @@ frouter
 4. **전체 설정 워크플로**
    `P`에서 키 편집, 프로바이더 on/off, 실시간 키 테스트, 누락 키 온보딩 수행.
 5. **비대화형 최적 모델 선택**
-   `frouter --best`로 스크립트에서 사용할 최적 모델 ID를 출력.
+   `free-router --best`로 스크립트에서 사용할 최적 모델 ID를 출력.
 
 ## 최초 실행 온보딩 테스트 (클린 상태)
 
@@ -65,9 +65,9 @@ npm run test:fresh-start
 
 `test:fresh-start` 실행 시:
 
-- 임시 홈에 `~/.frouter.json` 이 없는 상태로 시작
+- 임시 홈에 `~/.free-router.json` 이 없는 상태로 시작
 - 프로바이더 환경 변수 키(`NVIDIA_API_KEY`, `OPENROUTER_API_KEY`) 비활성화
-- 실제 `~/.frouter.json` 은 변경하지 않음
+- 실제 `~/.free-router.json` 은 변경하지 않음
 
 옵션:
 
@@ -84,17 +84,17 @@ npm run test:fresh-start -- --keep-home
 | **NVIDIA NIM** | [build.nvidia.com](https://build.nvidia.com/settings/api-keys) — 접두사 `nvapi-`     |
 | **OpenRouter** | [openrouter.ai/settings/keys](https://openrouter.ai/settings/keys) — 접두사 `sk-or-` |
 
-API 키 우선순위: 환경 변수 → `~/.frouter.json` → 키 없이 핑 (응답 속도는 그래도 표시됩니다).
+API 키 우선순위: 환경 변수 → `~/.free-router.json` → 키 없이 핑 (응답 속도는 그래도 표시됩니다).
 
 ```bash
-NVIDIA_API_KEY=nvapi-xxx frouter
-OPENROUTER_API_KEY=sk-or-xxx frouter
+NVIDIA_API_KEY=nvapi-xxx free-router
+OPENROUTER_API_KEY=sk-or-xxx free-router
 
 # 선택 사항: 스크롤 중 자동 재정렬 일시정지 시간(ms)
-FROUTER_SCROLL_SORT_PAUSE_MS=2500 frouter
+FREE_ROUTER_SCROLL_SORT_PAUSE_MS=2500 free-router
 
 # 선택 사항: 롤링 메트릭 캐시 비활성화(레거시 재계산 경로 강제)
-FROUTER_METRICS_CACHE=0 frouter
+FREE_ROUTER_METRICS_CACHE=0 free-router
 ```
 
 ## TUI (터미널 UI)
@@ -138,17 +138,17 @@ FROUTER_METRICS_CACHE=0 frouter
 
 **액션**
 
-| 키             | 동작                                                      |
-| -------------- | --------------------------------------------------------- |
-| `Enter`        | 설정 저장 + 현재 모델로 `opencode` 실행                   |
-| `/`            | 모델 검색 / 필터 (검색 중 Enter = `opencode` 실행)        |
-| `A`            | 빠른 API 키 추가/변경 (설정 키 편집 화면으로 이동)        |
-| `R`            | 만료/누락 추정 프로바이더 키 편집으로 바로 이동           |
-| `T`            | 등급 필터 순환: 전체 → S+ → S → A+ → …                    |
-| `P`            | 설정 화면 (키 편집, 프로바이더 활성화/비활성화, 테스트)   |
-| `W` / `X`      | 핑 간격 빠르게 / 느리게                                   |
-| `?`            | 도움말 오버레이                                           |
-| `q` / `Ctrl+C` | 종료                                                      |
+| 키             | 동작                                                    |
+| -------------- | ------------------------------------------------------- |
+| `Enter`        | 설정 저장 + 현재 모델로 `opencode` 실행                 |
+| `/`            | 모델 검색 / 필터 (검색 중 Enter = `opencode` 실행)      |
+| `A`            | 빠른 API 키 추가/변경 (설정 키 편집 화면으로 이동)      |
+| `R`            | 만료/누락 추정 프로바이더 키 편집으로 바로 이동         |
+| `T`            | 등급 필터 순환: 전체 → S+ → S → A+ → …                  |
+| `P`            | 설정 화면 (키 편집, 프로바이더 활성화/비활성화, 테스트) |
+| `W` / `X`      | 핑 간격 빠르게 / 느리게                                 |
+| `?`            | 도움말 오버레이                                         |
+| `q` / `Ctrl+C` | 종료                                                    |
 
 **정렬** (해당 키를 누르면 정렬, 다시 누르면 역순)
 
@@ -180,14 +180,14 @@ OpenCode fallback로 프로바이더가 바뀌는 경우(예: NIM Stepfun → Op
 
 기존 설정 파일은 덮어쓰기 전 자동으로 백업됩니다.
 
-frouter가 OpenCode를 실행할 때는 기본적으로 `OPENCODE_CLI_RUN_MODE=true`
+free-router가 OpenCode를 실행할 때는 기본적으로 `OPENCODE_CLI_RUN_MODE=true`
 (이미 값이 설정된 경우는 유지) 를 전달하여, OpenCode TUI 시작 시
 플러그인 자동 업데이트 체크 로그가 섞여 보이는 현상을 줄입니다.
 
 기본 OpenCode 시작 훅 동작을 그대로 원하면 다음처럼 실행하세요:
 
 ```bash
-OPENCODE_CLI_RUN_MODE=false frouter
+OPENCODE_CLI_RUN_MODE=false free-router
 ```
 
 ### 설정 화면 (`P`)
@@ -217,10 +217,10 @@ OPENCODE_CLI_RUN_MODE=false frouter
 
 ```bash
 # 약 10초 분석 후 최적 모델 ID 출력
-frouter --best
+free-router --best
 
 # 변수에 저장
-MODEL=$(frouter --best)
+MODEL=$(free-router --best)
 echo "최적 모델: $MODEL"
 ```
 
@@ -228,7 +228,7 @@ API 키가 최소 하나 이상 설정되어 있어야 합니다. 선택 기준:
 
 ## 설정 파일
 
-`~/.frouter.json` 에 저장됩니다 (권한 `0600`).
+`~/.free-router.json` 에 저장됩니다 (권한 `0600`).
 
 ```json
 {
@@ -247,7 +247,7 @@ API 키가 최소 하나 이상 설정되어 있어야 합니다. 선택 기준:
 ```
 
 `ui.scrollSortPauseMs` 는 탐색 입력 이후 자동 재정렬을 얼마나 오래 멈출지(ms) 설정합니다.
-`FROUTER_SCROLL_SORT_PAUSE_MS` 환경 변수가 있으면 설정값보다 우선합니다. `0`이면 일시정지를 끕니다.
+`FREE_ROUTER_SCROLL_SORT_PAUSE_MS` 환경 변수가 있으면 설정값보다 우선합니다. `0`이면 일시정지를 끕니다.
 
 ## 등급 기준 (SWE-bench Verified)
 
@@ -295,7 +295,7 @@ npm run test:perf
 
 ## 모델 카탈로그 자동 동기화 (GitHub Actions)
 
-`frouter`는 모델 메타데이터를 최신 상태로 유지하기 위한 스케줄 워크플로를 포함합니다.
+`free-router`는 모델 메타데이터를 최신 상태로 유지하기 위한 스케줄 워크플로를 포함합니다.
 
 - 워크플로: `.github/workflows/model-catalog-sync.yml`
 - 실행 트리거:

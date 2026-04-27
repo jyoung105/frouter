@@ -1,5 +1,5 @@
 {
-  "name": "frouter-site",
+  "name": "free-router-site",
   "type": "module",
   "version": "0.1.0",
   "engines": {
@@ -14,7 +14,7 @@
     "test": "node --test tests/*.test.mjs"
   },
   "devDependencies": {
-    "typescript": "^5.8.3",
-    "vite": "^6.3.1"
+    "typescript": "^5.9.3",
+    "vite": "^6.4.2"
   }
 }

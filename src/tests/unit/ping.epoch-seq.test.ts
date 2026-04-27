@@ -1,9 +1,16 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { createHttpServer } from "../helpers/mock-http.js";
-import { pingAllOnce as pingAllOnceImpl, bumpPingEpoch, getPingEpoch } from "../../lib/ping.js";
+import {
+  pingAllOnce as pingAllOnceImpl,
+  bumpPingEpoch,
+  getPingEpoch,
+} from "../../lib/ping.js";
 import { PROVIDERS_META } from "../../lib/config.js";
-const pingAllOnce = pingAllOnceImpl as (models: any[], config: any) => Promise<void>;
+const pingAllOnce = pingAllOnceImpl as (
+  models: any[],
+  config: any,
+) => Promise<void>;
 
 test("pingAllOnce drops stale results from previous epoch", async () => {
   const server = await createHttpServer((req, res) => {

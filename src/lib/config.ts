@@ -9,9 +9,9 @@ import {
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { execSync } from "node:child_process";
-import { R, B, D, RED, GREEN, CYAN } from "./utils.js";
 
-export const CONFIG_PATH = join(homedir(), ".frouter.json");
+export const CONFIG_PATH = join(homedir(), ".free-router.json");
+export const LEGACY_CONFIG_PATH = join(homedir(), ".frouter.json");
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -30,6 +30,8 @@ export type FrouterConfig = {
   providers: Record<string, { enabled: boolean }>;
   ui: { scrollSortPauseMs: number };
 };
+
+export type FreeRouterConfig = FrouterConfig;
 
 // ─── Provider metadata ────────────────────────────────────────────────────────
 export const PROVIDERS_META: Record<string, ProviderMeta> = {
@@ -55,6 +57,48 @@ export const PROVIDERS_META: Record<string, ProviderMeta> = {
 
 // ─── Config I/O ───────────────────────────────────────────────────────────────
 
+function readConfigFile(path: string, defaults: FrouterConfig): FrouterConfig {
+  try {
+    const parsed = JSON.parse(readFileSync(path, "utf8"));
+    return {
+      apiKeys: parsed.apiKeys || {},
+      providers: parsed.providers || defaults.providers,
+      ui: parsed.ui && typeof parsed.ui === "object" ? parsed.ui : defaults.ui,
+    };
+  } catch {
+    try {
+      const backupPath = `${path}.corrupt-${Date.now()}`;
+      copyFileSync(path, backupPath);
+      try {
+        chmodSync(backupPath, 0o600);
+      } catch {
+        /* best-effort */
+      }
+      process.stderr.write(
+        `Warning: malformed config at ${path}; backup saved to ${backupPath}\n`,
+      );
+    } catch {
+      /* best-effort */
+    }
+    return defaults;
+  }
+}
+
+function migrateLegacyConfigIfNeeded(defaults: FrouterConfig): FrouterConfig {
+  const config = readConfigFile(LEGACY_CONFIG_PATH, defaults);
+  if (existsSync(CONFIG_PATH)) return config;
+
+  try {
+    writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2) + "\n", {
+      mode: 0o600,
+    });
+    chmodSync(CONFIG_PATH, 0o600);
+  } catch {
+    /* best-effort: current process can still use the legacy config */
+  }
+  return config;
+}
+
 export function loadConfig(): FrouterConfig {
   const defaults = {
     apiKeys: {},
@@ -66,31 +110,9 @@ export function loadConfig(): FrouterConfig {
       scrollSortPauseMs: 1500,
     },
   };
-  if (!existsSync(CONFIG_PATH)) return defaults;
-  try {
-    const parsed = JSON.parse(readFileSync(CONFIG_PATH, "utf8"));
-    return {
-      apiKeys: parsed.apiKeys || {},
-      providers: parsed.providers || defaults.providers,
-      ui: parsed.ui && typeof parsed.ui === "object" ? parsed.ui : defaults.ui,
-    };
-  } catch {
-    try {
-      const backupPath = `${CONFIG_PATH}.corrupt-${Date.now()}`;
-      copyFileSync(CONFIG_PATH, backupPath);
-      try {
-        chmodSync(backupPath, 0o600);
-      } catch {
-        /* best-effort */
-      }
-      process.stderr.write(
-        `Warning: malformed config at ${CONFIG_PATH}; backup saved to ${backupPath}\n`,
-      );
-    } catch {
-      /* best-effort */
-    }
-    return defaults;
-  }
+  if (existsSync(CONFIG_PATH)) return readConfigFile(CONFIG_PATH, defaults);
+  if (existsSync(LEGACY_CONFIG_PATH)) return migrateLegacyConfigIfNeeded(defaults);
+  return defaults;
 }
 
 export function saveConfig(config: FrouterConfig): void {
@@ -107,7 +129,10 @@ export function saveConfig(config: FrouterConfig): void {
 /**
  * Priority: env var > config file > null (keyless ping)
  */
-export function getApiKey(config: FrouterConfig, providerKey: string): string | null {
+export function getApiKey(
+  config: FrouterConfig,
+  providerKey: string,
+): string | null {
   const meta = PROVIDERS_META[providerKey];
   if (!meta) return null;
   return process.env[meta.envVar] || config?.apiKeys?.[providerKey] || null;
@@ -202,59 +227,46 @@ export function promptMasked(promptText: string): Promise<string> {
 
 // ─── First-run wizard ─────────────────────────────────────────────────────────
 
-/**
- * 2-provider sequential wizard.
- * For each provider: open browser → masked key input → validate prefix → save.
- * Returns updated config.
- */
-export async function runFirstRunWizard(config: FrouterConfig) {
-  const w = (s: string) => process.stdout.write(s);
+export type FirstRunOutcome = {
+  config: FrouterConfig;
+  starPromptHandled: boolean;
+  startupSearchRequested: boolean;
+};
 
-  w("\x1b[2J\x1b[H");
-  w(`${B}  frouter — Free Model Router${R}\n`);
-  w(`${D}  Let's set up your API keys (ESC to skip any provider)${R}\n\n`);
+export async function runFirstRunWizard(
+  config: FrouterConfig,
+): Promise<FirstRunOutcome> {
+  const [{ render }, React, { FirstRunApp }] = await Promise.all([
+    import("ink"),
+    import("react"),
+    import("../tui/FirstRunApp.js"),
+  ]);
 
-  for (const [pk, meta] of Object.entries(PROVIDERS_META)) {
-    w(`${B}  ● ${meta.name}${R}\n`);
-    w(`${D}    Free key at: ${CYAN}${meta.signupUrl}${R}\n`);
+  const result = await new Promise<{
+    apiKeys: Record<string, string>;
+    starPromptHandled: boolean;
+    startupSearchRequested: boolean;
+  }>((resolve) => {
+    let resolved = false;
+    const element = React.createElement(FirstRunApp, {
+      providers: PROVIDERS_META,
+      validateKey: validateProviderApiKey,
+      openBrowser,
+      onDone: (r) => {
+        if (resolved) return;
+        resolved = true;
+        instance.unmount();
+        resolve(r);
+      },
+    });
+    const instance = render(element, { exitOnCtrlC: false });
+  });
 
-    const wantKey = await promptMasked(
-      `  Open browser for ${meta.name} key? (y/ESC to skip): `,
-    );
-    if (wantKey && wantKey.toLowerCase().startsWith("y")) {
-      openBrowser(meta.signupUrl);
-      w(`${D}    (browser opened — copy your key, then come back)${R}\n`);
-    }
-    if (!wantKey) {
-      w(`${D}  Skipped${R}\n\n`);
-      continue;
-    }
-
-    // Keep prompting until a valid key is entered or user presses ESC to skip.
-    while (true) {
-      const key = await promptMasked(
-        `  Paste ${meta.name} key (ESC to skip): `,
-      );
-      if (!key) {
-        w(`${D}  Skipped${R}\n\n`);
-        break;
-      }
-
-      const checked = validateProviderApiKey(pk, key);
-      if (!checked.ok) {
-        w(`${RED}  ✗ ${checked.reason}. Try again or press ESC to skip.${R}\n`);
-        continue;
-      }
-
-      config.apiKeys[pk] = checked.key!;
-      w(`${GREEN}  ✓ Key saved${R}\n\n`);
-      break;
-    }
-  }
-
+  config.apiKeys = { ...config.apiKeys, ...result.apiKeys };
   saveConfig(config);
-  const n = Object.keys(config.apiKeys).length;
-  w(`${GREEN}  ${n} key(s) saved → ~/.frouter.json${R}\n`);
-  await new Promise((r) => setTimeout(r, 1200));
-  return config;
+  return {
+    config,
+    starPromptHandled: result.starPromptHandled,
+    startupSearchRequested: result.startupSearchRequested,
+  };
 }

@@ -3,7 +3,12 @@
 
 import { useState, useRef, useCallback, useEffect } from "react";
 import { Text, Box } from "ink";
-import { ConfirmInput, Spinner, ProgressBar, StatusMessage } from "@inkjs/ui";
+import {
+  ConfirmInput,
+  Spinner,
+  ProgressBar,
+  StatusMessage,
+} from "./primitives.js";
 import { spawn } from "node:child_process";
 
 type UpdateInstallCommand = { bin: string; args: string[] };
@@ -12,7 +17,6 @@ export type UpdateAppProps = {
   currentVersion: string;
   latestVersion: string;
   detectInstallCommand: () => UpdateInstallCommand | null;
-  restartAfterUpdate: () => boolean;
   readHighestPercent: (text: string) => number | null;
   onDone: (result: "skipped" | "updated" | "failed") => void;
 };
@@ -23,7 +27,6 @@ export function UpdateApp({
   currentVersion,
   latestVersion,
   detectInstallCommand,
-  restartAfterUpdate,
   readHighestPercent,
   onDone,
 }: UpdateAppProps) {
@@ -87,10 +90,7 @@ export function UpdateApp({
       if (ok) {
         setProgress(100);
         setPhase("done");
-        setTimeout(() => {
-          restartAfterUpdate();
-          onDone("updated");
-        }, 500);
+        setTimeout(() => onDone("updated"), 500);
       } else {
         const errMsg = "Update command failed.";
         setError(errMsg);
@@ -101,7 +101,7 @@ export function UpdateApp({
 
     child.on("error", () => finish(false));
     child.on("close", (code) => finish(code === 0));
-  }, [detectInstallCommand, readHighestPercent, restartAfterUpdate, onDone]);
+  }, [detectInstallCommand, readHighestPercent, onDone]);
 
   if (phase === "confirm") {
     return (
@@ -127,7 +127,7 @@ export function UpdateApp({
   if (phase === "installing") {
     return (
       <Box flexDirection="column" paddingLeft={1}>
-        <Spinner label="Updating frouter-cli…" />
+        <Spinner label="Updating free-router…" />
         <Box marginTop={1}>
           <Text>  </Text>
           <ProgressBar value={progress} />

@@ -1,6 +1,6 @@
 // src/tui/TargetPickerApp.tsx — Ink-based target picker with Select.
 // Uses ink-harness (runs mid-session from ALT_ON state).
-// Pure UI component — returns user's selection; business logic lives in frouter.ts.
+// Pure UI component — returns user's selection; business logic lives in free-router.ts.
 
 import { useState } from "react";
 import { Text, Box, useInput } from "ink";

@@ -29,7 +29,11 @@ const getUptime = getUptimeImpl as (m: any) => number;
 const getVerdict = getVerdictImpl as (m: any) => string;
 const tierColor = tierColorImpl as (t: any) => string;
 const filterByTier = filterByTierImpl as (models: any[], tier: string) => any[];
-const sortModels = sortModelsImpl as (models: any[], col: string, asc?: boolean) => any[];
+const sortModels = sortModelsImpl as (
+  models: any[],
+  col: string,
+  asc?: boolean,
+) => any[];
 
 // ─── getAvg ──────────────────────────────────────────────────────────────────
 

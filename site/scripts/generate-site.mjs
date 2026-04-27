@@ -26,9 +26,9 @@ const GENERATED_STATE_DIR = path.join(siteRoot, '.generated');
 const DATA_PATH = path.join(repoRoot, 'data', 'model-rankings.json');
 const MANIFEST_PATH = path.join(repoRoot, 'data', 'slug-manifest.json');
 
-const HOME_TITLE = 'frouter | Free AI model router for coding tools';
+const HOME_TITLE = 'free-router | Free AI model router for agents';
 const HOME_DESCRIPTION =
-  'Browse free AI coding models, compare benchmark signals, and route requests through the fastest free providers with frouter.';
+  'Browse free AI coding models, compare benchmark signals, and route requests through the fastest free providers with free-router.';
 
 const ALLOWED_BOTS = ['Googlebot', 'Bingbot', 'OAI-SearchBot', 'PerplexityBot'];
 const BLOCKED_BOTS = ['GPTBot', 'Google-Extended'];
@@ -68,18 +68,18 @@ function buildHomeJsonLd(records, absoluteUrl) {
     '@graph': [
       {
         '@type': 'WebSite',
-        name: 'frouter',
+        name: 'free-router',
         url: absoluteUrl,
         description: HOME_DESCRIPTION,
       },
       {
         '@type': 'Organization',
-        name: 'frouter',
+        name: 'free-router',
         url: absoluteUrl,
       },
       {
         '@type': 'ItemList',
-        name: 'Free coding models on frouter',
+        name: 'Free coding models on free-router',
         itemListOrder: 'https://schema.org/ItemListOrderAscending',
         numberOfItems: records.length,
         itemListElement: records.map((record, index) => ({
@@ -99,7 +99,7 @@ function buildModelJsonLd(record, homeUrl) {
     '@graph': [
       {
         '@type': 'WebPage',
-        name: `${record.name} on frouter`,
+        name: `${record.name} on free-router`,
         url: record.absoluteUrl,
         description: record.description,
       },
@@ -147,7 +147,7 @@ function buildHeadMarkup({
     `<meta name="description" content="${escapedDescription}" />`,
     `<meta name="robots" content="${escapeHtml(robotsContent)}" />`,
     `<link rel="canonical" href="${escapedCanonical}" />`,
-    '<meta property="og:site_name" content="frouter" />',
+    '<meta property="og:site_name" content="free-router" />',
     `<meta property="og:type" content="${escapeHtml(type)}" />`,
     `<meta property="og:title" content="${escapedTitle}" />`,
     `<meta property="og:description" content="${escapedDescription}" />`,
@@ -188,7 +188,7 @@ function buildModelPage(record, context, homeUrl) {
     description: record.description,
     jsonLd: buildModelJsonLd(record, homeUrl),
     robotsContent: context.robotsContent,
-    title: `${record.name} free model routing | frouter`,
+    title: `${record.name} free model routing | free-router`,
     type: 'article',
   });
 
@@ -205,7 +205,7 @@ function buildModelPage(record, context, homeUrl) {
     <link rel="icon" type="image/x-icon" href="../../favicon.ico" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="/src/style.css" />
     ${headMarkup}
   </head>
@@ -226,7 +226,7 @@ function buildModelPage(record, context, homeUrl) {
           <p class="detail-summary">${escapeHtml(record.description)}</p>
           <div class="hero-actions">
             <a href="../../#models" class="btn-primary">Back to model index</a>
-            <a href="https://github.com/jyoung105/frouter" target="_blank" rel="noopener" class="btn-secondary">Open GitHub</a>
+            <a href="https://github.com/jyoung105/free-router" target="_blank" rel="noopener" class="btn-secondary">Open GitHub</a>
           </div>
         </div>
         <div class="detail-install">
@@ -241,7 +241,7 @@ function buildModelPage(record, context, homeUrl) {
               <div class="controls-spacer"></div>
             </div>
             <div class="body">
-              <div class="line prompt"><span class="ps1">$</span> frouter --best</div>
+              <div class="line prompt"><span class="ps1">$</span> free-router --best</div>
               <div class="line output indent">${escapeHtml(record.name)}</div>
               <div class="line output indent dim">${escapeHtml(record.model_id)}</div>
               <div class="spacer"></div>
@@ -282,7 +282,7 @@ function buildModelPage(record, context, homeUrl) {
 }
 
 function buildRobotsTxt(context) {
-  const lines = ['# frouter crawler policy'];
+  const lines = ['# free-router crawler policy'];
 
   for (const bot of ALLOWED_BOTS) {
     lines.push(`User-agent: ${bot}`);
@@ -379,13 +379,13 @@ function enrichRecords(records, context) {
           B: 'tier-b',
           C: 'tier-c',
         }[record.tier] || 'tier-c',
-      sweDisplay: formatValue(record.swe_bench, '—'),
-      intelDisplay: formatValue(record.aa_intelligence, '—'),
+      sweDisplay: formatValue(record.swe_bench, '·'),
+      intelDisplay: formatValue(record.aa_intelligence, '·'),
       speedDisplay:
         record.aa_speed_tps === null || record.aa_speed_tps === undefined
-          ? '—'
+          ? '·'
           : Number(record.aa_speed_tps).toFixed(0),
-      description: `${record.name} is available on ${providerLabel(record.source)} with a ${formatValue(record.tier, 'Unranked')} tier, ${formatValue(record.context, 'unknown')} context, ${formatValue(record.swe_bench, 'no')} SWE score, and ${formatValue(record.aa_speed_tps, 'no')} TPS signal on frouter.`,
+      description: `${record.name} is available on ${providerLabel(record.source)} with a ${formatValue(record.tier, 'Unranked')} tier, ${formatValue(record.context, 'unknown')} context, ${formatValue(record.swe_bench, 'no')} SWE score, and ${formatValue(record.aa_speed_tps, 'no')} TPS signal on free-router.`,
     };
   });
 }
@@ -415,8 +415,8 @@ async function writeHomepage(template, records, context, redirectCount) {
 
   const html = template
     .replace('__HEAD_META__', headMarkup)
-    .replace('__TAGLINE__', '&gt; Free model router for AI coding tools')
-    .replace('__SUBTITLE__', '&gt; Compare providers, benchmark latency, start building.')
+    .replace('__TAGLINE__', '&gt; Free model router for AI agents')
+    .replace('__SUBTITLE__', '&gt; Route through the fastest free models. Start building in seconds.')
     .replaceAll('__MODEL_COUNT__', String(records.length))
     .replace('__MODEL_ROWS__', records.map(buildModelRow).join('\n'))
     .replace('__MODEL_REDIRECT_COUNT__', String(redirectCount));

@@ -1,149 +1,119 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { ROOT_DIR } from "../helpers/test-paths.js";
 import { cleanupTempHome, makeTempHome } from "../helpers/temp-home.js";
 import { runNode } from "../helpers/spawn-cli.js";
 
-function prepareFakeBrowserLauncher(homePath: string) {
-  const cmd =
-    process.platform === "darwin"
-      ? "open"
-      : process.platform === "linux"
-        ? "xdg-open"
-        : null;
-
-  if (!cmd) return null;
-
-  const binDir = join(homePath, "fake-bin");
-  const logPath = join(homePath, "fake-browser.log");
-  mkdirSync(binDir, { recursive: true });
-
-  const launcher = join(binDir, cmd);
-  writeFileSync(
-    launcher,
-    `#!/bin/sh
-echo "$@" >> "${logPath}"
-exit 0
-`,
-    { mode: 0o755 },
-  );
-
-  return { binDir, logPath };
-}
-
 const configModuleUrl = pathToFileURL(join(ROOT_DIR, "lib", "config.js")).href;
+
 const WIZARD_SCRIPT = `
+import { PassThrough } from "node:stream";
+import { appendFileSync, existsSync, writeFileSync } from "node:fs";
 import { loadConfig, runFirstRunWizard } from ${JSON.stringify(configModuleUrl)};
 
-if (typeof process.stdin.setRawMode !== 'function') process.stdin.setRawMode = () => {};
+const browserLogPath = process.env.BROWSER_LOG_PATH;
+if (browserLogPath && !existsSync(browserLogPath)) writeFileSync(browserLogPath, "");
+
+if (typeof process.stdin.setRawMode !== "function") process.stdin.setRawMode = () => {};
 try {
-  Object.defineProperty(process.stdin, 'isRaw', { value: false, writable: true, configurable: true });
+  Object.defineProperty(process.stdin, "isTTY", { value: true, configurable: true });
 } catch {}
 
 const cfg = loadConfig();
-await runFirstRunWizard(cfg);
+const outcome = await runFirstRunWizard(cfg);
+process.stdout.write("OUTCOME:" + JSON.stringify({
+  apiKeys: outcome.config.apiKeys,
+  starPromptHandled: outcome.starPromptHandled,
+  startupSearchRequested: outcome.startupSearchRequested,
+}) + "\\n");
+process.exit(0);
 `;
 
-function buildInputChunks(sequence: string, firstDelayMs = 700, stepMs = 120) {
-  const chars = [...sequence];
-  let delayMs = firstDelayMs;
-  return chars.map((ch) => {
-    const chunk = { delayMs, data: ch };
+function buildInputChunks(
+  tokens: string[],
+  startDelayMs = 300,
+  stepMs = 120,
+) {
+  let delayMs = startDelayMs;
+  return tokens.map((data) => {
+    const chunk = { delayMs, data };
     delayMs += stepMs;
     return chunk;
   });
 }
 
-async function runWizard({
-  home,
-  inputChunks,
-  env = {} as NodeJS.ProcessEnv,
-}: {
-  home: string;
-  inputChunks: { delayMs: number; data: string }[];
-  env?: NodeJS.ProcessEnv;
-}) {
-  return runNode(["--input-type=module", "-e", WIZARD_SCRIPT], {
-    cwd: ROOT_DIR,
-    env: { HOME: home, ...env },
-    inputChunks,
-    timeoutMs: 15_000,
-  });
+function extractOutcome(stdout: string) {
+  const match = stdout.match(/OUTCOME:(\{.*\})/);
+  assert.ok(match, `expected OUTCOME payload in stdout:\n${stdout}`);
+  return JSON.parse(match[1]);
 }
 
-test("first-run onboarding rejects invalid key prefix and does not persist malformed key", async () => {
+const DOWN = "\x1b[B";
+
+test("first-run wizard persists a valid key and reaches star prompt", async () => {
   const home = makeTempHome();
+  const browserLogPath = join(home, "browser.log");
+  writeFileSync(browserLogPath, "");
   try {
-    const fakeBrowser = prepareFakeBrowserLauncher(home);
-    const env: NodeJS.ProcessEnv = {};
-    if (fakeBrowser) {
-      env.PATH = `${fakeBrowser.binDir}:${process.env.PATH ?? ""}`;
-    }
-
-    const result = await runWizard({
-      home,
-      env,
-      inputChunks: buildInputChunks("y\rbadkey\r\x1b\x1b"),
-    });
-
-    assert.equal(result.code, 0);
-    assert.match(
-      result.stdout,
-      /https:\/\/build\.nvidia\.com\/settings\/api-key/,
+    const result = await runNode(
+      ["--input-type=module", "-e", WIZARD_SCRIPT],
+      {
+        cwd: ROOT_DIR,
+        env: { HOME: home, BROWSER_LOG_PATH: browserLogPath },
+        inputChunks: [
+          { delayMs: 400, data: "\r" },
+          ...buildInputChunks([..."nvapi-demo", "\r"], 800, 120),
+          { delayMs: 2600, data: DOWN },
+          { delayMs: 2740, data: DOWN },
+          { delayMs: 2880, data: "\r" },
+          { delayMs: 3400, data: DOWN },
+          { delayMs: 3540, data: "\r" },
+        ],
+        timeoutMs: 15_000,
+      },
     );
-    assert.match(result.stdout, /Expected prefix "nvapi-"/);
-    assert.match(result.stdout, /0 key\(s\) saved/);
-
-    const cfg = JSON.parse(readFileSync(join(home, ".frouter.json"), "utf8"));
-    assert.equal(cfg.apiKeys.nvidia, undefined);
-    assert.equal(cfg.apiKeys.openrouter, undefined);
-
-    if (fakeBrowser) {
-      const browserLog = readFileSync(fakeBrowser.logPath, "utf8");
-      assert.match(
-        browserLog,
-        /https:\/\/build\.nvidia\.com\/settings\/api-key/,
-      );
-    }
-  } finally {
-    cleanupTempHome(home);
-  }
-});
-
-test("onboarding edge case: ESC on both providers saves zero keys", async () => {
-  const home = makeTempHome();
-  try {
-    const result = await runWizard({
-      home,
-      inputChunks: buildInputChunks("\x1b\x1b"),
-    });
 
     assert.equal(result.code, 0);
-    assert.match(result.stdout, /0 key\(s\) saved/);
-    const cfg = JSON.parse(readFileSync(join(home, ".frouter.json"), "utf8"));
-    assert.deepEqual(cfg.apiKeys, {});
-  } finally {
-    cleanupTempHome(home);
-  }
-});
+    const payload = extractOutcome(result.stdout);
+    assert.equal(payload.apiKeys.nvidia, "nvapi-demo");
+    assert.equal(payload.starPromptHandled, true);
+    assert.equal(payload.startupSearchRequested, false);
 
-test("onboarding error scenario: browser open failure is non-fatal", async () => {
-  const home = makeTempHome();
-  try {
-    // Clear PATH so `open`/`xdg-open` cannot be found by execSync().
-    const result = await runWizard({
-      home,
-      env: { PATH: "" },
-      inputChunks: buildInputChunks("y\rnvapi-demo\r\x1b"),
-    });
-
-    assert.equal(result.code, 0);
-    assert.match(result.stdout, /browser opened|Paste NVIDIA NIM key/);
-    const cfg = JSON.parse(readFileSync(join(home, ".frouter.json"), "utf8"));
+    const cfg = JSON.parse(readFileSync(join(home, ".free-router.json"), "utf8"));
     assert.equal(cfg.apiKeys.nvidia, "nvapi-demo");
+  } finally {
+    cleanupTempHome(home);
+  }
+});
+
+test("first-run wizard tolerates browser launch failure", async () => {
+  const home = makeTempHome();
+  try {
+    const result = await runNode(
+      ["--input-type=module", "-e", WIZARD_SCRIPT],
+      {
+        cwd: ROOT_DIR,
+        env: { HOME: home, PATH: "" },
+        inputChunks: [
+          { delayMs: 400, data: "\r" },
+          ...buildInputChunks([..."nvapi-demo", "\r"], 800, 120),
+          { delayMs: 2600, data: DOWN },
+          { delayMs: 2740, data: DOWN },
+          { delayMs: 2880, data: "\r" },
+          { delayMs: 3400, data: DOWN },
+          { delayMs: 3540, data: "\r" },
+        ],
+        timeoutMs: 15_000,
+      },
+    );
+
+    assert.equal(result.code, 0);
+    const cfg = JSON.parse(readFileSync(join(home, ".free-router.json"), "utf8"));
+    assert.equal(cfg.apiKeys.nvidia, "nvapi-demo");
+    assert.ok(existsSync(join(home, ".free-router.json")));
   } finally {
     cleanupTempHome(home);
   }

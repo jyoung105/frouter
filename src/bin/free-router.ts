@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// src/bin/frouter.ts — frouter main entry: TUI + --best mode
+// src/bin/free-router.ts — free-router main entry: TUI + --best mode
 // Zero dependencies — pure Node.js built-ins
 
 import {
@@ -54,9 +54,10 @@ import {
   WHITE,
   ORANGE,
   BG_SEL,
+  readEnv,
   type Model,
 } from "../lib/utils.js";
-import { spawn, spawnSync } from "node:child_process";
+import { spawnSync } from "node:child_process";
 import { realpathSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { basename, dirname } from "node:path";
@@ -82,11 +83,16 @@ const BG_HDR = "\x1b[48;5;17m";
 const ALT_ON = "\x1b[?1049h";
 const ALT_OFF = "\x1b[?1049l";
 const ALLOW_PLAINTEXT_KEY_EXPORT =
-  process.env.FROUTER_EXPORT_PLAINTEXT_KEYS === "1";
-const FORCE_FRAME_CLEAR = process.env.FROUTER_TUI_FORCE_CLEAR === "1";
+  readEnv(
+    "FREE_ROUTER_EXPORT_PLAINTEXT_KEYS",
+    "FROUTER_EXPORT_PLAINTEXT_KEYS",
+  ) === "1";
+const FORCE_FRAME_CLEAR =
+  readEnv("FREE_ROUTER_TUI_FORCE_CLEAR", "FROUTER_TUI_FORCE_CLEAR") === "1";
 const STRICT_RENDER_AUTH =
   process.env.NODE_ENV === "test" ||
-  process.env.FROUTER_STRICT_RENDER_AUTH === "1";
+  readEnv("FREE_ROUTER_STRICT_RENDER_AUTH", "FROUTER_STRICT_RENDER_AUTH") ===
+    "1";
 
 // ─── Parse CLI args ────────────────────────────────────────────────────────────
 const argv = process.argv.slice(2);
@@ -95,15 +101,15 @@ const HELP = argv.includes("--help") || argv.includes("-h");
 const VERSION = argv.includes("--version") || argv.includes("-v");
 
 if (VERSION) {
-  console.log(`frouter ${PKG_VERSION}`);
+  console.log(`free-router ${PKG_VERSION}`);
   process.exit(0);
 }
 
 if (HELP) {
   console.log(`
-  frouter — Free Model Router
+  free-router — Free Model Router
 
-  Usage: frouter [flags]
+  Usage: free-router [flags]
 
   Flags:
     (none)    Interactive TUI — discover, compare, select
@@ -132,7 +138,11 @@ if (HELP) {
 }
 
 // ─── State ─────────────────────────────────────────────────────────────────────
-let config: FrouterConfig = { apiKeys: {}, providers: {}, ui: { scrollSortPauseMs: 1500 } };
+let config: FrouterConfig = {
+  apiKeys: {},
+  providers: {},
+  ui: { scrollSortPauseMs: 1500 },
+};
 let models: Model[] = [];
 let filtered: Model[] = [];
 let cursor = 0;
@@ -152,7 +162,10 @@ let sKeyBuf = "";
 let sTestRes: Record<string, string> = {};
 let sNotice = "";
 let sAutoOpenedPk = "";
-let pingRef: { running: boolean; timer: ReturnType<typeof setTimeout> | null } | null = null;
+let pingRef: {
+  running: boolean;
+  timer: ReturnType<typeof setTimeout> | null;
+} | null = null;
 let userNavigated = false; // true once user actively moves cursor
 let autoSortPauseUntil = 0;
 const DEFAULT_USER_SCROLL_SORT_PAUSE_MS = 1500;
@@ -244,7 +257,12 @@ function sortArrow(colName: string) {
   return sortAsc ? "▲" : "▼";
 }
 
-function colHdr(label: string, colName: string, width: number, rightAlign = false) {
+function colHdr(
+  label: string,
+  colName: string,
+  width: number,
+  rightAlign = false,
+) {
   const arrow = sortArrow(colName);
   const text = arrow ? `${label}${arrow}` : label;
   return rightAlign ? text.padStart(width) : text.padEnd(width);
@@ -292,12 +310,18 @@ function truncAnsi(s: string, maxVis: number): string {
 }
 
 const STARTUP_PIXEL_TITLE = [
-  "  ███████╗ ██████╗   ██████╗  ██╗   ██╗ ████████╗ ███████╗ ██████╗",
-  "  ██╔════╝ ██╔══██╗ ██╔═══██╗ ██║   ██║ ╚══██╔══╝ ██╔════╝ ██╔══██╗",
-  "  █████╗   ██████╔╝ ██║   ██║ ██║   ██║    ██║    █████╗   ██████╔╝",
-  "  ██╔══╝   ██╔══██╗ ██║   ██║ ██║   ██║    ██║    ██╔══╝   ██╔══██╗",
-  "  ██║      ██║  ██║ ╚██████╔╝ ╚██████╔╝    ██║    ███████╗ ██║  ██║",
-  "  ╚═╝      ╚═╝  ╚═╝  ╚═════╝   ╚═════╝     ╚═╝    ╚══════╝ ╚═╝  ╚═╝",
+  "  ███████╗ ██████╗  ███████╗ ███████╗     ",
+  "  ██╔════╝ ██╔══██╗ ██╔════╝ ██╔════╝     ",
+  "  █████╗   ██████╔╝ █████╗   █████╗   ████",
+  "  ██╔══╝   ██╔══██╗ ██╔══╝   ██╔══╝   ╚══╝",
+  "  ██║      ██║  ██║ ███████╗ ███████╗     ",
+  "  ╚═╝      ╚═╝  ╚═╝ ╚══════╝ ╚══════╝     ",
+  "  ██████╗   ██████╗  ██╗   ██╗ ████████╗ ███████╗ ██████╗",
+  "  ██╔══██╗ ██╔═══██╗ ██║   ██║ ╚══██╔══╝ ██╔════╝ ██╔══██╗",
+  "  ██████╔╝ ██║   ██║ ██║   ██║    ██║    █████╗   ██████╔╝",
+  "  ██╔══██╗ ██║   ██║ ██║   ██║    ██║    ██╔══╝   ██╔══██╗",
+  "  ██║  ██║ ╚██████╔╝ ╚██████╔╝    ██║    ███████╗ ██║  ██║",
+  "  ╚═╝  ╚═╝  ╚═════╝   ╚═════╝     ╚═╝    ╚══════╝ ╚═╝  ╚═╝",
 ];
 
 function startupPixelTitleLines() {
@@ -389,10 +413,26 @@ function renderMain() {
     tierFilter !== "All" ? `${YELLOW}tier:${tierFilter}${R}  ` : "";
   const stats = `${D}${filtered.length}/${models.length} models  ${pingMs / 1000}s${R}`;
 
+  // ── Loading splash — skip all chrome until data is ready ──────────────────
+  const isLoading = filtered.length === 0 && models.length === 0;
+  if (isLoading) {
+    const splashLines = [
+      ...startupPixelTitleLines(),
+      `${D}  FREE-ROUTER · Free Model Router${R}`,
+      `${D}  Loading models…${R}`,
+    ];
+    const topPad = Math.max(0, Math.floor((r - splashLines.length) / 3) - 5);
+    let out = (FORCE_FRAME_CLEAR ? CLEAR : CURSOR_HOME) + HIDEC + "\x1b[J";
+    for (let i = 0; i < topPad; i++) out += "\n";
+    for (const line of splashLines) out += truncAnsi(line, c) + "\n";
+    w(out);
+    return;
+  }
+
   let out = (FORCE_FRAME_CLEAR ? CLEAR : CURSOR_HOME) + HIDEC;
 
   // Header
-  const hdrRaw = `${BG_HDR}${WHITE}${B} frouter ${R}  ${provStatus}${R}`;
+  const hdrRaw = `${BG_HDR}${WHITE}${B} free-router ${R}  ${provStatus}${R}`;
   out += fullWidthLine(hdrRaw) + "\n";
 
   // Search + stats bar
@@ -409,17 +449,7 @@ function renderMain() {
     w(out);
     return;
   }
-  const isLoading = filtered.length === 0 && models.length === 0;
-  if (isLoading) {
-    const loadingLines = [
-      ...startupPixelTitleLines(),
-      `${D}  FROUTER · Free Model Router${R}`,
-      `${D}  Loading models…${R}`,
-    ];
-    for (let i = 0; i < tr; i++) {
-      out += truncAnsi(loadingLines[i] ?? "", c) + "\n";
-    }
-  } else {
+  {
     const showSearchPixelTitle =
       searchMode &&
       !searchTabScrolled &&
@@ -495,7 +525,7 @@ function renderHelp() {
   w(
     CLEAR +
       HIDEC +
-      `${BG_HDR}${WHITE}${B} frouter — Keyboard Reference ${R}\n\n` +
+      `${BG_HDR}${WHITE}${B} free-router — Keyboard Reference ${R}\n\n` +
       `${B}  Navigation${R}\n` +
       `  ↑ / k       Move up\n` +
       `  ↓ / j       Move down\n` +
@@ -527,7 +557,7 @@ function maskKey(key: string) {
 
 function renderSettings() {
   let out = CLEAR + HIDEC;
-  out += `${BG_HDR}${WHITE}${B} frouter Settings ${R}\n\n`;
+  out += `${BG_HDR}${WHITE}${B} free-router Settings ${R}\n\n`;
 
   const pks = Object.keys(PROVIDERS_META);
   for (let i = 0; i < pks.length; i++) {
@@ -596,7 +626,7 @@ const ALLOWED_RENDER_REASONS = new Set([
 function renderWithAuthority(reason: string) {
   if (!ALLOWED_RENDER_REASONS.has(reason)) {
     renderAuthorityViolations++;
-    const msg = `[frouter] non-authoritative render attempt: ${reason}\n`;
+    const msg = `[free-router] non-authoritative render attempt: ${reason}\n`;
     if (STRICT_RENDER_AUTH) throw new Error(msg.trim());
     process.stderr.write(msg);
   }
@@ -643,9 +673,8 @@ function clampCursor(next: number) {
 function resolveUserScrollSortPauseMs(cfg: FrouterConfig): number {
   // Env overrides config so users can tune behavior per terminal/session.
   const raw =
-    process.env.FROUTER_SCROLL_SORT_PAUSE_MS != null
-      ? process.env.FROUTER_SCROLL_SORT_PAUSE_MS
-      : cfg?.ui?.scrollSortPauseMs;
+    readEnv("FREE_ROUTER_SCROLL_SORT_PAUSE_MS", "FROUTER_SCROLL_SORT_PAUSE_MS") ??
+    cfg?.ui?.scrollSortPauseMs;
   if (raw == null || raw === "") return DEFAULT_USER_SCROLL_SORT_PAUSE_MS;
   const parsed = Number(raw);
   if (!Number.isFinite(parsed) || parsed < 0) {
@@ -683,8 +712,10 @@ function enterSearchMode() {
 }
 
 function consumeStartupSearchRequestFromEnv(): boolean {
-  const requested = process.env[OPEN_SEARCH_ON_START_ENV] === "1";
+  const requested =
+    readEnv(OPEN_SEARCH_ON_START_ENV, LEGACY_OPEN_SEARCH_ON_START_ENV) === "1";
   delete process.env[OPEN_SEARCH_ON_START_ENV];
+  delete process.env[LEGACY_OPEN_SEARCH_ON_START_ENV];
   return requested;
 }
 
@@ -728,11 +759,8 @@ async function launchOpenCodeDirect() {
     return;
   }
 
-  const {
-    openCodeModel,
-    openCodePk,
-    openCodeApiKey,
-  } = resolveOpenCodeApplySelection(selModel);
+  const { openCodeModel, openCodePk, openCodeApiKey } =
+    resolveOpenCodeApplySelection(selModel);
 
   let launch = true;
 
@@ -822,7 +850,7 @@ function buildOpenCodeLaunchEnv(providerKey: string, apiKey: string | null) {
     launchEnv[envVar] = apiKey;
   }
   // Prevent oh-my-opencode startup auto-update/install logs from polluting
-  // the interactive OpenCode TUI launched by frouter.
+  // the interactive OpenCode TUI launched by free-router.
   if (launchEnv.OPENCODE_CLI_RUN_MODE == null) {
     launchEnv.OPENCODE_CLI_RUN_MODE = "true";
   }
@@ -1284,7 +1312,10 @@ async function refreshModels() {
     const existing = byKey.get(modelKey(m));
     if (!existing) return m;
     const preserved: Partial<Model> = {};
-    for (const k of PING_STATE_KEYS) (preserved as Record<string, unknown>)[k] = (existing as Record<string, unknown>)[k];
+    for (const k of PING_STATE_KEYS)
+      (preserved as Record<string, unknown>)[k] = (
+        existing as Record<string, unknown>
+      )[k];
     return { ...m, ...preserved };
   });
   applyFilters();
@@ -1359,12 +1390,14 @@ function restoreAfterInkSubApp(returnScreen = "main") {
 
 // ─── Update check ────────────────────────────────────────────────────────────
 const REGISTRY_URL =
-  process.env.FROUTER_REGISTRY_URL ||
-  "https://registry.npmjs.org/frouter-cli/latest";
-const UPDATE_SKIP_ONCE_ENV = "FROUTER_SKIP_UPDATE_ONCE";
-const OPEN_SEARCH_ON_START_ENV = "FROUTER_OPEN_SEARCH_ON_START";
-const UPDATE_PACKAGE_NAME = "frouter-cli";
-const GITHUB_REPO_URL = "https://github.com/jyoung105/frouter";
+  readEnv("FREE_ROUTER_REGISTRY_URL", "FROUTER_REGISTRY_URL") ||
+  "https://registry.npmjs.org/free-router/latest";
+const UPDATE_SKIP_ONCE_ENV = "FREE_ROUTER_SKIP_UPDATE_ONCE";
+const LEGACY_UPDATE_SKIP_ONCE_ENV = "FROUTER_SKIP_UPDATE_ONCE";
+const OPEN_SEARCH_ON_START_ENV = "FREE_ROUTER_OPEN_SEARCH_ON_START";
+const LEGACY_OPEN_SEARCH_ON_START_ENV = "FROUTER_OPEN_SEARCH_ON_START";
+const UPDATE_PACKAGE_NAME = "free-router";
+const GITHUB_REPO_URL = "https://github.com/jyoung105/free-router";
 
 type UpdateInstallCommand = {
   bin: string;
@@ -1446,17 +1479,6 @@ function promptYesNo(question: string, defaultValue = false): Promise<boolean> {
 
 function promptGithubStarSupport(): Promise<boolean> {
   return promptYesNo(`${D}  Support for github star: [Y/n] ${R}`, true);
-}
-
-const UPDATE_BAR_WIDTH = 24;
-
-function renderUpdateProgress(percent: number): void {
-  const pct = Math.max(0, Math.min(100, Math.round(percent)));
-  const filled = Math.round((pct / 100) * UPDATE_BAR_WIDTH);
-  const bar = `${"█".repeat(filled)}${"░".repeat(Math.max(0, UPDATE_BAR_WIDTH - filled))}`;
-  process.stdout.write(
-    `\r${D}  Updating frouter-cli [${bar}] ${String(pct).padStart(3)}%${R}`,
-  );
 }
 
 function readHighestPercent(text: string): number | null {
@@ -1568,107 +1590,80 @@ function restartAfterUpdate(extraEnv: NodeJS.ProcessEnv = {}): boolean {
   process.exit(restarted.status ?? 0);
 }
 
-async function runGlobalUpdate(
-  command: UpdateInstallCommand,
-): Promise<boolean> {
+async function runUpdateApp(
+  latest: string,
+): Promise<"skipped" | "updated" | "failed"> {
+  const [{ render }, React, { UpdateApp }] = await Promise.all([
+    import("ink"),
+    import("react"),
+    import("../tui/UpdateApp.js"),
+  ]);
+
   return new Promise((resolve) => {
-    let done = false;
-    let progress = 0;
-
-    function finish(ok: boolean) {
-      if (done) return;
-      done = true;
-      process.stdout.write("\n");
-      resolve(ok);
-    }
-
-    function setProgress(next: number) {
-      const pct = Math.max(progress, Math.min(100, Math.round(next)));
-      if (pct === progress) return;
-      progress = pct;
-      renderUpdateProgress(progress);
-    }
-
-    renderUpdateProgress(progress);
-
-    const child = spawn(command.bin, command.args, {
-      stdio: ["ignore", "pipe", "pipe"],
-      env: Object.fromEntries(
-        Object.entries(process.env).filter(
-          ([k]) => !k.toLowerCase().startsWith("npm_"),
-        ),
-      ),
+    let resolved = false;
+    const element = React.createElement(UpdateApp, {
+      currentVersion: PKG_VERSION,
+      latestVersion: latest,
+      detectInstallCommand: detectUpdateInstallCommand,
+      readHighestPercent,
+      onDone: (result: "skipped" | "updated" | "failed") => {
+        if (resolved) return;
+        resolved = true;
+        instance.unmount();
+        resolve(result);
+      },
     });
-
-    const fallback = setInterval(() => {
-      if (progress < 95) setProgress(progress + 1);
-    }, 120);
-
-    const onChunk = (chunk: string | Buffer) => {
-      const highest = readHighestPercent(String(chunk));
-      if (highest != null) setProgress(Math.min(highest, 99));
-    };
-
-    child.stdout?.on("data", onChunk);
-    child.stderr?.on("data", onChunk);
-
-    child.on("error", () => {
-      clearInterval(fallback);
-      finish(false);
-    });
-
-    child.on("close", (code) => {
-      clearInterval(fallback);
-      if (code === 0) {
-        setProgress(100);
-        finish(true);
-        return;
-      }
-      finish(false);
-    });
+    const instance = render(element, { exitOnCtrlC: false });
   });
 }
 
 async function checkForUpdate(): Promise<void> {
-  if (process.env[UPDATE_SKIP_ONCE_ENV] === "1") return;
+  if (readEnv(UPDATE_SKIP_ONCE_ENV, LEGACY_UPDATE_SKIP_ONCE_ENV) === "1") return;
 
   const latest = await fetchLatestVersion();
   if (!latest || !isStrictlyNewerVersion(PKG_VERSION, latest)) return;
 
-  process.stdout.write(
-    `\n${YELLOW}  Update available: ${D}${PKG_VERSION}${R} \u2192 ${GREEN}${latest}${R}\n`,
-  );
+  if (!detectUpdateInstallCommand()) {
+    process.stdout.write(
+      `\n${YELLOW}  Update available: ${D}${PKG_VERSION}${R} \u2192 ${GREEN}${latest}${R}${D} (no supported updater)${R}\n\n`,
+    );
+    return;
+  }
 
-  const yes = await promptYesNo(`${D}  Update now? (Y/n, default: n): ${R}`);
-  if (!yes) {
+  if (!process.stdin.isTTY) {
+    process.stdout.write(
+      `\n${YELLOW}  Update available: ${D}${PKG_VERSION}${R} \u2192 ${GREEN}${latest}${R}${D} (run interactively to update)${R}\n\n`,
+    );
+    return;
+  }
+
+  const result = await runUpdateApp(latest);
+  if (result === "skipped") {
     process.stdout.write(`${D}  Skipped update.${R}\n\n`);
     return;
   }
-  try {
-    const command = detectUpdateInstallCommand();
-    if (!command) throw new Error("no supported updater");
-    const ok = await runGlobalUpdate(command);
-    if (!ok) throw new Error("update command failed");
-    if (!starPromptHandledThisLaunch) {
-      const support = await promptGithubStarSupport();
-      if (support) handleGithubStarAccepted();
-      else handleGithubStarDeclined();
-    }
+  if (result === "failed") {
     process.stdout.write(
-      `${GREEN}  \u2713 Updated to ${latest}. Restarting frouter now...${R}\n\n`,
+      `${RED}  \u2717 Update failed. Run manually: npm install -g free-router${R}\n${D}    (or: bun install -g free-router)${R}\n\n`,
     );
-    const restartEnv = startupSearchRequestedThisLaunch
-      ? { [OPEN_SEARCH_ON_START_ENV]: "1" }
-      : {};
-    if (restartAfterUpdate(restartEnv)) return;
-    process.stdout.write(
-      `${YELLOW}  ! Update finished, but restart failed. Run frouter manually to use ${latest}.${R}\n\n`,
-    );
-  } catch {
-    process.stdout.write(
-      `${RED}  \u2717 Update failed. Run manually: npm install -g frouter-cli${R}\n${D}    (or: bun install -g frouter-cli)${R}\n\n`,
-    );
+    return;
   }
+
+  if (!starPromptHandledThisLaunch) {
+    const support = await promptGithubStarSupport();
+    if (support) handleGithubStarAccepted();
+    else handleGithubStarDeclined();
+  }
+  process.stdout.write(
+    `${GREEN}  \u2713 Updated to ${latest}. Restarting free-router now...${R}\n\n`,
+  );
+  const restartEnv = startupSearchRequestedThisLaunch
+    ? { [OPEN_SEARCH_ON_START_ENV]: "1" }
+    : {};
+  if (restartAfterUpdate(restartEnv)) return;
+  process.stdout.write(
+    `${YELLOW}  ! Update finished, but restart failed. Run free-router manually to use ${latest}.${R}\n\n`,
+  );
 }
 
 // ─── Cleanup ───────────────────────────────────────────────────────────────────
@@ -1677,7 +1672,7 @@ function cleanup() {
   destroyAgents();
   if (renderAuthorityViolations > 0) {
     process.stderr.write(
-      `[frouter] render authority violations: ${renderAuthorityViolations}\n`,
+      `[free-router] render authority violations: ${renderAuthorityViolations}\n`,
     );
   }
   w(SHOWC + ALT_OFF);
@@ -1698,7 +1693,7 @@ async function runBest() {
   );
   if (!hasKeys) {
     process.stderr.write(
-      "No API keys configured. Run `frouter` to set up keys.\n",
+      "No API keys configured. Run `free-router` to set up keys.\n",
     );
     process.exit(1);
   }
@@ -1751,21 +1746,16 @@ async function main() {
   userScrollSortPauseMs = resolveUserScrollSortPauseMs(config);
 
   if (!Object.keys(config.apiKeys || {}).length && process.stdin.isTTY) {
-    config = await runFirstRunWizard(config);
-    if (
-      Object.keys(config.apiKeys || {}).length &&
-      !starPromptHandledThisLaunch
-    ) {
-      const support = await promptGithubStarSupport();
-      if (support) handleGithubStarAccepted();
-      else handleGithubStarDeclined();
-    }
+    const outcome = await runFirstRunWizard(config);
+    config = outcome.config;
+    if (outcome.starPromptHandled) starPromptHandledThisLaunch = true;
+    if (outcome.startupSearchRequested) startupSearchRequestedThisLaunch = true;
   }
 
   await checkForUpdate();
 
   if (!process.stdin.isTTY) {
-    process.stderr.write("frouter requires an interactive terminal.\n");
+    process.stderr.write("free-router requires an interactive terminal.\n");
     process.exit(1);
   }
 

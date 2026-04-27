@@ -1,8 +1,17 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { createHttpServer } from "../helpers/mock-http.js";
-import { ping, startPingLoop as startPingLoopImpl, stopPingLoop } from "../../lib/ping.js";
-const startPingLoop = startPingLoopImpl as (models: any[], config: any, intervalMs: number, onUpdate: () => void) => any;
+import {
+  ping,
+  startPingLoop as startPingLoopImpl,
+  stopPingLoop,
+} from "../../lib/ping.js";
+const startPingLoop = startPingLoopImpl as (
+  models: any[],
+  config: any,
+  intervalMs: number,
+  onUpdate: () => void,
+) => any;
 
 // ─── ping timeout scenario ───────────────────────────────────────────────────
 

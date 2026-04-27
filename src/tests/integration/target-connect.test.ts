@@ -186,7 +186,7 @@ exit 0
         env: {
           HOME: home,
           PATH: `${fakeBin}:${process.env.PATH ?? ""}`,
-          FROUTER_NO_FETCH: "1",
+          FREE_ROUTER_NO_FETCH: "1",
           NVIDIA_API_KEY: "",
           OPENROUTER_API_KEY: "",
         },

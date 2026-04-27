@@ -5,7 +5,10 @@ import { performance } from "node:perf_hooks";
 import { createHttpServer } from "../helpers/mock-http.js";
 import { PROVIDERS_META } from "../../lib/config.js";
 import { pingAllOnce as pingAllOnceImpl } from "../../lib/ping.js";
-const pingAllOnce = pingAllOnceImpl as (models: any[], config: any) => Promise<void>;
+const pingAllOnce = pingAllOnceImpl as (
+  models: any[],
+  config: any,
+) => Promise<void>;
 
 function makePendingModels(count: number) {
   return Array.from({ length: count }, (_, i) => ({

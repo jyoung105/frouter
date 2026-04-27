@@ -1,0 +1,31 @@
+{
+  "name": "frouter",
+  "version": "1.2.0",
+  "description": "DEPRECATED — renamed to free-router. This shim re-execs free-router for backward compatibility.",
+  "type": "module",
+  "bin": {
+    "frouter": "bin.js"
+  },
+  "dependencies": {
+    "free-router": "^1.2.0"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "files": [
+    "bin.js",
+    "README.md"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jyoung105/free-router.git"
+  },
+  "homepage": "https://github.com/jyoung105/free-router#readme",
+  "author": "Tony Lee",
+  "license": "MIT",
+  "keywords": [
+    "deprecated",
+    "free-router",
+    "frouter"
+  ]
+}

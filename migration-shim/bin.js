@@ -14,17 +14,17 @@ const DIM = "\x1b[2m";
 process.stderr.write(
   `\n${YELLOW}  frouter has been renamed to ${BOLD}free-router${RESET}${YELLOW}.\n` +
     `  This shim is forwarding to free-router for backward compatibility.\n` +
-    `  Migrate with: ${BOLD}npm install -g free-router${RESET}${YELLOW} ` +
-    `(or: ${BOLD}bun install -g free-router${RESET}${YELLOW})${RESET}\n\n`,
+    `  Migrate with: ${BOLD}npm install -g @jyoung105/free-router${RESET}${YELLOW} ` +
+    `(or: ${BOLD}bun install -g @jyoung105/free-router${RESET}${YELLOW})${RESET}\n\n`,
 );
 
 const require = createRequire(import.meta.url);
 let freeRouterBin;
 try {
-  freeRouterBin = require.resolve("free-router/dist/bin/free-router.js");
+  freeRouterBin = require.resolve("@jyoung105/free-router/dist/bin/free-router.js");
 } catch (err) {
   process.stderr.write(
-    `\x1b[31m  Failed to locate free-router. Reinstall manually: npm install -g free-router${RESET}\n`,
+    `\x1b[31m  Failed to locate free-router. Reinstall manually: npm install -g @jyoung105/free-router${RESET}\n`,
   );
   process.stderr.write(`${DIM}  ${err && err.message ? err.message : String(err)}${RESET}\n`);
   process.exit(1);

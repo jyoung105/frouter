@@ -1391,12 +1391,12 @@ function restoreAfterInkSubApp(returnScreen = "main") {
 // ─── Update check ────────────────────────────────────────────────────────────
 const REGISTRY_URL =
   readEnv("FREE_ROUTER_REGISTRY_URL", "FROUTER_REGISTRY_URL") ||
-  "https://registry.npmjs.org/free-router/latest";
+  "https://registry.npmjs.org/@jyoung105%2ffree-router/latest";
 const UPDATE_SKIP_ONCE_ENV = "FREE_ROUTER_SKIP_UPDATE_ONCE";
 const LEGACY_UPDATE_SKIP_ONCE_ENV = "FROUTER_SKIP_UPDATE_ONCE";
 const OPEN_SEARCH_ON_START_ENV = "FREE_ROUTER_OPEN_SEARCH_ON_START";
 const LEGACY_OPEN_SEARCH_ON_START_ENV = "FROUTER_OPEN_SEARCH_ON_START";
-const UPDATE_PACKAGE_NAME = "free-router";
+const UPDATE_PACKAGE_NAME = "@jyoung105/free-router";
 const GITHUB_REPO_URL = "https://github.com/jyoung105/free-router";
 
 type UpdateInstallCommand = {

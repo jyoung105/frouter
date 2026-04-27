@@ -7,7 +7,7 @@
     "frouter": "bin.js"
   },
   "dependencies": {
-    "free-router": "^1.2.0"
+    "@jyoung105/free-router": "^1.2.0"
   },
   "engines": {
     "node": ">=22.0.0"

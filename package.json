@@ -48,6 +48,7 @@
   "license": "MIT",
   "dependencies": {
     "ink": "^7.0.1",
+    "ora": "^9.4.0",
     "react": "^19.2.5"
   },
   "devDependencies": {

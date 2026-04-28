@@ -64,6 +64,7 @@ import { fileURLToPath } from "node:url";
 import { basename, dirname } from "node:path";
 import { get as httpsGet } from "node:https";
 import { get as httpGet } from "node:http";
+import ora from "ora";
 
 import { createRequire } from "node:module";
 
@@ -182,6 +183,8 @@ let userScrollSortPauseMs = DEFAULT_USER_SCROLL_SORT_PAUSE_MS;
 let renderAuthorityViolations = 0;
 let starPromptHandledThisLaunch = false;
 let startupSearchRequestedThisLaunch = false;
+const choiceSpinner = ora({ spinner: "dots", color: false, isEnabled: false });
+let choiceSpinnerTimer: ReturnType<typeof setInterval> | null = null;
 
 // ─── Geometry ──────────────────────────────────────────────────────────────────
 const DEFAULT_COLS = 80;
@@ -419,6 +422,10 @@ function tableRowLine(
   return tableLine(cells);
 }
 
+function selectedRankMarker(rankText: string): string {
+  return `${YELLOW}${B}${choiceSpinner.frame().trimEnd()} ${rankText}${R}`;
+}
+
 // Truncate a string with ANSI codes to at most `maxVis` visible columns.
 // Preserves escape sequences but stops emitting visible chars once the limit is reached.
 // Emoji are treated as 2 columns wide to prevent terminal line wrapping.
@@ -616,7 +623,7 @@ function renderMain() {
       const idx = scrollOff + i;
       const isSel = idx === cursor;
       const rankText = String(idx + 1).padStart(3);
-      const rank = isSel ? `${YELLOW}${B}${rankText}${R}` : rankText;
+      const rank = isSel ? selectedRankMarker(rankText) : `  ${rankText}`;
       const tier = tierColor(m.tier) + (m.tier || "?") + R;
       const prov = m.providerKey === "nvidia" ? "NIM" : "OpenRouter";
       const name = m.displayName || m.id;
@@ -764,6 +771,7 @@ const ALLOWED_RENDER_REASONS = new Set([
   "refresh-complete",
   "onPingTick",
   "round-complete",
+  "selection-spinner",
   "timed-return",
   "throttled",
 ]);
@@ -1500,6 +1508,21 @@ function restartLoop() {
   );
 }
 
+function startChoiceSpinnerLoop() {
+  if (choiceSpinnerTimer) return;
+  choiceSpinnerTimer = setInterval(() => {
+    if (screen === "main" && filtered.length > 0) {
+      renderWithAuthority("selection-spinner");
+    }
+  }, choiceSpinner.interval);
+}
+
+function stopChoiceSpinnerLoop() {
+  if (!choiceSpinnerTimer) return;
+  clearInterval(choiceSpinnerTimer);
+  choiceSpinnerTimer = null;
+}
+
 // ─── Ink sub-app lifecycle helpers ─────────────────────────────────────────────
 // Used by runInkSubApp hooks to safely transition between raw ANSI and Ink rendering.
 
@@ -1515,6 +1538,7 @@ function prepareForInkSubApp() {
     _renderTimer = null;
   }
   screen = "ink-subapp";
+  stopChoiceSpinnerLoop();
   stopPingLoop(pingRef);
   // Don't change raw mode — the harness manages stdin via a proxy stream.
   w(ALT_OFF + SHOWC);
@@ -1534,6 +1558,7 @@ function restoreAfterInkSubApp(returnScreen = "main") {
   process.stdin.on("data", onData);
   process.stdin.resume();
   screen = returnScreen;
+  if (returnScreen === "main") startChoiceSpinnerLoop();
   renderWithAuthority("settings-exit");
 }
 
@@ -1817,6 +1842,7 @@ async function checkForUpdate(): Promise<void> {
 
 // ─── Cleanup ───────────────────────────────────────────────────────────────────
 function cleanup() {
+  stopChoiceSpinnerLoop();
   stopPingLoop(pingRef);
   destroyAgents();
   if (renderAuthorityViolations > 0) {
@@ -1913,6 +1939,7 @@ async function main() {
   process.stdin.resume();
   process.stdin.setEncoding("utf8");
   process.stdin.on("data", onData);
+  startChoiceSpinnerLoop();
 
   const onSignal = () => {
     cleanup();

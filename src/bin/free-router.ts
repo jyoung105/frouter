@@ -528,9 +528,8 @@ function renderSearchLines(stats: string, tierBar: string): string[] {
   const input = searchMode
     ? `${CYAN}/${searchQuery}_${R}`
     : `${GRAY}Press / to search models${R}`;
-  const hint = searchMode ? "ESC clear  Enter apply" : "/ start";
   const searchField = `${BG_SEARCH}${WHITE}${B} Model Search ${R} ${input}`;
-  const right = `${tierBar}${stats}  ${D}${hint}${R}`;
+  const right = `${tierBar}${stats}`;
   return blockWidthLines(searchField, right, `${WHITE}${B}`);
 }
 
@@ -554,7 +553,7 @@ function renderMain() {
 
   const tierBar =
     tierFilter !== "All" ? `${YELLOW}tier:${tierFilter}${R}  ` : "";
-  const stats = `${D}${filtered.length}/${models.length} models  ${pingMs / 1000}s${R}`;
+  const stats = `${D}${filtered.length}/${models.length} models${R}`;
 
   // ── Loading splash — skip all chrome until data is ready ──────────────────
   const isLoading = filtered.length === 0 && models.length === 0;

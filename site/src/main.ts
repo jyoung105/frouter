@@ -96,7 +96,7 @@ const I18N: Record<string, Record<string, string>> = {
     "install.globalBody": "내 머신에 고정 설치",
     "models.label": "모델",
     "models.lede":
-      "라우터가 지금 닿을 수 있는 모든 무료 모델. 공개 벤치마크 신호로 정렬되었습니다.",
+      "라우터가 지금 닿을 수 있는 모든 무료 모델. 공개 벤치마크 점수로 정렬했습니다.",
   },
 };
 

@@ -7,7 +7,7 @@
 
 Free model router CLI - discover, ping, and configure free AI models for OpenCode / OpenClaw.
 
-![free-router-gif](./public/example.gif)
+![free-router terminal demo](./public/example.gif)
 
 ## Install
 

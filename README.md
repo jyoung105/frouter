@@ -68,6 +68,7 @@ FREE_ROUTER_METRICS_CACHE=0 free-router
 ## TUI
 
 The interactive TUI pings all models in parallel every 2 seconds and shows live latency, uptime, and verdict.
+The selected row uses a stable marker, and redraws are deferred while the terminal is unfocused to avoid background-tab blinking.
 
 ### Columns
 
@@ -91,6 +92,10 @@ Search bar provider badges:
 - `Name:✓` key exists and looks healthy
 - `Name:✗` provider appears expired/no-auth
 - `Name:○` key missing
+
+The `?` help overlay and `A` API-key editor use the same terminal header/footer
+chrome as the main list. Their mode tags stay left-aligned, and help body text
+uses the same foreground color as the table rows.
 
 ### Keyboard shortcuts
 

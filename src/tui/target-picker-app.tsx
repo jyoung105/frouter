@@ -4,7 +4,7 @@
 
 import { useState } from "react";
 import { Text, Box, useInput } from "ink";
-import { Select, StatusMessage } from "@inkjs/ui";
+import { Select, StatusMessage } from "./primitives.js";
 
 type Target = { id: string; label: string; path: string; enabled: boolean };
 

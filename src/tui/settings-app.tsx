@@ -3,7 +3,7 @@
 
 import { useState, useRef } from "react";
 import { Text, Box, useInput } from "ink";
-import { PasswordInput, StatusMessage } from "@inkjs/ui";
+import { PasswordInput, StatusMessage } from "./primitives.js";
 import { useMountEffect } from "./useMountEffect.js";
 import type { FrouterConfig } from "../lib/config.js";
 
@@ -256,6 +256,10 @@ export function SettingsApp({
             <PasswordInput
               placeholder={currentMeta.keyPrefix ? `${currentMeta.keyPrefix}...` : "paste key here"}
               onSubmit={handleKeySave}
+              onCancel={() => {
+                setMode("navigate");
+                setNotice(null);
+              }}
             />
             <Text dimColor>Enter to save, Esc to cancel</Text>
           </Box>

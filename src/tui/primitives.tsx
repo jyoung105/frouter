@@ -40,9 +40,11 @@ export function Select({
 export function PasswordInput({
   placeholder,
   onSubmit,
+  onCancel,
 }: {
   placeholder?: string;
   onSubmit: (value: string) => void;
+  onCancel?: () => void;
 }) {
   const [buf, setBuf] = useState("");
 
@@ -52,7 +54,8 @@ export function PasswordInput({
       return;
     }
     if (key.escape) {
-      onSubmit("");
+      if (onCancel) onCancel();
+      else onSubmit("");
       return;
     }
     if (key.backspace || key.delete) {

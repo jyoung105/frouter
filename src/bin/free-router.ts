@@ -193,7 +193,7 @@ const DEFAULT_COLS = 80;
 const DEFAULT_ROWS = 12;
 const MIN_COLS = 40;
 const MIN_ROWS = 8;
-const BASE_CHROME_ROWS = 8;
+const BASE_CHROME_ROWS = 9;
 
 function envSize(name: string): number | null {
   const raw = process.env[name];
@@ -246,7 +246,7 @@ function viewport() {
 const cols = () => viewport().c;
 const rows = () => viewport().r;
 // All lines are truncated to terminal width so nothing wraps.
-// Chrome: provider tag row + search block(3) + header/separator/detail/footer = 8 lines
+// Chrome: provider tag row + search block(3) + header/separator/detail/footer(2) = 9 lines
 const mainChromeRows = () => BASE_CHROME_ROWS + (topAlertLine() ? 1 : 0);
 const tRows = () => Math.max(0, rows() - mainChromeRows());
 const WRAP_GUARD_COLS = 1;
@@ -550,6 +550,47 @@ function renderSelectedModelLine(): string {
   return fullWidthLine(`${D} Selected: ${fullId}${sweStr}${ctxStr}${R}`);
 }
 
+function footerKey(key: string, label: string): string {
+  return `${CYAN}${B}${key}${R}${D} ${label}${R}`;
+}
+
+function renderFooterLines(): string[] {
+  const width = cols();
+  if (width < 72) {
+    return [
+      fullWidthBar(
+        ` ${footerKey("Enter", "open")}  ${footerKey("/", "search")}  ${footerKey("A", "key")}  ${footerKey("P", "cfg")}  ${footerKey("?", "help")}  ${footerKey("q", "quit")} `,
+        BG_TABLE_HDR,
+      ),
+      fullWidthLine(`${D} ↑↓/jk nav   T tier   0-9 sort${R}`, true),
+    ];
+  }
+
+  if (width < 96) {
+    return [
+      fullWidthBar(
+        ` ${footerKey("Enter", "open")}  ${footerKey("/", "search")}  ${footerKey("A", "api key")}  ${footerKey("P", "settings")}  ${footerKey("?", "help")}  ${footerKey("q", "quit")} `,
+        BG_TABLE_HDR,
+      ),
+      fullWidthLine(
+        `${D} ↑↓/jk nav   PgUp/PgDn page   T tier   0-9 sort${R}`,
+        true,
+      ),
+    ];
+  }
+
+  return [
+    fullWidthBar(
+      ` ${footerKey("Enter", "open opencode")}  ${footerKey("/", "search models")}  ${footerKey("A", "api key")}  ${footerKey("P", "settings")}  ${footerKey("?", "help")}  ${footerKey("q", "quit")} `,
+      BG_TABLE_HDR,
+    ),
+    fullWidthLine(
+      `${D} ↑↓/jk navigate   PgUp/PgDn page   T tier filter   0-9 sort columns   W/X ping interval${R}`,
+      true,
+    ),
+  ];
+}
+
 // ─── Main TUI ──────────────────────────────────────────────────────────────────
 function renderMain() {
   const { c, r } = viewport();
@@ -662,8 +703,7 @@ function renderMain() {
   } // end if (!isLoading)
 
   // Footer
-  const footer = ` ↑↓/jk:nav  /:focus model search  Enter:open opencode  A:api key  P:settings  T:tier  ?:help  0-9:sort  q:quit `;
-  out += fullWidthBar(footer, INVERT, true);
+  out += renderFooterLines().join("\n");
   w(out);
 }
 

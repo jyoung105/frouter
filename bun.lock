@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "free-router",
+      "name": "@bytonylee/free-router",
       "dependencies": {
         "@inkjs/ui": "^2.0.0",
         "ink": "^7.0.0",

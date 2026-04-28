@@ -27,7 +27,7 @@ export type FirstRunAppProps = {
 
 type Step = "choose" | "input" | "starConfirm" | "saving";
 
-const GITHUB_REPO_URL = "https://github.com/jyoung105/free-router";
+const GITHUB_REPO_URL = "https://github.com/bytonylee/free-router";
 
 export function FirstRunApp({
   providers,

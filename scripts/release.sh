@@ -290,7 +290,7 @@ create_tag() {
   fi
 
   echo
-  echo "Release workflow monitor: https://github.com/jyoung105/free-router/actions"
+  echo "Release workflow monitor: https://github.com/bytonylee/free-router/actions"
 }
 
 main() {

@@ -1,5 +1,5 @@
 {
-  "name": "@jyoung105/free-router",
+  "name": "@bytonylee/free-router",
   "version": "1.2.0",
   "description": "Free model router — discover, ping, and configure free AI models for OpenCode / OpenClaw",
   "bin": {
@@ -28,9 +28,9 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/jyoung105/free-router.git"
+    "url": "git+https://github.com/bytonylee/free-router.git"
   },
-  "homepage": "https://github.com/jyoung105/free-router#readme",
+  "homepage": "https://github.com/bytonylee/free-router#readme",
   "author": "Tony Lee",
   "keywords": [
     "ai",

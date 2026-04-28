@@ -1596,7 +1596,7 @@ async function runUpdateApp(
   const [{ render }, React, { UpdateApp }] = await Promise.all([
     import("ink"),
     import("react"),
-    import("../tui/UpdateApp.js"),
+    import("../tui/update-app.js"),
   ]);
 
   return new Promise((resolve) => {

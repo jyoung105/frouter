@@ -10,7 +10,10 @@ import { readEnv, type Model } from "./utils.js";
 // ─── model-rankings.json lookup ────────────────────────────────────────────────
 
 type RankingEntry = {
+  source?: string;
   model_id: string;
+  name?: string;
+  context?: string;
   aa_slug?: string;
   swe_bench?: string;
   tier?: string;
@@ -21,16 +24,19 @@ type RankingEntry = {
 
 let _byId: Map<string, RankingEntry> | null = null;
 let _bySlug: Map<string, RankingEntry> | null = null;
+let _allRankings: RankingEntry[] | null = null;
 let _getAllModelsCallCount = 0;
 
 function loadRankings(): void {
   if (_byId) return;
   _byId = new Map();
   _bySlug = new Map();
+  _allRankings = [];
   try {
     const __dir = dirname(fileURLToPath(import.meta.url));
     const raw = readFileSync(join(__dir, "..", "model-rankings.json"), "utf8");
     for (const m of JSON.parse(raw).models) {
+      _allRankings.push(m);
       const bare = m.model_id.replace(":free", "");
       _byId.set(m.model_id, m);
       _byId.set(bare, m);
@@ -41,6 +47,40 @@ function loadRankings(): void {
   } catch {
     /* rankings file missing or malformed — degrade gracefully */
   }
+}
+
+function parseContextString(value: string | undefined): number {
+  if (!value) return 32768;
+  const trimmed = value.trim().toLowerCase();
+  if (!trimmed) return 32768;
+
+  if (trimmed.endsWith("m")) {
+    const parsed = Number.parseFloat(trimmed.slice(0, -1));
+    return Number.isFinite(parsed) ? Math.round(parsed * 1_000_000) : 32768;
+  }
+
+  if (trimmed.endsWith("k")) {
+    const parsed = Number.parseFloat(trimmed.slice(0, -1));
+    return Number.isFinite(parsed) ? Math.round(parsed * 1_000) : 32768;
+  }
+
+  const parsed = Number.parseInt(trimmed, 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 32768;
+}
+
+function getRankingsBySource(source: string): RankingEntry[] {
+  loadRankings();
+  return (_allRankings || []).filter((entry) => entry.source === source);
+}
+
+function titleFromModelId(id: string): string {
+  return (
+    id
+      .split("/")
+      .pop()
+      ?.replace(/-/g, " ")
+      .replace(/\b\w/g, (c) => c.toUpperCase()) || id
+  );
 }
 
 /** Derive a slug-like key from a model ID for fuzzy matching. */
@@ -150,13 +190,28 @@ function applyTestDrops(models: Model[]): Model[] {
 }
 
 // ─── NVIDIA NIM hardcoded model list ─────────────────────────────────────────
-// Full list of free chat/instruct models from https://integrate.api.nvidia.com/v1/models
+// Prefer the synced rankings file as the canonical catalog so the terminal and
+// site stay aligned. Fall back to the legacy hardcoded list if rankings are
+// unavailable.
 let _nimModelsCache: ReturnType<typeof makeModel>[] | null = null;
 function getNimModels() {
   if (!_nimModelsCache) _nimModelsCache = _buildNimModels();
   return _nimModelsCache;
 }
 function _buildNimModels() {
+  const rankedNimModels = getRankingsBySource("nim")
+    .map((entry) =>
+      makeModel(
+        entry.model_id,
+        entry.name || titleFromModelId(entry.model_id),
+        parseContextString(entry.context),
+        "nvidia",
+      ),
+    )
+    .sort((a, b) => a.id.localeCompare(b.id));
+
+  if (rankedNimModels.length > 0) return rankedNimModels;
+
   return [
     // ── S+ tier ────────────────────────────────────────────────────────────────
     makeModel("z-ai/glm5", "GLM 5", 131072, "nvidia"),
@@ -830,8 +885,16 @@ async function fetchNimModels(apiKey: string | null): Promise<Model[] | null> {
   );
   if (!data) return null;
 
+  const allowedIds = new Set(getRankingsBySource("nim").map((entry) => entry.model_id));
+
   const result = data
-    .filter((m) => !/embed|rerank|reward/i.test(m.id || ""))
+    .filter((m) => {
+      if (!m?.id) return false;
+      if (allowedIds.size > 0) return allowedIds.has(m.id);
+      return !/embed|rerank|reward|ocr|video|audio|speech|voice|speaker|detector|detection|translate|translation/i.test(
+        m.id || "",
+      );
+    })
     .map((m) =>
       makeModel(
         m.id,
@@ -857,13 +920,25 @@ async function fetchOpenRouterModels(apiKey: string | null): Promise<Model[]> {
     [],
   );
   return data
-    .filter(
-      (m) =>
-        m?.pricing?.prompt === "0" &&
-        m?.pricing?.completion === "0" &&
-        Array.isArray(m?.supported_parameters) &&
-        m.supported_parameters.includes("tools"),
-    )
+    .filter((m) => {
+      if (m?.pricing?.prompt !== "0" || m?.pricing?.completion !== "0") return false;
+      const output = Array.isArray(m?.architecture?.output_modalities)
+        ? m.architecture.output_modalities
+        : [];
+      if (!output.includes("text")) return false;
+      if (output.some((value: string) => value !== "text")) return false;
+      const input = Array.isArray(m?.architecture?.input_modalities)
+        ? m.architecture.input_modalities
+        : ["text"];
+      if (input.some((value: string) => value !== "text" && value !== "image")) {
+        return false;
+      }
+      const haystack = `${m?.id || ""} ${m?.name || ""} ${m?.description || ""}`.toLowerCase();
+      if (haystack.includes("openrouter/free")) return false;
+      return !/ocr|video|audio|speech|voice|speaker|detector|detection|translate|translation|embed|rerank|guard|safety|retriever/i.test(
+        haystack,
+      );
+    })
     .map((m) =>
       makeModel(m.id, m.name || m.id, m.context_length || 32768, "openrouter"),
     );

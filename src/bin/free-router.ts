@@ -131,10 +131,9 @@ if (HELP) {
     ↑↓ / j k     Navigate models
     PgUp / PgDn   Jump one page
     g / G          Jump to top / bottom
-    /              Search (type to filter, Enter opens opencode, ESC to clear)
+    /              Toggle search (Enter opens opencode, ESC clears)
     Enter          Save config + open current model in opencode
     A              Quick API key add/change (opens key editor)
-    P              Settings (edit keys, toggle providers, test)
     T              Cycle tier filter
     W / X          Faster / slower ping interval
     ?              Help overlay
@@ -580,7 +579,7 @@ function renderFooterLines(): string[] {
   if (width < 72) {
     return [
       fullWidthBar(
-        ` ${footerKey("Enter", "open")}  ${footerKey("/", "search")}  ${footerKey("A", "key")}  ${footerKey("P", "cfg")}  ${footerKey("?", "help")}  ${footerKey("q", "quit")} `,
+        ` ${footerKey("Enter", "open")}  ${footerKey("/", "search")}  ${footerKey("A", "key")}  ${footerKey("?", "help")}  ${footerKey("q", "quit")} `,
         BG_TABLE_HDR,
       ),
       fullWidthLine(`${D} ↑↓/jk nav   T tier   0-9 sort${R}`, true),
@@ -590,7 +589,7 @@ function renderFooterLines(): string[] {
   if (width < 96) {
     return [
       fullWidthBar(
-        ` ${footerKey("Enter", "open")}  ${footerKey("/", "search")}  ${footerKey("A", "api key")}  ${footerKey("P", "settings")}  ${footerKey("?", "help")}  ${footerKey("q", "quit")} `,
+        ` ${footerKey("Enter", "open")}  ${footerKey("/", "search")}  ${footerKey("A", "api key")}  ${footerKey("?", "help")}  ${footerKey("q", "quit")} `,
         BG_TABLE_HDR,
       ),
       fullWidthLine(
@@ -602,7 +601,7 @@ function renderFooterLines(): string[] {
 
   return [
     fullWidthBar(
-      ` ${footerKey("Enter", "open opencode")}  ${footerKey("/", "search models")}  ${footerKey("A", "api key")}  ${footerKey("P", "settings")}  ${footerKey("?", "help")}  ${footerKey("q", "quit")} `,
+      ` ${footerKey("Enter", "open opencode")}  ${footerKey("/", "search models")}  ${footerKey("A", "api key")}  ${footerKey("?", "help")}  ${footerKey("q", "quit")} `,
       BG_TABLE_HDR,
     ),
     fullWidthLine(
@@ -745,11 +744,10 @@ function renderHelp() {
       `  G           Jump to bottom\n\n` +
       `${B}  Actions${R}\n` +
       `  Enter       Save config + open current model in opencode\n` +
-      `  /           Focus model search (filter by model name; Enter opens opencode)\n` +
+      `  /           Toggle model search (Enter opens opencode)\n` +
       `  A           Quick API key add/change (opens key editor)\n` +
       `  R           Change API key (auto-detects rejected provider)\n` +
       `  T           Cycle tier filter (All → S+ → S → …)\n` +
-      `  P           Settings (API keys, toggle providers)\n` +
       `  W / X       Faster / slower ping interval\n` +
       `  q           Quit\n\n` +
       `${B}  Sort (press key to sort, press again to reverse)${R}\n` +
@@ -1007,7 +1005,7 @@ async function launchOpenCodeDirect() {
       return;
     }
     w(
-      `${YELLOW} Launch cancelled. Set ${envVar} in Settings (P), then retry.${R}\n`,
+      `${YELLOW} Launch cancelled. Set ${envVar} with A, then retry.${R}\n`,
     );
     launch = false;
   }
@@ -1194,6 +1192,9 @@ function handleMain(ch: string) {
         return;
       }
       searchMode = false;
+    } else if (ch === "/") {
+      resetSearchState();
+      needsRefilter = true;
     } else if (ch === "\x7f") {
       searchQuery = searchQuery.slice(0, -1);
       needsRefilter = true;
@@ -1231,13 +1232,6 @@ function handleMain(ch: string) {
     enterSearchMode();
   } else if (ch === "\r") {
     enterTargetPickerFromSelection();
-  } else if (ch === "p" || ch === "P") {
-    searchMode = false;
-    _resetSettingsState();
-    screen = "settings";
-    maybeAutoOpenSettingsSignup(Object.keys(PROVIDERS_META)[sCursor] || "");
-    renderWithAuthority("settings-open");
-    return;
   } else if (ch === "a" || ch === "A") {
     openApiKeyEditorFromMain();
     return;

@@ -10,7 +10,7 @@
 [English](./README.md) | [한국어](./README.ko.md)
 
 ![Version](https://img.shields.io/badge/version-1.2.0-333333?style=flat-square)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
+[![License: MIT License](https://img.shields.io/badge/License-MIT%20License-yellow.svg)](./LICENSE)
 [![npm downloads](https://img.shields.io/npm/dm/free-router)](https://www.npmjs.com/package/free-router)
 [![CI](https://github.com/jyoung105/free-router/actions/workflows/ci.yml/badge.svg)](https://github.com/jyoung105/free-router/actions/workflows/ci.yml)
 
@@ -330,4 +330,4 @@ npm run models:sync:apply
 
 ## License
 
-MIT. See [LICENSE](./LICENSE).
+MIT License. See [LICENSE](./LICENSE).

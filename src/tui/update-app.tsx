@@ -1,4 +1,4 @@
-// src/tui/UpdateApp.tsx — Ink-based update flow with ProgressBar + Spinner.
+// src/tui/update-app.tsx — Ink-based update flow with ProgressBar + Spinner.
 // Runs pre-ALT_ON (normal terminal), no harness needed.
 
 import { useState, useRef, useCallback, useEffect } from "react";

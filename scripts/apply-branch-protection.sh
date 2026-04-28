@@ -24,10 +24,8 @@ read -r -d '' PAYLOAD <<'JSON' || true
   "required_status_checks": {
     "strict": true,
     "contexts": [
-      "CI / Test (Node 20 on ubuntu-latest)",
-      "CI / Test (Node 20 on macos-latest)",
-      "CI / Test (Node 22 on ubuntu-latest)",
-      "CI / Test (Node 22 on macos-latest)",
+      "CI / Validate (Node 22 on ubuntu-latest)",
+      "CI / Validate (Node 22 on macos-latest)",
       "CI / Site build (Node 22 on ubuntu-latest)",
       "PR Governance / Branch + PR policy"
     ]

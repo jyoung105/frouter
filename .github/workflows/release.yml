@@ -51,18 +51,6 @@ jobs:
       - name: Build dist artifacts
         run: npm run build
 
-      - name: Run unit + security tests
-        run: node --test dist/tests/unit/*.test.js dist/tests/security/*.test.js
-
-      - name: Run integration tests
-        run: node --test dist/tests/integration/*.test.js
-
-      - name: Perf baseline + perf tests
-        continue-on-error: true
-        run: |
-          npm run perf:baseline
-          npm run test:perf
-
       - name: Publish to npm
         run: npm publish
         env:

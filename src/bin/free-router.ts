@@ -24,6 +24,7 @@ import {
 } from "../lib/ping.js";
 import {
   writeOpenCode,
+  writeOpenClaw,
   resolveOpenCodeSelection,
   isOpenCodeInstalled,
   detectAvailableInstallers,
@@ -76,12 +77,23 @@ const PKG_VERSION: string = createRequire(import.meta.url)(
 const w = (s: string) => process.stdout.write(String(s));
 const CLEAR = "\x1b[2J\x1b[H";
 const CURSOR_HOME = "\x1b[H";
+const CLEAR_TO_EOL = "\x1b[K";
 const HIDEC = "\x1b[?25l";
 const SHOWC = "\x1b[?25h";
 const INVERT = "\x1b[7m";
-const BG_HDR = "\x1b[48;5;17m";
+const BG_SEARCH = "\x1b[48;5;235m";
+const BG_TABLE_HDR = "\x1b[48;5;236m";
+const BG_OK = "\x1b[48;5;22m";
+const BG_WARN = "\x1b[48;5;58m";
+const BG_BAD = "\x1b[48;5;52m";
+const BG_OFF = "\x1b[48;5;238m";
+const GRAY = "\x1b[90m";
 const ALT_ON = "\x1b[?1049h";
 const ALT_OFF = "\x1b[?1049l";
+const FOCUS_EVENTS_ON = "\x1b[?1004h";
+const FOCUS_EVENTS_OFF = "\x1b[?1004l";
+const FOCUS_IN = "\x1b[I";
+const FOCUS_OUT = "\x1b[O";
 const ALLOW_PLAINTEXT_KEY_EXPORT =
   readEnv(
     "FREE_ROUTER_EXPORT_PLAINTEXT_KEYS",
@@ -121,10 +133,9 @@ if (HELP) {
     ↑↓ / j k     Navigate models
     PgUp / PgDn   Jump one page
     g / G          Jump to top / bottom
-    /              Search (type to filter, Enter opens opencode, ESC to clear)
+    /              Toggle search (Enter opens opencode, ESC clears)
     Enter          Save config + open current model in opencode
     A              Quick API key add/change (opens key editor)
-    P              Settings (edit keys, toggle providers, test)
     T              Cycle tier filter
     W / X          Faster / slower ping interval
     ?              Help overlay
@@ -151,7 +162,6 @@ let sortCol = "priority";
 let sortAsc = true;
 let searchMode = false;
 let searchQuery = "";
-let searchTabScrolled = false;
 let tierFilter = "All";
 let pingMs = 2000;
 let screen = "main"; // 'main' | 'settings' | 'help' | 'ink-subapp'
@@ -173,6 +183,8 @@ let userScrollSortPauseMs = DEFAULT_USER_SCROLL_SORT_PAUSE_MS;
 let renderAuthorityViolations = 0;
 let starPromptHandledThisLaunch = false;
 let startupSearchRequestedThisLaunch = false;
+let terminalFocused = true;
+let renderDeferredWhileBlurred = false;
 
 // ─── Geometry ──────────────────────────────────────────────────────────────────
 const DEFAULT_COLS = 80;
@@ -181,7 +193,7 @@ const DEFAULT_COLS = 80;
 const DEFAULT_ROWS = 12;
 const MIN_COLS = 40;
 const MIN_ROWS = 8;
-const CHROME_ROWS = 5;
+const BASE_CHROME_ROWS = 9;
 
 function envSize(name: string): number | null {
   const raw = process.env[name];
@@ -234,8 +246,9 @@ function viewport() {
 const cols = () => viewport().c;
 const rows = () => viewport().r;
 // All lines are truncated to terminal width so nothing wraps.
-// Chrome: header(1) + search bar(1) + colhdr(1) + detail(1) + footer(1) = 5 lines
-const tRows = () => Math.max(0, rows() - CHROME_ROWS);
+// Chrome: provider tag row + search block(3) + header/separator/detail/footer(2) = 9 lines
+const mainChromeRows = () => BASE_CHROME_ROWS + (topAlertLine() ? 1 : 0);
+const tRows = () => Math.max(0, rows() - mainChromeRows());
 const WRAP_GUARD_COLS = 1;
 
 // ─── Sort column metadata ──────────────────────────────────────────────────────
@@ -268,6 +281,37 @@ function colHdr(
   return rightAlign ? text.padStart(width) : text.padEnd(width);
 }
 
+type TableColumn = {
+  key:
+    | "rank"
+    | "tier"
+    | "provider"
+    | "model"
+    | "context"
+    | "intel"
+    | "avg"
+    | "latest"
+    | "uptime"
+    | "verdict";
+  label: string;
+  sortCol?: string;
+  width: number;
+  right?: boolean;
+};
+
+const TABLE_COLUMNS: TableColumn[] = [
+  { key: "rank", label: "#", width: 5, right: true },
+  { key: "tier", label: "Tier", sortCol: "tier", width: 6 },
+  { key: "provider", label: "Provider", sortCol: "provider", width: 13 },
+  { key: "model", label: "Model", sortCol: "model", width: 34 },
+  { key: "context", label: "Ctx", sortCol: "context", width: 7, right: true },
+  { key: "intel", label: "AA", sortCol: "intel", width: 5, right: true },
+  { key: "avg", label: "Avg", sortCol: "avg", width: 8, right: true },
+  { key: "latest", label: "Lat", sortCol: "latest", width: 8, right: true },
+  { key: "uptime", label: "Up%", sortCol: "uptime", width: 6, right: true },
+  { key: "verdict", label: "Verdict", sortCol: "verdict", width: 16 },
+];
+
 // ─── Render helpers ────────────────────────────────────────────────────────────
 function fmtCtx(n: number) {
   if (!n) return "  —  ";
@@ -299,7 +343,109 @@ function fullWidthLine(content: string, lastLine = false) {
   const guard = lastLine ? Math.max(1, WRAP_GUARD_COLS) : WRAP_GUARD_COLS;
   const maxW = Math.max(0, c - guard);
   const truncated = truncAnsi(content, maxW);
-  return `${truncated}${" ".repeat(Math.max(0, maxW - visLen(truncated)))}`;
+  return `${truncated}${" ".repeat(Math.max(0, maxW - visLen(truncated)))}${R}${CLEAR_TO_EOL}`;
+}
+
+function centeredWidthLine(content: string, lastLine = false) {
+  const c = cols();
+  const guard = lastLine ? Math.max(1, WRAP_GUARD_COLS) : WRAP_GUARD_COLS;
+  const maxW = Math.max(0, c - guard);
+  const truncated = truncAnsi(content, maxW);
+  const padWidth = Math.max(0, maxW - visLen(truncated));
+  const leftPad = Math.floor(padWidth / 2);
+  const rightPad = padWidth - leftPad;
+  return `${" ".repeat(leftPad)}${truncated}${" ".repeat(rightPad)}${R}${CLEAR_TO_EOL}`;
+}
+
+function rightWidthLine(content: string, lastLine = false) {
+  const c = cols();
+  const guard = lastLine ? Math.max(1, WRAP_GUARD_COLS) : WRAP_GUARD_COLS;
+  const maxW = Math.max(0, c - guard);
+  const truncated = truncAnsi(content, maxW);
+  return `${" ".repeat(Math.max(0, maxW - visLen(truncated)))}${truncated}${R}${CLEAR_TO_EOL}`;
+}
+
+function blockWidthLines(
+  left: string,
+  right = "",
+  borderStyle = `${D}${WHITE}`,
+) {
+  const c = cols();
+  const guard = WRAP_GUARD_COLS;
+  const maxW = Math.max(0, c - guard);
+  if (maxW <= 4) return [fullWidthLine(""), fullWidthLine(""), fullWidthLine("")];
+
+  const innerW = maxW - 2;
+  const rightPart = right ? truncAnsi(right, innerW) : "";
+  const leftMaxW = Math.max(0, innerW - visLen(rightPart) - (rightPart ? 1 : 0));
+  const leftPart = truncAnsi(left, leftMaxW);
+  const gapW = Math.max(0, innerW - visLen(leftPart) - visLen(rightPart));
+  const top = `${borderStyle}╭${"─".repeat(Math.max(0, innerW))}╮${R}`;
+  const middle = `${borderStyle}│${R}${leftPart}${" ".repeat(gapW)}${rightPart}${borderStyle}│${R}`;
+  const bottom = `${borderStyle}╰${"─".repeat(Math.max(0, innerW))}╯${R}`;
+  return [top, middle, bottom].map((line) =>
+    `${line}${" ".repeat(Math.max(0, maxW - visLen(line)))}${R}${CLEAR_TO_EOL}`,
+  );
+}
+
+function tableCell(
+  content: string,
+  width: number,
+  style: string,
+  rightAlign = false,
+): string {
+  const truncated = truncAnsi(content, width);
+  const padWidth = Math.max(0, width - visLen(truncated));
+  const leftPad = rightAlign ? " ".repeat(padWidth) : "";
+  const rightPad = rightAlign ? "" : " ".repeat(padWidth);
+  return `${style}${leftPad}${truncated}${style}${rightPad}${R}`;
+}
+
+function tableLine(cells: string[], separatorStyle = ""): string {
+  const separator = separatorStyle ? `${R}${separatorStyle} ${R}` : " ";
+  return fullWidthLine(cells.join(separator));
+}
+
+function tableHeaderLine(): string {
+  const cells = TABLE_COLUMNS.map((col) =>
+    tableCell(
+      col.sortCol ? colHdr(col.label, col.sortCol, col.width, col.right) : col.label,
+      col.width,
+      `${BG_TABLE_HDR}${WHITE}${B}`,
+      col.right,
+    ),
+  );
+  return tableLine(cells, `${BG_TABLE_HDR}${WHITE}${B}`);
+}
+
+function tableSeparatorLine(): string {
+  return fullWidthLine(`${D}${"─".repeat(Math.max(0, cols() - WRAP_GUARD_COLS))}${R}`);
+}
+
+function tableRowStyle(selected: boolean): string {
+  return selected ? `${BG_SEL}${WHITE}${B}` : WHITE;
+}
+
+function tableRowLine(
+  values: Record<TableColumn["key"], string>,
+  selected: boolean,
+): string {
+  const rowStyle = tableRowStyle(selected);
+  const cells = TABLE_COLUMNS.map((col) =>
+    tableCell(values[col.key], col.width, rowStyle, col.right),
+  );
+  return tableLine(cells);
+}
+
+function formatVerdict(verdict: string, selected: boolean): string {
+  const rowStyle = tableRowStyle(selected);
+  if (verdict.startsWith("✓ ")) return `${GREEN}✓${R}${rowStyle}${verdict.slice(1)}`;
+  if (verdict.startsWith("x ")) return `${RED}x${R}${rowStyle}${verdict.slice(1)}`;
+  return verdict;
+}
+
+function selectedRankMarker(rankText: string): string {
+  return `${YELLOW}${B}> ${rankText}${R}`;
 }
 
 // Truncate a string with ANSI codes to at most `maxVis` visible columns.
@@ -355,63 +501,140 @@ function statusDot(model: Model) {
   }
 }
 
-// ─── Expired key detection ───────────────────────────────────────────────────
-function isProviderKeyExpired(providerKey: string): boolean {
+// ─── Rejected key detection ──────────────────────────────────────────────────
+function isRejectedKeyStatus(status: string): boolean {
+  return status === "noauth" || status === "forbidden";
+}
+
+function isProviderKeyRejected(providerKey: string): boolean {
+  if (!getApiKey(config, providerKey)) return false;
   const provConf = config.providers?.[providerKey];
   if (provConf?.enabled === false) return false;
   const provModels = models.filter((m) => m.providerKey === providerKey);
   if (provModels.length === 0) return false;
   const pinged = provModels.filter((m) => m.status && m.status !== "pending");
   if (pinged.length === 0) return false;
-  return pinged.every((m) => m.status === "noauth");
+  return pinged.every((m) => isRejectedKeyStatus(m.status));
 }
 
-function findExpiredProvider(): string | null {
+function findRejectedKeyProvider(): string | null {
   for (const pk of Object.keys(PROVIDERS_META)) {
-    if (isProviderKeyExpired(pk)) return pk;
+    if (isProviderKeyRejected(pk)) return pk;
   }
   return null;
+}
+
+function topAlertLine(): string | null {
+  if (isProviderKeyRejected("nvidia")) {
+    return `${RED}${B} NVIDIA NIM API Key is wrong.${R} ${D}Press R to update.${R}`;
+  }
+  return null;
+}
+
+function providerStatusTag(providerKey: string, label: string): string {
+  const on = config.providers?.[providerKey]?.enabled !== false;
+  if (!on) return `${BG_OFF}${WHITE} ${label} OFF ${R}`;
+
+  const key = getApiKey(config, providerKey);
+  if (!key) return `${BG_WARN}${WHITE}${B} ${label} NO KEY ${R}`;
+  if (isProviderKeyRejected(providerKey)) {
+    return `${BG_BAD}${WHITE}${B} ${label} WRONG KEY ${R}`;
+  }
+  return `${BG_OK}${WHITE}${B} ${label} READY ${R}`;
+}
+
+function providerStatusTags(): string {
+  return Object.entries(PROVIDERS_META)
+    .map(([pk, meta]) => providerStatusTag(pk, meta.name))
+    .join(" ");
+}
+
+function renderProviderTagLine(): string {
+  return rightWidthLine(providerStatusTags());
+}
+
+function renderSearchLines(stats: string, tierBar: string): string[] {
+  const input = searchMode
+    ? `${CYAN}/${searchQuery}_${R}`
+    : `${GRAY}Press / to search models${R}`;
+  const searchField = `${BG_SEARCH}${WHITE}${B} Model Search ${R} ${input}`;
+  const right = `${tierBar}${stats}`;
+  return blockWidthLines(searchField, right, `${WHITE}${B}`);
+}
+
+function renderSelectedModelLine(): string {
+  const sel = filtered[cursor];
+  if (!sel) return fullWidthLine("");
+
+  const fullId = `${sel.providerKey}/${sel.id}`;
+  const sweStr = sel.sweScore != null ? `  SWE:${sel.sweScore}%` : "";
+  const ctxStr = sel.context ? `  ctx:${fmtCtx(sel.context).trim()}` : "";
+  return fullWidthLine(`${D} Selected model: ${fullId}${sweStr}${ctxStr}${R}`);
+}
+
+function footerKey(key: string, label: string): string {
+  return `${CYAN}${B}${key}${R}${D} ${label}${R}`;
+}
+
+function renderFooterLines(): string[] {
+  const width = cols();
+  if (width < 72) {
+    return [
+      fullWidthBar(
+        ` ${footerKey("Enter", "open")}  ${footerKey("/", "search")}  ${footerKey("A", "key")}  ${footerKey("?", "help")}  ${footerKey("q", "quit")} `,
+        BG_TABLE_HDR,
+      ),
+      fullWidthLine(`${D} ↑↓/jk nav   T tier   0-9 sort${R}`, true),
+    ];
+  }
+
+  if (width < 96) {
+    return [
+      fullWidthBar(
+        ` ${footerKey("Enter", "open")}  ${footerKey("/", "search")}  ${footerKey("A", "api key")}  ${footerKey("?", "help")}  ${footerKey("q", "quit")} `,
+        BG_TABLE_HDR,
+      ),
+      fullWidthLine(
+        `${D} ↑↓/jk nav   PgUp/PgDn page   T tier   0-9 sort${R}`,
+        true,
+      ),
+    ];
+  }
+
+  return [
+    fullWidthBar(
+      ` ${footerKey("Enter", "open opencode")}  ${footerKey("/", "search models")}  ${footerKey("A", "api key")}  ${footerKey("?", "help")}  ${footerKey("q", "quit")} `,
+      BG_TABLE_HDR,
+    ),
+    fullWidthLine(
+      `${D} ↑↓/jk navigate   PgUp/PgDn page   T tier filter   0-9 sort columns   W/X ping interval${R}`,
+      true,
+    ),
+  ];
+}
+
+function modeTagLine(label: string): string {
+  return fullWidthLine(`${BG_OFF}${WHITE} ${label} ${R}`);
+}
+
+function modalFooterLine(items: Array<[string, string]>, lastLine = true): string {
+  return fullWidthLine(
+    ` ${items.map(([key, label]) => footerKey(key, label)).join("  ")} `,
+    lastLine,
+  );
 }
 
 // ─── Main TUI ──────────────────────────────────────────────────────────────────
 function renderMain() {
   const { c, r } = viewport();
-  const tr = Math.max(0, r - CHROME_ROWS);
+  const topAlert = topAlertLine();
+  const tr = Math.max(0, r - mainChromeRows());
   if (cursor < scrollOff) scrollOff = cursor;
   if (cursor >= scrollOff + tr) scrollOff = cursor - tr + 1;
 
-  const provStatus = Object.entries(PROVIDERS_META)
-    .map(([pk, m]) => {
-      const on = config.providers?.[pk]?.enabled !== false;
-      if (!on) return `${D}${m.name} off${R}`;
-      const key = getApiKey(config, pk);
-      if (!key) return `${YELLOW}${m.name} ○${R}`;
-      if (isProviderKeyExpired(pk)) return `${RED}${m.name} ✗${R}`;
-      return `${GREEN}${m.name} ✓${R}`;
-    })
-    .join("  ");
-
-  const searchLabel = `${CYAN}${B}[Model Search]${R}`;
-  const searchInput = searchMode
-    ? `${CYAN}/${searchQuery}_${R}`
-    : `${D}Press '/' to search models${R}`;
-  const keyBadges = Object.entries(PROVIDERS_META)
-    .filter(([pk]) => config.providers?.[pk]?.enabled !== false)
-    .map(([pk, m]) => {
-      const key = getApiKey(config, pk);
-      if (!key) return `${YELLOW}${m.name}:○${R}`;
-      if (isProviderKeyExpired(pk)) return `${RED}${m.name}:✗${R}`;
-      return `${GREEN}${m.name}:✓${R}`;
-    })
-    .join("  ");
-  const searchHint = searchMode
-    ? `${YELLOW}[ESC clear]${R} ${GREEN}[Enter apply]${R}`
-    : `${CYAN}[/ start]${R}`;
-  const searchBar = `${searchLabel} ${searchInput} ${keyBadges}  ${searchHint}`;
-
   const tierBar =
     tierFilter !== "All" ? `${YELLOW}tier:${tierFilter}${R}  ` : "";
-  const stats = `${D}${filtered.length}/${models.length} models  ${pingMs / 1000}s${R}`;
+  const stats = `${D}${filtered.length}/${models.length} models${R}`;
 
   // ── Loading splash — skip all chrome until data is ready ──────────────────
   const isLoading = filtered.length === 0 && models.length === 0;
@@ -429,18 +652,20 @@ function renderMain() {
     return;
   }
 
-  let out = (FORCE_FRAME_CLEAR ? CLEAR : CURSOR_HOME) + HIDEC;
+  let out = (FORCE_FRAME_CLEAR ? CLEAR : CURSOR_HOME) + HIDEC + "\x1b[J";
 
-  // Header
-  const hdrRaw = `${BG_HDR}${WHITE}${B} free-router ${R}  ${provStatus}${R}`;
-  out += fullWidthLine(hdrRaw) + "\n";
+  if (topAlert) out += fullWidthLine(topAlert) + "\n";
+  out += renderProviderTagLine() + "\n";
 
   // Search + stats bar
-  out += fullWidthLine(` ${searchBar}   ${tierBar}${stats}`) + "\n";
+  for (const line of renderSearchLines(stats, tierBar)) out += line + "\n";
+
+  // Selected model detail
+  out += renderSelectedModelLine() + "\n";
 
   // Column headers with sort indicators
-  const hdr = `  ${"#".padStart(3)}  ${colHdr("Tier", "tier", 4)}  ${colHdr("Provider", "provider", 11)}  ${colHdr("Model", "model", 32)}  ${colHdr("Ctx", "context", 5, true)}  ${colHdr("AA", "intel", 3, true)}  ${colHdr("Avg", "avg", 6, true)}  ${colHdr("Lat", "latest", 6, true)}  ${colHdr("Up%", "uptime", 4, true)}  ${colHdr("Verdict", "verdict", 7)}`;
-  out += fullWidthBar(hdr) + "\n";
+  out += tableHeaderLine() + "\n";
+  out += tableSeparatorLine() + "\n";
 
   // Model rows (skip if terminal too small)
   if (tr === 0) {
@@ -450,19 +675,16 @@ function renderMain() {
     return;
   }
   {
-    const showSearchPixelTitle =
-      searchMode &&
-      !searchTabScrolled &&
-      scrollOff === 0 &&
-      tr > STARTUP_PIXEL_TITLE.length;
-    const titleLines = showSearchPixelTitle ? startupPixelTitleLines() : [];
-    for (const line of titleLines) {
-      out += fullWidthLine(line) + "\n";
-    }
-
-    const rowsAvailable = Math.max(0, tr - titleLines.length);
+    const rowsAvailable = tr;
     const slice = filtered.slice(scrollOff, scrollOff + rowsAvailable);
     for (let i = 0; i < rowsAvailable; i++) {
+      if (filtered.length === 0) {
+        out +=
+          (i === 0 ? centeredWidthLine(`${D}not found${R}`) : fullWidthLine("")) +
+          "\n";
+        continue;
+      }
+
       const m = slice[i];
       if (!m) {
         out += fullWidthLine("") + "\n";
@@ -471,10 +693,11 @@ function renderMain() {
 
       const idx = scrollOff + i;
       const isSel = idx === cursor;
-      const rank = String(idx + 1).padStart(3);
-      const tier = pad(tierColor(m.tier) + (m.tier || "?") + R, 4);
-      const prov = pad(m.providerKey === "nvidia" ? "NIM" : "OpenRouter", 11);
-      const name = pad(m.displayName || m.id, 32);
+      const rankText = String(idx + 1).padStart(3);
+      const rank = isSel ? selectedRankMarker(rankText) : `  ${rankText}`;
+      const tier = tierColor(m.tier) + (m.tier || "?") + R;
+      const prov = m.providerKey === "nvidia" ? "NIM" : "OpenRouter";
+      const name = m.displayName || m.id;
       const ctx = fmtCtx(m.context);
       const avg = getAvg(m);
       const avgStr = fmtLatency(avg !== Infinity ? avg : null);
@@ -484,34 +707,33 @@ function renderMain() {
       const up = getUptime(m);
       const upStr = uptimeColor(up) + fmtUp(up, m.pings.length > 0) + R;
       const dot = statusDot(m);
-      const verdict = `${D}${getVerdict(m)}${R}`;
+      const verdict = `${dot} ${formatVerdict(getVerdict(m), isSel)}`;
       const aaStr =
         m.aaIntelligence != null
           ? String(Math.round(m.aaIntelligence)).padStart(3)
-          : `${D}  —${R}`;
+          : `${GRAY}  —${R}`;
 
-      const row = fullWidthLine(
-        `  ${rank}  ${tier}  ${prov}  ${name}  ${ctx}  ${aaStr}  ${avgStr}  ${latStr}  ${upStr}  ${dot} ${verdict}`,
-      );
-      if (isSel) out += `${BG_SEL}${B}${row}${R}\n`;
-      else out += `${row}${R}\n`;
+      out +=
+        tableRowLine(
+          {
+            rank,
+            tier,
+            provider: prov,
+            model: name,
+            context: ctx,
+            intel: aaStr,
+            avg: avgStr,
+            latest: latStr,
+            uptime: upStr,
+            verdict,
+          },
+          isSel,
+        ) + "\n";
     }
   } // end if (!isLoading)
 
-  // Detail bar — full model ID of highlighted model
-  const sel = filtered[cursor];
-  if (sel) {
-    const fullId = `${sel.providerKey}/${sel.id}`;
-    const sweStr = sel.sweScore != null ? `  SWE:${sel.sweScore}%` : "";
-    const ctxStr = sel.context ? `  ctx:${fmtCtx(sel.context).trim()}` : "";
-    out += fullWidthLine(`${D} ${fullId}${sweStr}${ctxStr}${R}`) + "\n";
-  } else {
-    out += fullWidthLine("") + "\n";
-  }
-
   // Footer
-  const footer = ` ↑↓/jk:nav  /:focus model search  Enter:open opencode  A:api key  P:settings  T:tier  ?:help  0-9:sort  q:quit `;
-  out += fullWidthBar(footer, INVERT, true);
+  out += renderFooterLines().join("\n");
   w(out);
 }
 
@@ -519,33 +741,34 @@ function renderMain() {
 function renderHelp() {
   const sortLines = SORT_COLS.map((s) => {
     const active = sortCol === s.col ? ` ${CYAN}← active${R}` : "";
-    return `  ${s.key}           ${s.label}${active}`;
+    return `${WHITE}  ${s.key}           ${s.label}${active}${R}`;
   }).join("\n");
 
   w(
     CLEAR +
       HIDEC +
-      `${BG_HDR}${WHITE}${B} free-router — Keyboard Reference ${R}\n\n` +
-      `${B}  Navigation${R}\n` +
-      `  ↑ / k       Move up\n` +
-      `  ↓ / j       Move down\n` +
-      `  PgUp        Page up\n` +
-      `  PgDn        Page down\n` +
-      `  g           Jump to top\n` +
-      `  G           Jump to bottom\n\n` +
-      `${B}  Actions${R}\n` +
-      `  Enter       Save config + open current model in opencode\n` +
-      `  /           Focus model search (filter by model name; Enter opens opencode)\n` +
-      `  A           Quick API key add/change (opens key editor)\n` +
-      `  R           Change API key (auto-detects expired provider)\n` +
-      `  T           Cycle tier filter (All → S+ → S → …)\n` +
-      `  P           Settings (API keys, toggle providers)\n` +
-      `  W / X       Faster / slower ping interval\n` +
-      `  q           Quit\n\n` +
-      `${B}  Sort (press key to sort, press again to reverse)${R}\n` +
+      modeTagLine("HELP") +
+      "\n\n" +
+      `${WHITE}${B}  Navigation${R}\n` +
+      `${WHITE}  ↑ / k       Move up${R}\n` +
+      `${WHITE}  ↓ / j       Move down${R}\n` +
+      `${WHITE}  PgUp        Page up${R}\n` +
+      `${WHITE}  PgDn        Page down${R}\n` +
+      `${WHITE}  g           Jump to top${R}\n` +
+      `${WHITE}  G           Jump to bottom${R}\n\n` +
+      `${WHITE}${B}  Actions${R}\n` +
+      `${WHITE}  Enter       Save config + open current model in opencode${R}\n` +
+      `${WHITE}  /           Toggle model search (Enter opens opencode)${R}\n` +
+      `${WHITE}  A           Quick API key add/change (opens key editor)${R}\n` +
+      `${WHITE}  R           Change API key (auto-detects rejected provider)${R}\n` +
+      `${WHITE}  T           Cycle tier filter (All → S+ → …)${R}\n` +
+      `${WHITE}  W / X       Faster / slower ping interval${R}\n` +
+      `${WHITE}  q           Quit${R}\n\n` +
+      `${WHITE}${B}  Sort (press key to sort, press again to reverse)${R}\n` +
       sortLines +
       "\n" +
-      `\n${INVERT} Press any key to close ${R}\n`,
+      "\n" +
+      modalFooterLine([["Any key", "close"]]),
   );
 }
 
@@ -557,7 +780,7 @@ function maskKey(key: string) {
 
 function renderSettings() {
   let out = CLEAR + HIDEC;
-  out += `${BG_HDR}${WHITE}${B} free-router Settings ${R}\n\n`;
+  out += modeTagLine("API KEY") + "\n\n";
 
   const pks = Object.keys(PROVIDERS_META);
   for (let i = 0; i < pks.length; i++) {
@@ -570,7 +793,7 @@ function renderSettings() {
     const toggleStr = enabled ? `${GREEN}[ ON  ]${R}` : `${RED}[ OFF ]${R}`;
     let keyDisp;
     if (sEditing && isSel) {
-      keyDisp = `${CYAN}${"•".repeat(sKeyBuf.length)}_${R}`;
+      keyDisp = `${CYAN}${sKeyBuf}_${R}`;
     } else if (key) {
       keyDisp = maskKey(key);
     } else {
@@ -582,7 +805,19 @@ function renderSettings() {
     out += `${prefix}${toggleStr} ${pad(meta.name, 14)} ${keyDisp}${testDisp}\n`;
   }
 
-  out += `\n${INVERT} ↑↓:navigate  Enter:edit key  Space:toggle  T:test  D:delete key  ESC:back ${R}\n`;
+  out +=
+    "\n" +
+    modalFooterLine(
+      [
+        ["↑↓", "navigate"],
+        ["Enter", "edit key"],
+        ["Space", "toggle"],
+        ["T", "test"],
+        ["D", "delete key"],
+        ["ESC", "back"],
+      ],
+      !sEditing && !sNotice,
+    );
   if (sEditing) out += `\n${D} Type key  •  Enter:save  •  ESC:cancel${R}\n`;
   if (sNotice) out += `\n${sNotice}\n`;
   w(out);
@@ -621,6 +856,7 @@ const ALLOWED_RENDER_REASONS = new Set([
   "round-complete",
   "timed-return",
   "throttled",
+  "focus-in",
 ]);
 
 function renderWithAuthority(reason: string) {
@@ -629,6 +865,10 @@ function renderWithAuthority(reason: string) {
     const msg = `[free-router] non-authoritative render attempt: ${reason}\n`;
     if (STRICT_RENDER_AUTH) throw new Error(msg.trim());
     process.stderr.write(msg);
+  }
+  if (!terminalFocused) {
+    renderDeferredWhileBlurred = true;
+    return;
   }
   render();
 }
@@ -700,7 +940,6 @@ function isAutoSortPaused() {
 function resetSearchState() {
   searchMode = false;
   searchQuery = "";
-  searchTabScrolled = false;
   cursor = 0;
   scrollOff = 0;
 }
@@ -759,7 +998,7 @@ async function launchOpenCodeDirect() {
     return;
   }
 
-  const { openCodeModel, openCodePk, openCodeApiKey } =
+  const { openCodeModel, openCodePk, openCodeApiKey, notice } =
     resolveOpenCodeApplySelection(selModel);
 
   let launch = true;
@@ -768,14 +1007,18 @@ async function launchOpenCodeDirect() {
     writeOpenCode(openCodeModel, openCodePk, openCodeApiKey, {
       persistApiKey: ALLOW_PLAINTEXT_KEY_EXPORT,
     });
+    writeOpenClaw(openCodeModel, openCodePk, openCodeApiKey, {
+      persistApiKey: ALLOW_PLAINTEXT_KEY_EXPORT,
+    });
   } catch (err: any) {
-    w(`${RED} \u2717 OpenCode write failed: ${err.message}${R}\n`);
+    w(`${RED} \u2717 Target config write failed: ${err.message}${R}\n`);
     setTimeout(() => {
       restoreAfterInkSubApp("main");
       restartLoop();
     }, 1400);
     return;
   }
+  if (notice) w(`\n${notice}\n`);
 
   // Guard: missing API key → offer to add it
   if (launch && !openCodeApiKey) {
@@ -793,7 +1036,7 @@ async function launchOpenCodeDirect() {
       return;
     }
     w(
-      `${YELLOW} Launch cancelled. Set ${envVar} in Settings (P), then retry.${R}\n`,
+      `${YELLOW} Launch cancelled. Set ${envVar} with A, then retry.${R}\n`,
     );
     launch = false;
   }
@@ -946,7 +1189,6 @@ function openApiKeyEditorFromMain(providerKey?: string) {
   _resetSettingsState();
   sCursor = Math.max(0, pks.indexOf(resolvedProviderKey));
   screen = "settings";
-  sEditing = true;
 
   const meta = PROVIDERS_META[resolvedProviderKey];
   if (meta?.signupUrl && !getApiKey(config, resolvedProviderKey)) {
@@ -980,14 +1222,15 @@ function handleMain(ch: string) {
         return;
       }
       searchMode = false;
+    } else if (ch === "/") {
+      resetSearchState();
+      needsRefilter = true;
     } else if (ch === "\x7f") {
       searchQuery = searchQuery.slice(0, -1);
       needsRefilter = true;
     } else if (ch === UP) {
-      searchTabScrolled = true;
       navigate(cursor - 1);
     } else if (ch === DOWN) {
-      searchTabScrolled = true;
       navigate(cursor + 1);
     } else if (ch.length === 1 && ch >= " ") {
       searchQuery += ch;
@@ -1019,20 +1262,13 @@ function handleMain(ch: string) {
     enterSearchMode();
   } else if (ch === "\r") {
     enterTargetPickerFromSelection();
-  } else if (ch === "p" || ch === "P") {
-    searchMode = false;
-    _resetSettingsState();
-    screen = "settings";
-    maybeAutoOpenSettingsSignup(Object.keys(PROVIDERS_META)[sCursor] || "");
-    renderWithAuthority("settings-open");
-    return;
   } else if (ch === "a" || ch === "A") {
     openApiKeyEditorFromMain();
     return;
   } else if (ch === "r" || ch === "R") {
-    const expired = findExpiredProvider();
-    if (expired) {
-      openApiKeyEditorFromMain(expired);
+    const rejected = findRejectedKeyProvider();
+    if (rejected) {
+      openApiKeyEditorFromMain(rejected);
     } else {
       // Fall back to current model's provider or first provider
       const sel = filtered[cursor];
@@ -1135,7 +1371,7 @@ function handleSettings(ch: string) {
     sNotice = "";
   } else if (ch === "\r") {
     sEditing = true;
-    sKeyBuf = "";
+    sKeyBuf = getApiKey(config, currentPk) || "";
     sNotice = "";
   } else if (ch === "d" || ch === "D") {
     if (config.apiKeys?.[currentPk]) {
@@ -1276,6 +1512,21 @@ function dispatch(ch: string) {
     process.exit(0);
   }
 
+  if (ch === FOCUS_IN) {
+    terminalFocused = true;
+    if (renderDeferredWhileBlurred) {
+      renderDeferredWhileBlurred = false;
+      renderWithAuthority("focus-in");
+    }
+    return;
+  }
+
+  if (ch === FOCUS_OUT) {
+    terminalFocused = false;
+    renderDeferredWhileBlurred = false;
+    return;
+  }
+
   if (screen === "help") {
     screen = "main";
     renderWithAuthority("help-close");
@@ -1368,11 +1619,13 @@ function prepareForInkSubApp() {
   screen = "ink-subapp";
   stopPingLoop(pingRef);
   // Don't change raw mode — the harness manages stdin via a proxy stream.
-  w(ALT_OFF + SHOWC);
+  w(FOCUS_EVENTS_OFF + ALT_OFF + SHOWC);
 }
 
 function restoreAfterInkSubApp(returnScreen = "main") {
-  w(ALT_ON + HIDEC);
+  terminalFocused = true;
+  renderDeferredWhileBlurred = false;
+  w(ALT_ON + FOCUS_EVENTS_ON + HIDEC);
   // The harness manages stdin directly (proxy pattern), so process.stdin
   // is still in raw/flowing/data-listener mode from prepareForInkSubApp's teardown.
   // We just need to re-attach our handler and restore raw mode.
@@ -1391,13 +1644,13 @@ function restoreAfterInkSubApp(returnScreen = "main") {
 // ─── Update check ────────────────────────────────────────────────────────────
 const REGISTRY_URL =
   readEnv("FREE_ROUTER_REGISTRY_URL", "FROUTER_REGISTRY_URL") ||
-  "https://registry.npmjs.org/@jyoung105%2ffree-router/latest";
+  "https://registry.npmjs.org/@bytonylee%2ffree-router/latest";
 const UPDATE_SKIP_ONCE_ENV = "FREE_ROUTER_SKIP_UPDATE_ONCE";
 const LEGACY_UPDATE_SKIP_ONCE_ENV = "FROUTER_SKIP_UPDATE_ONCE";
 const OPEN_SEARCH_ON_START_ENV = "FREE_ROUTER_OPEN_SEARCH_ON_START";
 const LEGACY_OPEN_SEARCH_ON_START_ENV = "FROUTER_OPEN_SEARCH_ON_START";
-const UPDATE_PACKAGE_NAME = "@jyoung105/free-router";
-const GITHUB_REPO_URL = "https://github.com/jyoung105/free-router";
+const UPDATE_PACKAGE_NAME = "@bytonylee/free-router";
+const GITHUB_REPO_URL = "https://github.com/bytonylee/free-router";
 
 type UpdateInstallCommand = {
   bin: string;
@@ -1593,15 +1846,15 @@ function restartAfterUpdate(extraEnv: NodeJS.ProcessEnv = {}): boolean {
 async function runUpdateApp(
   latest: string,
 ): Promise<"skipped" | "updated" | "failed"> {
-  const [{ render }, React, { UpdateApp }] = await Promise.all([
+  const [{ render }, { createElement }, { UpdateApp }] = await Promise.all([
     import("ink"),
     import("react"),
-    import("../tui/UpdateApp.js"),
+    import("../tui/update-app.js"),
   ]);
 
   return new Promise((resolve) => {
     let resolved = false;
-    const element = React.createElement(UpdateApp, {
+    const element = createElement(UpdateApp, {
       currentVersion: PKG_VERSION,
       latestVersion: latest,
       detectInstallCommand: detectUpdateInstallCommand,
@@ -1644,7 +1897,7 @@ async function checkForUpdate(): Promise<void> {
   }
   if (result === "failed") {
     process.stdout.write(
-      `${RED}  \u2717 Update failed. Run manually: npm install -g free-router${R}\n${D}    (or: bun install -g free-router)${R}\n\n`,
+      `${RED}  \u2717 Update failed. Run manually: npm install -g @bytonylee/free-router${R}\n${D}    (or: bun install -g @bytonylee/free-router)${R}\n\n`,
     );
     return;
   }
@@ -1675,7 +1928,7 @@ function cleanup() {
       `[free-router] render authority violations: ${renderAuthorityViolations}\n`,
     );
   }
-  w(SHOWC + ALT_OFF);
+  w(FOCUS_EVENTS_OFF + SHOWC + ALT_OFF);
   try {
     if (process.stdin.isTTY) process.stdin.setRawMode(false);
   } catch {
@@ -1683,7 +1936,7 @@ function cleanup() {
   }
 }
 
-process.on("exit", () => w(SHOWC + ALT_OFF));
+process.on("exit", () => w(FOCUS_EVENTS_OFF + SHOWC + ALT_OFF));
 
 // ─── --best mode ───────────────────────────────────────────────────────────────
 async function runBest() {
@@ -1759,7 +2012,9 @@ async function main() {
     process.exit(1);
   }
 
-  w(ALT_ON);
+  terminalFocused = true;
+  renderDeferredWhileBlurred = false;
+  w(ALT_ON + FOCUS_EVENTS_ON);
   process.stdin.setRawMode(true);
   process.stdin.resume();
   process.stdin.setEncoding("utf8");

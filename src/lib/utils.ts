@@ -239,20 +239,20 @@ export function getVerdict(model: Model): string {
     : model.pings.some((p: PingEntry) => p.code === "200");
 
   if (model.status === "ratelimit" || last?.code === "429")
-    return "🔥 Overloaded";
-  if (model.status === "unavailable") return "🛑 Unavailable";
-  if (model.status === "forbidden") return "⛔ Forbidden";
+    return "x Overloaded";
+  if (model.status === "unavailable") return "x Unavailable";
+  if (model.status === "forbidden") return "x Forbidden";
   if (everUp && model.status !== "up" && model.status !== "noauth")
-    return "⚠️  Unstable";
-  if (model.status === "notfound") return "🚫 Not Found";
+    return "x Unstable";
+  if (model.status === "notfound") return "x Not Found";
   if (!everUp && model.pings.length > 0 && model.status !== "pending")
-    return "👻 Not Active";
-  if (avg === Infinity) return "⏳ Pending";
-  if (avg < 400) return "🚀 Perfect";
-  if (avg < 1000) return "✅ Normal";
-  if (avg < 3000) return "🐢 Slow";
-  if (avg < 5000) return "🐌 Very Slow";
-  return "💀 Unusable";
+    return "x Not Active";
+  if (avg === Infinity) return "- Pending";
+  if (avg < 400) return "✓ Perfect";
+  if (avg < 1000) return "✓ Normal";
+  if (avg < 3000) return "x Slow";
+  if (avg < 5000) return "x Very Slow";
+  return "x Unusable";
 }
 
 // ─── Color helpers ─────────────────────────────────────────────────────────────
@@ -379,18 +379,18 @@ function cmpPriority(a: Model, b: Model): number {
 }
 
 const VERDICT_RANK: Record<string, number> = {
-  "🚀 Perfect": 0,
-  "✅ Normal": 1,
-  "🐢 Slow": 2,
-  "🐌 Very Slow": 3,
-  "💀 Unusable": 4,
-  "🔥 Overloaded": 5,
-  "🛑 Unavailable": 6,
-  "⛔ Forbidden": 7,
-  "⚠️  Unstable": 8,
-  "👻 Not Active": 9,
-  "🚫 Not Found": 10,
-  "⏳ Pending": 11,
+  "✓ Perfect": 0,
+  "✓ Normal": 1,
+  "x Slow": 2,
+  "x Very Slow": 3,
+  "x Unusable": 4,
+  "x Overloaded": 5,
+  "x Unavailable": 6,
+  "x Forbidden": 7,
+  "x Unstable": 8,
+  "x Not Active": 9,
+  "x Not Found": 10,
+  "- Pending": 11,
 };
 function verdictRank(v: string): number {
   return VERDICT_RANK[v] ?? 11;

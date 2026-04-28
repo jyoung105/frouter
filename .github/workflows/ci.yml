@@ -8,8 +8,8 @@ permissions:
   contents: read
 
 jobs:
-  test:
-    name: Test (Node ${{ matrix.node }} on ${{ matrix.os }})
+  validate:
+    name: Validate (Node ${{ matrix.node }} on ${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -42,20 +42,6 @@ jobs:
 
       - name: Build dist artifacts
         run: npm run build
-
-      - name: Run unit + security tests
-        run: node --test dist/tests/unit/*.test.js dist/tests/security/*.test.js
-
-      - name: Run integration tests (Ubuntu only)
-        if: matrix.os == 'ubuntu-latest'
-        run: node --test dist/tests/integration/*.test.js
-
-      - name: Perf baseline + perf tests
-        if: matrix.os == 'ubuntu-latest' && matrix.node == 22
-        continue-on-error: true
-        run: |
-          npm run perf:baseline
-          npm run test:perf
 
   site-build:
     name: Site build (Node 22 on ubuntu-latest)

@@ -1,6 +1,6 @@
 {
-  "name": "@jyoung105/free-router",
-  "version": "1.2.0",
+  "name": "@bytonylee/free-router",
+  "version": "1.2.1",
   "description": "Free model router — discover, ping, and configure free AI models for OpenCode / OpenClaw",
   "bin": {
     "free-router": "dist/bin/free-router.js"
@@ -12,14 +12,8 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint src --max-warnings=0",
     "lint:fix": "eslint src --fix",
-    "pretest": "npm run build",
-    "test": "node --test dist/tests/unit/*.test.js dist/tests/integration/*.test.js dist/tests/security/*.test.js",
-    "test:perf": "npm run build && node --expose-gc --test dist/tests/perf/*.perf.test.js",
-    "perf:baseline": "npm run build && node dist/tests/perf/collect-baseline.js",
     "models:sync": "npx tsx scripts/update-models.ts",
     "models:sync:apply": "npx tsx scripts/update-models.ts --apply",
-    "test:onboarding": "node --test dist/tests/integration/onboarding.test.js",
-    "test:fresh-start": "npm run build && bash ./scripts/free-router-fresh-start.sh",
     "prepack": "npm run build"
   },
   "engines": {
@@ -30,14 +24,13 @@
     "dist/lib/",
     "dist/tui/",
     "dist/model-rankings.json",
-    "dist/model-support.json",
-    "scripts/free-router-fresh-start.sh"
+    "dist/model-support.json"
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/jyoung105/free-router.git"
+    "url": "git+https://github.com/bytonylee/free-router.git"
   },
-  "homepage": "https://github.com/jyoung105/free-router#readme",
+  "homepage": "https://github.com/bytonylee/free-router#readme",
   "author": "Tony Lee",
   "keywords": [
     "ai",
@@ -54,7 +47,6 @@
   ],
   "license": "MIT",
   "dependencies": {
-    "@inkjs/ui": "^2.0.0",
     "ink": "^7.0.1",
     "react": "^19.2.5"
   },

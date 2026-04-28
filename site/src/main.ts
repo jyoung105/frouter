@@ -41,7 +41,7 @@ const I18N: Record<string, Record<string, string>> = {
   en: {
     "hero.providers": "2 providers",
     "hero.lede":
-      "Free model router for AI agents. Route requests through the fastest free models, compare providers, and start building in seconds.",
+      '<span class="lede-strong">Free model router for AI agents.</span><br />Route requests through the fastest free models, compare providers, and start building in seconds.',
     "hero.ctaRepo": "Read the README",
     "providers.label": "Providers",
     "providers.nim":
@@ -64,6 +64,11 @@ const I18N: Record<string, Record<string, string>> = {
     "install.npxBody": "one-shot run via npx",
     "install.globalTitle": "Global",
     "install.globalBody": "pin to your machine",
+    "usage.label": "Usage",
+    "usage.pickTitle": "Open",
+    "usage.pickBody": "pick a model and launch OpenCode",
+    "usage.bestTitle": "Best model",
+    "usage.bestBody": "print the top free model id",
     "models.label": "Models",
     "models.lede":
       "Every free model the router can reach right now, ranked by public benchmark signals.",
@@ -71,7 +76,7 @@ const I18N: Record<string, Record<string, string>> = {
   ko: {
     "hero.providers": "2개 제공자",
     "hero.lede":
-      "AI 에이전트를 위한 무료 모델 라우터. 가장 빠른 무료 모델로 요청을 라우팅하고, 제공자를 비교하며, 몇 초 만에 빌드를 시작하세요.",
+      '<span class="lede-strong">AI 에이전트를 위한 무료 모델 라우터.</span><br />가장 빠른 무료 모델로 요청을 라우팅하고, 제공자를 비교하며, 몇 초 만에 빌드를 시작하세요.',
     "hero.ctaRepo": "README 읽기",
     "providers.label": "제공자",
     "providers.nim":
@@ -80,7 +85,7 @@ const I18N: Record<string, Record<string, string>> = {
       "수십 개 모델 연구소의 무료 티어를 하나의 OpenAI 호환 API로 통합.",
     "why.label": "왜 free-router 인가",
     "why.sub":
-      "무료 모델은 매주 바뀝니다. 라우터가 항상 최신 상태를 유지해 에이전트가 깨지지 않습니다.",
+      "안타깝게도 무료 모델은 영원하지 않습니다.<br />대신 free-router 가 항상 최신 상태를 유지해 사용에 문제가 없도록 합니다.",
     "why.0":
       "5초마다 제공자 핑을 갱신해 항상 가장 빠른 무료 엔드포인트에 닿습니다.",
     "why.1":
@@ -94,9 +99,14 @@ const I18N: Record<string, Record<string, string>> = {
     "install.npxBody": "npx로 한 줄 실행",
     "install.globalTitle": "전역",
     "install.globalBody": "내 머신에 고정 설치",
+    "usage.label": "사용법",
+    "usage.pickTitle": "실행",
+    "usage.pickBody": "모델을 고르고 OpenCode 실행",
+    "usage.bestTitle": "최고 모델",
+    "usage.bestBody": "최상위 무료 모델 ID 출력",
     "models.label": "모델",
     "models.lede":
-      "라우터가 지금 닿을 수 있는 모든 무료 모델. 공개 벤치마크 신호로 정렬되었습니다.",
+      "라우터가 지금 닿을 수 있는 모든 무료 모델. 공개 벤치마크 점수로 정렬했습니다.",
   },
 };
 

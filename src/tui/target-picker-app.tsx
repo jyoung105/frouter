@@ -1,10 +1,10 @@
-// src/tui/TargetPickerApp.tsx — Ink-based target picker with Select.
+// src/tui/target-picker-app.tsx — Ink-based target picker with Select.
 // Uses ink-harness (runs mid-session from ALT_ON state).
 // Pure UI component — returns user's selection; business logic lives in free-router.ts.
 
 import { useState } from "react";
 import { Text, Box, useInput } from "ink";
-import { Select, StatusMessage } from "@inkjs/ui";
+import { Select, StatusMessage } from "./primitives.js";
 
 type Target = { id: string; label: string; path: string; enabled: boolean };
 

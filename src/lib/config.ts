@@ -236,10 +236,10 @@ export type FirstRunOutcome = {
 export async function runFirstRunWizard(
   config: FrouterConfig,
 ): Promise<FirstRunOutcome> {
-  const [{ render }, React, { FirstRunApp }] = await Promise.all([
+  const [{ render }, { createElement }, { FirstRunApp }] = await Promise.all([
     import("ink"),
     import("react"),
-    import("../tui/FirstRunApp.js"),
+    import("../tui/first-run-app.js"),
   ]);
 
   const result = await new Promise<{
@@ -248,7 +248,7 @@ export async function runFirstRunWizard(
     startupSearchRequested: boolean;
   }>((resolve) => {
     let resolved = false;
-    const element = React.createElement(FirstRunApp, {
+    const element = createElement(FirstRunApp, {
       providers: PROVIDERS_META,
       validateKey: validateProviderApiKey,
       openBrowser,

@@ -183,6 +183,11 @@ const OPENCODE_PROVIDER_FALLBACKS: Record<
   },
 };
 
+const DEFAULT_UNSUPPORTED_MODEL_FALLBACK = {
+  providerKey: "nvidia",
+  modelId: "deepseek-ai/deepseek-v4-pro",
+};
+
 function assertOpenCodeCompatible(model: Model) {
   if (model?.opencodeSupported === false) {
     throw new Error(
@@ -259,8 +264,8 @@ export function writeOpenCode(
 
 /**
  * Resolve model selection for OpenCode config.
- * Always respects the user's explicit provider choice — if the user selected
- * a model from NIM (or any provider), that exact provider/model is used.
+ * Keeps the user's explicit provider/model unless metadata marks it unsupported
+ * or a known provider remap is required.
  */
 export function resolveOpenCodeSelection(
   model: Model,
@@ -268,7 +273,10 @@ export function resolveOpenCodeSelection(
   _allModels: Model[] = [],
 ) {
   const fallbackRule =
-    OPENCODE_PROVIDER_FALLBACKS[`${providerKey}:${model?.id}`];
+    OPENCODE_PROVIDER_FALLBACKS[`${providerKey}:${model?.id}`] ??
+    (model?.opencodeSupported === false
+      ? DEFAULT_UNSUPPORTED_MODEL_FALLBACK
+      : null);
   if (!fallbackRule) return { model, providerKey, fallback: false };
 
   const fallbackModel = findFallbackModel(
@@ -282,6 +290,7 @@ export function resolveOpenCodeSelection(
         ...model,
         id: fallbackRule.modelId,
         providerKey: fallbackRule.providerKey,
+        opencodeSupported: null,
       },
       providerKey: fallbackRule.providerKey,
       fallback: true,

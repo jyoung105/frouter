@@ -239,7 +239,7 @@ function buildModelPage(record, context, homeUrl) {
           <p class="detail-summary">${escapeHtml(record.description)}</p>
           <div class="hero-actions">
             <a href="../../#models" class="btn-primary">Back to model index</a>
-            <a href="https://github.com/jyoung105/free-router" target="_blank" rel="noopener" class="btn-secondary">Open GitHub</a>
+            <a href="https://github.com/bytonylee/free-router" target="_blank" rel="noopener" class="btn-secondary">Open GitHub</a>
           </div>
         </div>
         <div class="detail-install">

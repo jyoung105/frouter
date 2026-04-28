@@ -1,4 +1,4 @@
-// src/tui/FirstRunApp.tsx — Ink-based first-run wizard with Select + PasswordInput.
+// src/tui/first-run-app.tsx — Ink-based first-run wizard with Select + PasswordInput.
 // Runs pre-ALT_ON (normal terminal), no harness needed.
 
 import { useRef, useState } from "react";
@@ -27,7 +27,7 @@ export type FirstRunAppProps = {
 
 type Step = "choose" | "input" | "starConfirm" | "saving";
 
-const GITHUB_REPO_URL = "https://github.com/jyoung105/free-router";
+const GITHUB_REPO_URL = "https://github.com/bytonylee/free-router";
 
 export function FirstRunApp({
   providers,

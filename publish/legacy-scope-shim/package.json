@@ -1,0 +1,31 @@
+{
+  "name": "@jyoung105/free-router",
+  "version": "1.2.1",
+  "description": "DEPRECATED — moved to @bytonylee/free-router. This shim re-execs the new package for backward compatibility.",
+  "type": "module",
+  "bin": {
+    "free-router": "bin.js"
+  },
+  "dependencies": {
+    "@bytonylee/free-router": "^1.2.1"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "files": [
+    "bin.js",
+    "README.md"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bytonylee/free-router.git"
+  },
+  "homepage": "https://github.com/bytonylee/free-router#readme",
+  "author": "Tony Lee",
+  "license": "MIT",
+  "keywords": [
+    "deprecated",
+    "free-router",
+    "compatibility-shim"
+  ]
+}

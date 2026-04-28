@@ -1,33 +1,24 @@
-```
- ███████╗ ██████╗  ███████╗ ███████╗          ██████╗   ██████╗  ██╗   ██╗ ████████╗ ███████╗ ██████╗
- ██╔════╝ ██╔══██╗ ██╔════╝ ██╔════╝          ██╔══██╗ ██╔═══██╗ ██║   ██║ ╚══██╔══╝ ██╔════╝ ██╔══██╗
- █████╗   ██████╔╝ █████╗   █████╗   ██████╗  ██████╔╝ ██║   ██║ ██║   ██║    ██║    █████╗   ██████╔╝
- ██╔══╝   ██╔══██╗ ██╔══╝   ██╔══╝   ╚═════╝  ██╔══██╗ ██║   ██║ ██║   ██║    ██║    ██╔══╝   ██╔══██╗
- ██║      ██║  ██║ ███████╗ ███████╗          ██║  ██║ ╚██████╔╝ ╚██████╔╝    ██║    ███████╗ ██║  ██║
- ╚═╝      ╚═╝  ╚═╝ ╚══════╝ ╚══════╝          ╚═╝  ╚═╝  ╚═════╝   ╚═════╝     ╚═╝    ╚══════╝ ╚═╝  ╚═╝
-```
-
 [English](./README.md) | [한국어](./README.ko.md)
 
-![Version](https://img.shields.io/badge/version-1.2.0-333333?style=flat-square)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
-[![npm downloads](https://img.shields.io/npm/dm/free-router)](https://www.npmjs.com/package/free-router)
-[![CI](https://github.com/jyoung105/free-router/actions/workflows/ci.yml/badge.svg)](https://github.com/jyoung105/free-router/actions/workflows/ci.yml)
+![Version](https://img.shields.io/badge/version-1.2.1-333333?style=flat-square)
+[![License: MIT License](https://img.shields.io/badge/License-MIT%20License-yellow.svg)](./LICENSE)
+[![npm downloads](https://img.shields.io/npm/dm/%40bytonylee%2Ffree-router)](https://www.npmjs.com/package/@bytonylee/free-router)
+[![CI](https://github.com/bytonylee/free-router/actions/workflows/ci.yml/badge.svg)](https://github.com/bytonylee/free-router/actions/workflows/ci.yml)
 
-무료 AI 모델 라우터 CLI — OpenCode / OpenClaw용 무료 모델을 탐색, 핑 테스트, 설정합니다.
+무료 AI 모델 라우터 CLI - OpenCode / OpenClaw용 무료 모델을 탐색, 핑 테스트, 설정합니다.
 
 ![free-router-gif](./public/example.gif)
 
 ## 설치
 
 ```bash
-npx free-router
+npx @bytonylee/free-router
 # 또는
-npm i -g free-router
+npm i -g @bytonylee/free-router
 # 또는
-bunx free-router
+bunx @bytonylee/free-router
 # 또는
-bun install -g free-router
+bun install -g @bytonylee/free-router
 ```
 
 ## 실행
@@ -54,35 +45,12 @@ free-router
 5. **비대화형 최적 모델 선택**
    `free-router --best`로 스크립트에서 사용할 최적 모델 ID를 출력.
 
-## 최초 실행 온보딩 테스트 (클린 상태)
-
-실제 설치/설정을 지우지 않고, 임시 `HOME`에서 완전 초기 상태 온보딩을 테스트할 수 있습니다.
-
-```bash
-npm run test:onboarding
-npm run test:fresh-start
-```
-
-`test:fresh-start` 실행 시:
-
-- 임시 홈에 `~/.free-router.json` 이 없는 상태로 시작
-- 프로바이더 환경 변수 키(`NVIDIA_API_KEY`, `OPENROUTER_API_KEY`) 비활성화
-- 실제 `~/.free-router.json` 은 변경하지 않음
-
-옵션:
-
-```bash
-npm run test:fresh-start -- --keep-home
-```
-
-종료 후 임시 `HOME` 디렉터리를 유지하여 결과 파일을 확인할 수 있습니다.
-
 ## 프로바이더
 
 | 프로바이더     | 무료 키 발급                                                                         |
 | -------------- | ------------------------------------------------------------------------------------ |
-| **NVIDIA NIM** | [build.nvidia.com](https://build.nvidia.com/settings/api-keys) — 접두사 `nvapi-`     |
-| **OpenRouter** | [openrouter.ai/settings/keys](https://openrouter.ai/settings/keys) — 접두사 `sk-or-` |
+| **NVIDIA NIM** | [build.nvidia.com](https://build.nvidia.com/settings/api-keys) - 접두사 `nvapi-`     |
+| **OpenRouter** | [openrouter.ai/settings/keys](https://openrouter.ai/settings/keys) - 접두사 `sk-or-` |
 
 API 키 우선순위: 환경 변수 → `~/.free-router.json` → 키 없이 핑 (응답 속도는 그래도 표시됩니다).
 
@@ -100,6 +68,7 @@ FREE_ROUTER_METRICS_CACHE=0 free-router
 ## TUI (터미널 UI)
 
 모든 모델을 2초마다 병렬로 핑하며 실시간 응답 속도, 가동률, 상태를 표시합니다.
+선택된 행은 고정 마커를 사용하고, 터미널 포커스가 없을 때는 다시 그리기를 미뤄 백그라운드 탭 깜빡임을 줄입니다.
 
 ### 컬럼 설명
 
@@ -114,7 +83,7 @@ FREE_ROUTER_METRICS_CACHE=0 free-router
 | `Avg`      | HTTP 200 응답만을 기준으로 한 평균 응답 속도           |
 | `Lat`      | 마지막으로 측정된 핑 응답 속도                         |
 | `Up%`      | 현재 세션 가동률                                       |
-| `Verdict`  | 상태 요약 (🚀 Perfect / ✅ Normal / 🔥 Overloaded / …) |
+| `Verdict`  | 상태 요약 (✓ Perfect / ✓ Normal / x Overloaded / …)    |
 
 기본 정렬 기준: **응답 가능 모델 우선**, 그 다음 **높은 등급 우선** (S+ → S → A+ …), 그 다음 낮은 응답 속도.
 
@@ -123,6 +92,10 @@ FREE_ROUTER_METRICS_CACHE=0 free-router
 - `이름:✓` 키 존재 + 정상 추정
 - `이름:✗` 만료/인증 실패 추정
 - `이름:○` 키 없음
+
+`?` 도움말 오버레이와 `A` API 키 편집 화면은 메인 목록과 같은 터미널
+헤더/푸터 스타일을 사용합니다. 모드 태그는 왼쪽에 고정되고, 도움말 본문
+텍스트는 테이블 행과 같은 글자색을 사용합니다.
 
 ### 키보드 단축키
 
@@ -172,6 +145,10 @@ FREE_ROUTER_METRICS_CACHE=0 free-router
 OpenCode fallback로 프로바이더가 바뀌는 경우(예: NIM Stepfun → OpenRouter),
 실제 프로바이더 API 키가 없으면 다음 확인 프롬프트가 표시됩니다:
 `Add API key now? (Y/n, default: Y)`.
+
+모델 메타데이터상 선택한 모델이 알려진 타깃 지원 목록에서 지원되지 않는 경우,
+free-router는 기본 고성능 모델인 NVIDIA NIM `deepseek-ai/deepseek-v4-pro`로
+fallback합니다.
 
 설정 파일 경로:
 
@@ -264,70 +241,24 @@ API 키가 최소 하나 이상 설정되어 있어야 합니다. 선택 기준:
 
 ## 상태 요약 (Verdict)
 
-| 상태          | 조건                           |
-| ------------- | ------------------------------ |
-| 🔥 Overloaded | 마지막 HTTP 코드 = 429         |
-| ⚠️ Unstable   | 이전엔 응답했으나 현재 실패 중 |
-| 👻 Not Active | 한 번도 응답하지 않음          |
-| ⏳ Pending    | 첫 번째 성공 응답 대기 중      |
-| 🚀 Perfect    | 평균 < 400 ms                  |
-| ✅ Normal     | 평균 < 1000 ms                 |
-| 🐢 Slow       | 평균 < 3000 ms                 |
-| 🐌 Very Slow  | 평균 < 5000 ms                 |
-| 💀 Unusable   | 평균 ≥ 5000 ms                 |
-
-## 테스트
-
-```bash
-npm run lint
-npm test
-npm run typecheck
-
-# 선택: 성능 기준선/회귀 테스트
-npm run perf:baseline
-npm run test:perf
-```
-
-## 엔지니어링 워크플로
-
-`dev`/`main` 브랜치 전략, SemVer 규칙, PR/이슈 정책, 릴리스 태그(`cli-v*`, `site-v*`)는
-[`docs/release-governance.md`](./docs/release-governance.md)에서 확인할 수 있습니다.
-
-## 모델 카탈로그 자동 동기화 (GitHub Actions)
-
-`free-router`는 모델 메타데이터를 최신 상태로 유지하기 위한 스케줄 워크플로를 포함합니다.
-
-- 워크플로: `.github/workflows/model-catalog-sync.yml`
-- 실행 트리거:
-  - 매일: `17 3 * * *` (UTC)
-  - 주간 AA 갱신: `47 4 * * 1` (UTC)
-  - 수동 실행: `workflow_dispatch`
-- 업데이트 대상:
-  - `model-rankings.json`
-  - `model-support.json` (OpenCode 지원 모델 맵)
-- 변경사항이 있으면 `chore/model-catalog-sync` 브랜치 PR을 생성/업데이트합니다.
-- 신규 모델 tier가 미해결이면 PR에 `needs-tier-review` 라벨이 붙습니다.
-
-워크플로에서 사용하는 저장소 시크릿:
-
-- `NVIDIA_API_KEY`
-- `OPENROUTER_API_KEY`
-- `ARTIFICIAL_ANALYSIS_API_KEY`
-
-로컬 동기화 명령:
-
-```bash
-npm run models:sync
-npm run models:sync:apply
-```
+| 상태         | 조건                           |
+| ------------ | ------------------------------ |
+| x Overloaded | 마지막 HTTP 코드 = 429         |
+| x Unstable   | 이전엔 응답했으나 현재 실패 중 |
+| x Not Active | 한 번도 응답하지 않음          |
+| - Pending    | 첫 번째 성공 응답 대기 중      |
+| ✓ Perfect    | 평균 < 400 ms                  |
+| ✓ Normal     | 평균 < 1000 ms                 |
+| x Slow       | 평균 < 3000 ms                 |
+| x Very Slow  | 평균 < 5000 ms                 |
+| x Unusable   | 평균 ≥ 5000 ms                 |
 
 ## 개발 노트
 
-- 소스 오브 트루스는 TypeScript `src/` (앱 + 테스트) 입니다.
+- 소스 오브 트루스는 TypeScript `src/` 입니다.
 - ESLint 설정도 TypeScript 파일(`eslint.config.ts`)로 관리합니다.
 - 런타임 JavaScript는 `npm run build` 시 `dist/`에만 생성됩니다.
-- 테스트는 빌드 후 `dist/tests/` 산출물을 기준으로 실행됩니다.
 
 ## 라이선스
 
-MIT 라이선스입니다. 자세한 내용은 [LICENSE](./LICENSE)를 참고하세요.
+MIT License입니다. 자세한 내용은 [LICENSE](./LICENSE)를 참고하세요.

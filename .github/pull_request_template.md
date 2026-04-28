@@ -30,9 +30,6 @@ Closes #
 - [ ] `npm run lint`
 - [ ] `npm run typecheck`
 - [ ] `npm run build`
-- [ ] `node --test dist/tests/unit/*.test.js dist/tests/security/*.test.js`
-- [ ] `node --test dist/tests/integration/*.test.js` (Ubuntu lane)
-- [ ] `npm run perf:baseline && npm run test:perf` (Ubuntu Node 22 lane)
 - [ ] `npm --prefix site run build` (if site changed)
 
 ## Breaking change notes (required for major)

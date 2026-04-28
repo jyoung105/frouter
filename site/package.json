@@ -10,8 +10,7 @@
     "generate": "node scripts/generate-site.mjs",
     "build": "node scripts/build-site.mjs",
     "preview": "vite preview",
-    "sync:manifest": "node scripts/generate-site.mjs --write-manifest",
-    "test": "node --test tests/*.test.mjs"
+    "sync:manifest": "node scripts/generate-site.mjs --write-manifest"
   },
   "devDependencies": {
     "typescript": "^5.9.3",

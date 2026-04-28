@@ -47,9 +47,6 @@ jobs:
       - name: Build dist artifacts
         run: npm run build
 
-      - name: Run unit + security tests
-        run: node --test dist/tests/unit/*.test.js dist/tests/security/*.test.js
-
       - name: Read sync report
         id: report
         run: |

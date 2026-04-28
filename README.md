@@ -1,33 +1,24 @@
-```
- ███████╗ ██████╗  ███████╗ ███████╗          ██████╗   ██████╗  ██╗   ██╗ ████████╗ ███████╗ ██████╗
- ██╔════╝ ██╔══██╗ ██╔════╝ ██╔════╝          ██╔══██╗ ██╔═══██╗ ██║   ██║ ╚══██╔══╝ ██╔════╝ ██╔══██╗
- █████╗   ██████╔╝ █████╗   █████╗   ██████╗  ██████╔╝ ██║   ██║ ██║   ██║    ██║    █████╗   ██████╔╝
- ██╔══╝   ██╔══██╗ ██╔══╝   ██╔══╝   ╚═════╝  ██╔══██╗ ██║   ██║ ██║   ██║    ██║    ██╔══╝   ██╔══██╗
- ██║      ██║  ██║ ███████╗ ███████╗          ██║  ██║ ╚██████╔╝ ╚██████╔╝    ██║    ███████╗ ██║  ██║
- ╚═╝      ╚═╝  ╚═╝ ╚══════╝ ╚══════╝          ╚═╝  ╚═╝  ╚═════╝   ╚═════╝     ╚═╝    ╚══════╝ ╚═╝  ╚═╝
-```
-
 [English](./README.md) | [한국어](./README.ko.md)
 
-![Version](https://img.shields.io/badge/version-1.2.0-333333?style=flat-square)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
-[![npm downloads](https://img.shields.io/npm/dm/free-router)](https://www.npmjs.com/package/free-router)
-[![CI](https://github.com/jyoung105/free-router/actions/workflows/ci.yml/badge.svg)](https://github.com/jyoung105/free-router/actions/workflows/ci.yml)
+![Version](https://img.shields.io/badge/version-1.2.1-333333?style=flat-square)
+[![License: MIT License](https://img.shields.io/badge/License-MIT%20License-yellow.svg)](./LICENSE)
+[![npm downloads](https://img.shields.io/npm/dm/%40bytonylee%2Ffree-router)](https://www.npmjs.com/package/@bytonylee/free-router)
+[![CI](https://github.com/bytonylee/free-router/actions/workflows/ci.yml/badge.svg)](https://github.com/bytonylee/free-router/actions/workflows/ci.yml)
 
-Free model router CLI — discover, ping, and configure free AI models for OpenCode / OpenClaw.
+Free model router CLI - discover, ping, and configure free AI models for OpenCode / OpenClaw.
 
 ![free-router-gif](./public/example.gif)
 
 ## Install
 
 ```bash
-npx free-router
+npx @bytonylee/free-router
 # or
-npm i -g free-router
+npm i -g @bytonylee/free-router
 # or
-bunx free-router
+bunx @bytonylee/free-router
 # or
-bun install -g free-router
+bun install -g @bytonylee/free-router
 ```
 
 ## Run
@@ -54,35 +45,12 @@ restarts automatically, so you can continue without running `free-router` again.
 5. **Non-interactive best-model selection**
    Run `free-router --best` to print the best responding model ID for scripts.
 
-## First-run onboarding test (clean state)
-
-Use an isolated temporary `HOME` to test onboarding from zero without deleting your real install/config:
-
-```bash
-npm run test:onboarding
-npm run test:fresh-start
-```
-
-`test:fresh-start` launches interactive onboarding with:
-
-- no `~/.free-router.json` in the temp home
-- provider env keys unset (`NVIDIA_API_KEY`, `OPENROUTER_API_KEY`)
-- your real `~/.free-router.json` untouched
-
-Optional:
-
-```bash
-npm run test:fresh-start -- --keep-home
-```
-
-This keeps the temp `HOME` path after exit for inspection.
-
 ## Providers
 
 | Provider       | Free key                                                                             |
 | -------------- | ------------------------------------------------------------------------------------ |
-| **NVIDIA NIM** | [build.nvidia.com](https://build.nvidia.com/settings/api-keys) — prefix `nvapi-`     |
-| **OpenRouter** | [openrouter.ai/settings/keys](https://openrouter.ai/settings/keys) — prefix `sk-or-` |
+| **NVIDIA NIM** | [build.nvidia.com](https://build.nvidia.com/settings/api-keys) - prefix `nvapi-`     |
+| **OpenRouter** | [openrouter.ai/settings/keys](https://openrouter.ai/settings/keys) - prefix `sk-or-` |
 
 API key priority: environment variable → `~/.free-router.json` → keyless ping (latency still shown).
 
@@ -100,6 +68,7 @@ FREE_ROUTER_METRICS_CACHE=0 free-router
 ## TUI
 
 The interactive TUI pings all models in parallel every 2 seconds and shows live latency, uptime, and verdict.
+The selected row uses a stable marker, and redraws are deferred while the terminal is unfocused to avoid background-tab blinking.
 
 ### Columns
 
@@ -114,7 +83,7 @@ The interactive TUI pings all models in parallel every 2 seconds and shows live 
 | `Avg`      | Rolling average latency (HTTP 200 only)                        |
 | `Lat`      | Latest measured ping latency                                   |
 | `Up%`      | Uptime percentage this session                                 |
-| `Verdict`  | Condition summary (🚀 Perfect / ✅ Normal / 🔥 Overloaded / …) |
+| `Verdict`  | Condition summary (✓ Perfect / ✓ Normal / x Overloaded / …)    |
 
 Default ranking: **availability first**, then **higher tier first** (S+ → S → A+ …), then lower latency.
 
@@ -123,6 +92,10 @@ Search bar provider badges:
 - `Name:✓` key exists and looks healthy
 - `Name:✗` provider appears expired/no-auth
 - `Name:○` key missing
+
+The `?` help overlay and `A` API-key editor use the same terminal header/footer
+chrome as the main list. Their mode tags stay left-aligned, and help body text
+uses the same foreground color as the table rows.
 
 ### Keyboard shortcuts
 
@@ -172,6 +145,10 @@ Pressing `Enter` on a model writes the OpenCode config and immediately opens `op
 If OpenCode fallback remaps the provider (for example NIM Stepfun → OpenRouter)
 and the effective provider key is missing, free-router asks:
 `Add API key now? (Y/n, default: Y)`.
+
+If model metadata says the selected model is unsupported by the known target
+support list, free-router falls back to NVIDIA NIM `deepseek-ai/deepseek-v4-pro`
+as the default high-performance model.
 
 Configs written:
 
@@ -264,70 +241,24 @@ Stored at `~/.free-router.json` (permissions `0600`).
 
 ## Verdict legend
 
-| Verdict       | Trigger                   |
-| ------------- | ------------------------- |
-| 🔥 Overloaded | Last HTTP code = 429      |
-| ⚠️ Unstable   | Was up, now failing       |
-| 👻 Not Active | Never responded           |
-| ⏳ Pending    | Waiting for first success |
-| 🚀 Perfect    | Avg < 400 ms              |
-| ✅ Normal     | Avg < 1000 ms             |
-| 🐢 Slow       | Avg < 3000 ms             |
-| 🐌 Very Slow  | Avg < 5000 ms             |
-| 💀 Unusable   | Avg ≥ 5000 ms             |
-
-## Test
-
-```bash
-npm run lint
-npm test
-npm run typecheck
-
-# optional perf workflow
-npm run perf:baseline
-npm run test:perf
-```
-
-## Engineering workflow
-
-For branch strategy (`dev`/`main`), SemVer rules, PR/issue governance, and release tags
-(`cli-v*`, `site-v*`), see [`docs/release-governance.md`](./docs/release-governance.md).
-
-## Model catalog auto-sync (GitHub Actions)
-
-`free-router` includes a scheduled workflow to keep model metadata current:
-
-- Workflow: `.github/workflows/model-catalog-sync.yml`
-- Triggers:
-  - Daily: `17 3 * * *` (UTC)
-  - Weekly AA refresh: `47 4 * * 1` (UTC)
-  - Manual: `workflow_dispatch`
-- Updates:
-  - `model-rankings.json`
-  - `model-support.json` (OpenCode support map)
-- If changes exist, it opens/updates a PR on `chore/model-catalog-sync`.
-- If unresolved new-model tiers remain, PR gets `needs-tier-review`.
-
-Repository secrets used by this workflow:
-
-- `NVIDIA_API_KEY`
-- `OPENROUTER_API_KEY`
-- `ARTIFICIAL_ANALYSIS_API_KEY`
-
-Local sync commands:
-
-```bash
-npm run models:sync
-npm run models:sync:apply
-```
+| Verdict      | Trigger                   |
+| ------------ | ------------------------- |
+| x Overloaded | Last HTTP code = 429      |
+| x Unstable   | Was up, now failing       |
+| x Not Active | Never responded           |
+| - Pending    | Waiting for first success |
+| ✓ Perfect    | Avg < 400 ms              |
+| ✓ Normal     | Avg < 1000 ms             |
+| x Slow       | Avg < 3000 ms             |
+| x Very Slow  | Avg < 5000 ms             |
+| x Unusable   | Avg ≥ 5000 ms             |
 
 ## Development notes
 
-- TypeScript source of truth: `src/` (app + tests)
+- TypeScript source of truth: `src/`
 - ESLint config is TypeScript: `eslint.config.ts`
 - Runtime JS output is generated only in `dist/` via `npm run build`
-- Tests run from compiled `dist/tests/` output after build
 
 ## License
 
-MIT. See [LICENSE](./LICENSE).
+MIT License. See [LICENSE](./LICENSE).

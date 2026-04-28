@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-// Migration shim — frouter has been renamed to free-router.
-// This thin wrapper re-execs the free-router binary so existing users
-// who run `npm update -g frouter` keep working while they migrate.
+// Migration shim — @jyoung105/free-router moved to @bytonylee/free-router.
+// This wrapper preserves the old package name and free-router bin while
+// forwarding execution to the canonical package.
 
 import { spawn } from "node:child_process";
 import { createRequire } from "node:module";
@@ -10,21 +10,22 @@ const RESET = "\x1b[0m";
 const BOLD = "\x1b[1m";
 const YELLOW = "\x1b[33m";
 const DIM = "\x1b[2m";
+const NEW_PACKAGE = "@bytonylee/free-router";
 
 process.stderr.write(
-  `\n${YELLOW}  frouter has been renamed to ${BOLD}free-router${RESET}${YELLOW}.\n` +
-    `  This shim is forwarding to free-router for backward compatibility.\n` +
-    `  Migrate with: ${BOLD}npm install -g @jyoung105/free-router${RESET}${YELLOW} ` +
-    `(or: ${BOLD}bun install -g @jyoung105/free-router${RESET}${YELLOW})${RESET}\n\n`,
+  `\n${YELLOW}  @jyoung105/free-router moved to ${BOLD}${NEW_PACKAGE}${RESET}${YELLOW}.\n` +
+    `  This shim is forwarding to the new package for backward compatibility.\n` +
+    `  Reinstall with: ${BOLD}npm install -g ${NEW_PACKAGE}${RESET}${YELLOW} ` +
+    `(or: ${BOLD}bun install -g ${NEW_PACKAGE}${RESET}${YELLOW})${RESET}\n\n`,
 );
 
 const require = createRequire(import.meta.url);
 let freeRouterBin;
 try {
-  freeRouterBin = require.resolve("@jyoung105/free-router/dist/bin/free-router.js");
+  freeRouterBin = require.resolve(`${NEW_PACKAGE}/dist/bin/free-router.js`);
 } catch (err) {
   process.stderr.write(
-    `\x1b[31m  Failed to locate free-router. Reinstall manually: npm install -g @jyoung105/free-router${RESET}\n`,
+    `\x1b[31m  Failed to locate ${NEW_PACKAGE}. Reinstall manually: npm install -g ${NEW_PACKAGE}${RESET}\n`,
   );
   process.stderr.write(`${DIM}  ${err && err.message ? err.message : String(err)}${RESET}\n`);
   process.exit(1);

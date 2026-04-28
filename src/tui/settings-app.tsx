@@ -1,9 +1,9 @@
-// src/tui/SettingsApp.tsx — Ink-based settings screen with PasswordInput + Spinner.
+// src/tui/settings-app.tsx — Ink-based settings screen with PasswordInput + Spinner.
 // Uses ink-harness (runs mid-session from ALT_ON state).
 
 import { useState, useRef } from "react";
 import { Text, Box, useInput } from "ink";
-import { PasswordInput, StatusMessage } from "@inkjs/ui";
+import { PasswordInput, StatusMessage } from "./primitives.js";
 import { useMountEffect } from "./useMountEffect.js";
 import type { FrouterConfig } from "../lib/config.js";
 
@@ -256,6 +256,10 @@ export function SettingsApp({
             <PasswordInput
               placeholder={currentMeta.keyPrefix ? `${currentMeta.keyPrefix}...` : "paste key here"}
               onSubmit={handleKeySave}
+              onCancel={() => {
+                setMode("navigate");
+                setNotice(null);
+              }}
             />
             <Text dimColor>Enter to save, Esc to cancel</Text>
           </Box>

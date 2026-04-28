@@ -1,71 +1,53 @@
 source,model_id,name,swe_bench,tier,context,aa_intelligence,aa_speed_tps,aa_price_input,aa_price_output,aa_context,aa_slug,aa_url
-nim,z-ai/glm5,GLM 5,77.8%,S+,128k,50,63.2,1,3.2,200k,glm-5,https://artificialanalysis.ai/models/glm-5
-nim,moonshotai/kimi-k2.5,Kimi K2.5,76.8%,S+,128k,47,45.3,0.6,3,256k,kimi-k2-5,https://artificialanalysis.ai/models/kimi-k2-5
-nim,z-ai/glm4.7,GLM 4.7,73.8%,S+,200k,42,159.2,0.55,2.15,200k,glm-4-7,https://artificialanalysis.ai/models/glm-4-7
-nim,moonshotai/kimi-k2-thinking,Kimi K2 Thinking,71.3%,S+,256k,41,84.4,0.6,2.5,256k,kimi-k2-thinking,https://artificialanalysis.ai/models/kimi-k2-thinking
-nim,minimaxai/minimax-m2.1,MiniMax M2.1,74.0%,S+,200k,40,60.4,0.3,1.2,205k,minimax-m2-1,https://artificialanalysis.ai/models/minimax-m2-1
-nim,deepseek-ai/deepseek-v3.2,DeepSeek V3.2,73.1%,S+,128k,32,49.2,0.28,0.42,128k,deepseek-v3-2,https://artificialanalysis.ai/models/deepseek-v3-2
+nim,z-ai/glm5,GLM 5,77.8%,S+,128k,49.8,68.419,1,3.2,200k,glm-5,https://artificialanalysis.ai/models/glm-5
+nim,moonshotai/kimi-k2.5,Kimi K2.5,76.8%,S+,128k,46.8,33.768,0.6,3,256k,kimi-k2-5,https://artificialanalysis.ai/models/kimi-k2-5
+nim,z-ai/glm4.7,GLM 4.7,73.8%,S+,200k,42.1,93.271,0.6,2.2,200k,glm-4-7,https://artificialanalysis.ai/models/glm-4-7
+nim,moonshotai/kimi-k2-thinking,Kimi K2 Thinking,71.3%,S+,256k,40.9,75.19,0.6,2.5,256k,kimi-k2-thinking,https://artificialanalysis.ai/models/kimi-k2-thinking
+nim,deepseek-ai/deepseek-v3.2,DeepSeek V3.2,73.1%,S+,128k,32.1,80.001,0.28,0.42,128k,deepseek-v3-2,https://artificialanalysis.ai/models/deepseek-v3-2
 nim,mistralai/devstral-2-123b-instruct-2512,Devstral 2 123B,72.2%,S+,256k,22,75.8,0,0,256k,devstral-2,https://artificialanalysis.ai/models/devstral-2
 nim,qwen/qwen3-235b-a22b,Qwen3 235B,70.0%,S+,128k,,,,,,,
-openrouter,qwen/qwen3-235b-a22b-thinking-2507,Qwen3 235B Thinking,,S+,131k,,,,,,,
-nim,qwen/qwen3-coder-480b-a35b-instruct,Qwen3 Coder 480B,70.6%,S+,256k,,,,,,,
-openrouter,qwen/qwen3-vl-235b-a22b-thinking,Qwen3 VL 235B Thinking,,S+,131k,,,,,,,
-nim,stepfun-ai/step-3.5-flash,Step 3.5 Flash,74.4%,S+,256k,,,,,,,
-nim,minimaxai/minimax-m2,MiniMax M2,69.4%,S,128k,36,61.3,0.3,1.2,205k,minimax-m2,https://artificialanalysis.ai/models/minimax-m2
-nim,openai/gpt-oss-120b,GPT OSS 120B,60.0%,S,131k,33,330.6,0.15,0.6,131k,gpt-oss-120b,https://artificialanalysis.ai/models/gpt-oss-120b
-nim,deepseek-ai/deepseek-v3.1,DeepSeek V3.1,62.0%,S,128k,28,,0.56,1.68,128k,deepseek-v3-1,https://artificialanalysis.ai/models/deepseek-v3-1
-nim,deepseek-ai/deepseek-v3.1-terminus,DeepSeek V3.1 Term.,68.4%,S,128k,28,,0.4,1.68,128k,deepseek-v3-1-terminus,https://artificialanalysis.ai/models/deepseek-v3-1-terminus
-nim,moonshotai/kimi-k2-instruct-0905,Kimi K2 0905,,S,128k,26,,,,,kimi-k2,
-nim,moonshotai/kimi-k2-instruct,Kimi K2 Instruct,65.8%,S,128k,26,39.5,0.6,2.5,128k,kimi-k2,https://artificialanalysis.ai/models/kimi-k2
-nim,meta/llama-4-maverick-17b-128e-instruct,Llama 4 Maverick,62.0%,S,1m,18,125.6,0.31,0.85,1m,llama-4-maverick,https://artificialanalysis.ai/models/llama-4-maverick
-nim,qwen/qwen3-235b-a22b-instruct-fp8,Qwen3 235B A22B,,S,32k,,,,,,,
-nim,qwen/qwen3-next-80b-a3b-instruct,Qwen3 80B Instruct,65.0%,S,128k,,,,,,,
+nim,qwen/qwen3-coder-480b-a35b-instruct,Qwen3 Coder 480B,70.6%,S+,256k,24.8,69.911,1.5,7.5,,qwen3-coder-480b-a35b-instruct,https://artificialanalysis.ai/models/qwen3-coder-480b-a35b-instruct
+nim,stepfun-ai/step-3.5-flash,Step 3.5 Flash,74.4%,S+,256k,38.5,140.525,0,0,,step-3-5-flash,https://artificialanalysis.ai/models/step-3-5-flash
+nim,minimaxai/minimax-m2,MiniMax M2,69.4%,S,128k,36.1,89.895,0.3,1.2,205k,minimax-m2,https://artificialanalysis.ai/models/minimax-m2
+nim,openai/gpt-oss-120b,GPT OSS 120B,60.0%,S,131k,33.3,220.973,0.15,0.6,131k,gpt-oss-120b,https://artificialanalysis.ai/models/gpt-oss-120b
+nim,deepseek-ai/deepseek-v3.1-terminus,DeepSeek V3.1 Term.,68.4%,S,128k,28.5,0,0.27,1,128k,deepseek-v3-1-terminus,https://artificialanalysis.ai/models/deepseek-v3-1-terminus
+nim,moonshotai/kimi-k2-instruct-0905,Kimi K2 0905,,A,128k,26.3,36.341,0.585,2.4,,kimi-k2,https://artificialanalysis.ai/models/kimi-k2
+nim,moonshotai/kimi-k2-instruct,Kimi K2 Instruct,65.8%,S,128k,26.3,36.341,0.585,2.4,128k,kimi-k2,https://artificialanalysis.ai/models/kimi-k2
+nim,meta/llama-4-maverick-17b-128e-instruct,Llama 4 Maverick,62.0%,S,1m,18.4,110.971,0.35,0.85,1m,llama-4-maverick,https://artificialanalysis.ai/models/llama-4-maverick
+nim,qwen/qwen3-next-80b-a3b-instruct,Qwen3 80B Instruct,65.0%,S,128k,20.1,174.526,0.5,2,,qwen3-next-80b-a3b-instruct,https://artificialanalysis.ai/models/qwen3-next-80b-a3b-instruct
 nim,qwen/qwen3-next-80b-a3b-thinking,Qwen3 80B Thinking,68.0%,S,128k,,,,,,,
-nim,qwen/qwen3.5-397b-a17b,Qwen3.5 400B,68.0%,S,128k,,,,,,,
+nim,qwen/qwen3.5-397b-a17b,Qwen3.5 400B,68.0%,S,128k,45,50.858,0.6,3.6,,qwen3-5-397b-a17b,https://artificialanalysis.ai/models/qwen3-5-397b-a17b
 nim,mistralai/mistral-large-3-675b-instruct-2512,Mistral Large 675B,58.0%,A+,256k,23,56,0.5,1.5,256k,mistral-large-3,https://artificialanalysis.ai/models/mistral-large-3
-nim,qwen/qwq-32b,QwQ 32B,50.0%,A+,131k,20,29.3,0.43,0.6,131k,qwq-32b,https://artificialanalysis.ai/models/qwq-32b
 nim,nvidia/llama-3.1-nemotron-ultra-253b-v1,Nemotron Ultra 253B,56.0%,A+,128k,,,,,,,
-nim,qwen/qwen3-32b-instruct,Qwen3 32B,,A+,32k,,,,,,,
 openrouter,qwen/qwen3-coder:free,Qwen3 Coder 480B,,A+,262k,,,,,,,
-nim,deepseek-ai/deepseek-r1,DeepSeek R1,,A,128k,27,,,,,deepseek-r1,https://artificialanalysis.ai/models/deepseek-r1
-nim,deepseek-ai/deepseek-r1-distill-qwen-32b,R1 Distill 32B,43.9%,A,128k,27,,1.35,4.2,128k,deepseek-r1-distill-qwen-32b,https://artificialanalysis.ai/models/deepseek-r1
-nim,openai/gpt-oss-20b,GPT OSS 20B,42.0%,A,131k,24,322.1,0.07,0.2,131k,gpt-oss-20b,https://artificialanalysis.ai/models/gpt-oss-20b
-nim,mistralai/mistral-medium-3-instruct,Mistral Medium 3,48.0%,A,128k,19,83.4,0.4,2,128k,mistral-medium-3,https://artificialanalysis.ai/models/mistral-medium-3
-nim,mistralai/magistral-small-2506,Magistral Small,45.0%,A,32k,17,,0,0,40k,magistral-small,https://artificialanalysis.ai/models/magistral-small
-nim,qwen/qwen2.5-72b-instruct,Qwen2.5 72B,,A,128k,16,46,,,,qwen2-5-72b-instruct,https://artificialanalysis.ai/models/qwen2-5-72b-instruct
-nim,meta/llama-4-scout-17b-16e-instruct,Llama 4 Scout,44.0%,A,10m,13,159.9,0.18,0.63,10m,llama-4-scout,https://artificialanalysis.ai/models/llama-4-scout
-nim,igenius/colosseum_355b_instruct_16k,Colosseum 355B,,A,16k,,,,,,,
-openrouter,nousresearch/hermes-3-llama-3.1-405b:free,Hermes 3 405B,,A,131k,,,,,,,
+nim,openai/gpt-oss-20b,GPT OSS 20B,42.0%,A,131k,24.5,277.665,0.07,0.2,131k,gpt-oss-20b,https://artificialanalysis.ai/models/gpt-oss-20b
+nim,mistralai/mistral-medium-3-instruct,Mistral Medium 3,48.0%,A,128k,18.8,65.598,0.4,2,128k,mistral-medium-3,https://artificialanalysis.ai/models/mistral-medium-3
+nim,mistralai/magistral-small-2506,Magistral Small,45.0%,A,32k,16.8,0,0,0,40k,magistral-small,https://artificialanalysis.ai/models/magistral-small
 nim,meta/llama-3.1-405b-instruct,Llama 3.1 405B,44.0%,A,128k,,,,,,,
-nim,mistralai/mistral-large-2-instruct,Mistral Large 2,,A,128k,,,,,,,
+nim,mistralai/mistral-large-2-instruct,Mistral Large 2,,A-,128k,15.1,38.57,2,6,,mistral-large-2,https://artificialanalysis.ai/models/mistral-large-2
 nim,mistralai/mistral-nemotron,Mistral Nemotron,,A,128k,,,,,,,
 nim,nvidia/nemotron-4-340b-instruct,Nemotron 4 340B,,A,4k,,,,,,,
 nim,nvidia/nemotron-nano-3-30b-a3b,Nemotron Nano 3 30B,,A,128k,,,,,,,
 nim,nvidia/nemotron-3-nano-30b-a3b,Nemotron Nano 30B,43.0%,A,128k,,,,,,,
-nim,nvidia/llama-3.3-nemotron-super-49b-v1.5,Nemotron Super 49B,49.0%,A,128k,,,,,,,
-nim,nvidia/llama-3.3-nemotron-super-49b-v1,Nemotron Super 49B v1,,A,128k,,,,,,,
-nim,qwen/qwen2.5-coder-32b-instruct,Qwen2.5 Coder 32B,46.0%,A,32k,,,,,,,
-nim,qwen/qwen3-30b-a3b-instruct,Qwen3 30B A3B,,A,32k,,,,,,,
-openrouter,qwen/qwen3-next-80b-a3b-instruct:free,Qwen3 80B Instruct,,A,262k,,,,,,,
-openrouter,qwen/qwen3-vl-30b-a3b-thinking,Qwen3 VL 30B Thinking,,A,131k,,,,,,,
+nim,nvidia/llama-3.3-nemotron-super-49b-v1.5,Nemotron Super 49B,49.0%,A,128k,14.3,0,0,0,,llama-3-3-nemotron-super-49b,https://artificialanalysis.ai/models/llama-3-3-nemotron-super-49b
+nim,nvidia/llama-3.3-nemotron-super-49b-v1,Nemotron Super 49B v1,,B+,128k,14.3,0,0,0,,llama-3-3-nemotron-super-49b,https://artificialanalysis.ai/models/llama-3-3-nemotron-super-49b
+nim,qwen/qwen2.5-coder-32b-instruct,Qwen2.5 Coder 32B,46.0%,A,32k,12.9,0,0,0,,qwen2-5-coder-32b-instruct,https://artificialanalysis.ai/models/qwen2-5-coder-32b-instruct
+openrouter,qwen/qwen3-next-80b-a3b-instruct:free,Qwen3 80B Instruct,,A,262k,20.1,174.526,0.5,2,,qwen3-next-80b-a3b-instruct,https://artificialanalysis.ai/models/qwen3-next-80b-a3b-instruct
 nim,meta/llama-3.2-90b-vision-instruct,Llama 3.2 90B Vision,,A-,128k,,,,,,,
 nim,meta/llama-3.3-70b-instruct,Llama 3.3 70B,39.5%,A-,128k,,,,,,,
 openrouter,meta-llama/llama-3.3-70b-instruct:free,Llama 3.3 70B,,A-,128k,,,,,,,
-nim,mistralai/mistral-large,Mistral Large,,A-,32k,,,,,,,
+nim,mistralai/mistral-large,Mistral Large,,B,32k,9.9,0,4,12,,mistral-large,https://artificialanalysis.ai/models/mistral-large
 nim,nvidia/llama-3.1-nemotron-51b-instruct,Nemotron 51B,,A-,128k,,,,,,,
 nim,nvidia/llama-3.1-nemotron-70b-instruct,Nemotron 70B,,A-,128k,,,,,,,
 nim,writer/palmyra-creative-122b,Palmyra Creative 122B,,A-,32k,,,,,,,
-nim,deepseek-ai/deepseek-r1-distill-qwen-14b,R1 Distill 14B,37.7%,A-,64k,,,,,,,
-nim,bytedance/seed-oss-36b-instruct,Seed OSS 36B,38.0%,A-,32k,,,,,,,
+nim,bytedance/seed-oss-36b-instruct,Seed OSS 36B,38.0%,A-,32k,25.2,42.379,0.21,0.57,,seed-oss-36b-instruct,https://artificialanalysis.ai/models/seed-oss-36b-instruct
 nim,stockmark/stockmark-2-100b-instruct,Stockmark 100B,36.0%,A-,32k,,,,,,,
-openrouter,openai/gpt-oss-120b:free,GPT OSS 120B,,B+,131k,33,330.6,0.15,0.6,131k,gpt-oss-120b,https://artificialanalysis.ai/models/gpt-oss-120b
-nim,mistralai/mistral-small-3.1-24b-instruct-2503,Mistral Small 3.1 24B,,B+,128k,14,,,,,mistral-small-3-1,
+openrouter,openai/gpt-oss-120b:free,GPT OSS 120B,,A+,131k,33.3,220.973,0.15,0.6,131k,gpt-oss-120b,https://artificialanalysis.ai/models/gpt-oss-120b
 nim,nvidia/llama3-chatqa-1.5-70b,ChatQA 1.5 70B,,B+,128k,,,,,,,
 nim,meta/codellama-70b,Code Llama 70B,,B+,4k,,,,,,,
 nim,mistralai/codestral-22b-instruct-v0.1,Codestral 22B,,B+,32k,,,,,,,
 nim,abacusai/dracarys-llama-3.1-70b-instruct,Dracarys 70B,,B+,128k,,,,,,,
 nim,ibm/granite-34b-code-instruct,Granite 34B Code,30.0%,B+,32k,,,,,,,
-nim,meta/llama3-70b-instruct,Llama 3 70B,,B+,8k,,,,,,,
 nim,meta/llama-3.1-70b-instruct,Llama 3.1 70B,,B+,128k,,,,,,,
 nim,mistralai/ministral-14b-instruct-2512,Ministral 14B,34.0%,B+,32k,,,,,,,
 nim,mistralai/mixtral-8x22b-instruct-v0.1,Mixtral 8x22B,32.0%,B+,64k,,,,,,,
@@ -73,103 +55,71 @@ openrouter,nvidia/nemotron-3-nano-30b-a3b:free,Nemotron Nano 30B,,B+,256k,,,,,,,
 nim,writer/palmyra-fin-70b-32k,Palmyra Fin 70B,,B+,32k,,,,,,,
 nim,writer/palmyra-med-70b,Palmyra Med 70B,,B+,32k,,,,,,,
 nim,writer/palmyra-med-70b-32k,Palmyra Med 70B 32K,,B+,32k,,,,,,,
-openrouter,upstage/solar-pro-3:free,Solar Pro 3,,B+,128k,,,,,,,
-openrouter,stepfun/step-3.5-flash:free,Step 3.5 Flash,,B+,256k,,,,,,,
-nim,tokyotech-llm/llama-3-swallow-70b-instruct-v0.1,Swallow 3 70B,,B+,8k,,,,,,,
-nim,institute-of-science-tokyo/llama-3.1-swallow-70b-instruct-v0.1,Swallow 70B,,B+,128k,,,,,,,
-nim,yentinglin/llama-3-taiwan-70b-instruct,Taiwan 70B,,B+,8k,,,,,,,
-nim,nvidia/usdcode-llama-3.1-70b-instruct,USDCode 70B,,B+,128k,,,,,,,
-nim,nvidia/usdcode-llama-3.1-70b-instruct,USDCode 70B,,B+,128k,,,,,,,
 nim,01-ai/yi-large,Yi Large,,B+,32k,,,,,,,
-openrouter,deepseek/deepseek-r1-0528:free,DeepSeek R1 0528,,B,164k,27,,1.35,4.2,128k,deepseek-r1,https://artificialanalysis.ai/models/deepseek-r1
-openrouter,openai/gpt-oss-20b:free,GPT OSS 20B,,B,131k,24,322.1,0.07,0.2,131k,gpt-oss-20b,https://artificialanalysis.ai/models/gpt-oss-20b
-openrouter,z-ai/glm-4.5-air:free,GLM 4.5 Air,,B,128k,23,263.2,0.2,1.1,128k,glm-4-5-air,https://artificialanalysis.ai/models/glm-4-5-air
-nim,microsoft/phi-4,Phi-4,,B,16k,10,6.7,,,,phi-4,https://artificialanalysis.ai/models/phi-4
+openrouter,openai/gpt-oss-20b:free,GPT OSS 20B,,A,131k,24.5,277.665,0.07,0.2,131k,gpt-oss-20b,https://artificialanalysis.ai/models/gpt-oss-20b
+openrouter,z-ai/glm-4.5-air:free,GLM 4.5 Air,,A,128k,23.2,59.986,0.17,0.98,128k,glm-4-5-air,https://artificialanalysis.ai/models/glm-4-5-air
 nim,nvidia/cosmos-reason2-8b,Cosmos Reason2 8B,,B,128k,,,,,,,
-openrouter,cognitivecomputations/dolphin-mistral-24b-venice-edition:free,Dolphin Mistral 24B,,B,32k,,,,,,,
-nim,google/gemma-2-27b-it,Gemma 2 27B,,B,8k,,,,,,,
-openrouter,google/gemma-3n-e4b-it:free,Gemma 3n 4B,,B,8k,,,,,,,
-nim,ibm/granite-3.3-8b-instruct,Granite 3.3 8B,,B,128k,,,,,,,
 nim,meta/llama2-70b,Llama 2 70B,,B,4k,,,,,,,
 nim,meta/llama-3.1-8b-instruct,Llama 3.1 8B,,B,128k,,,,,,,
 nim,meta/llama-3.2-11b-vision-instruct,Llama 3.2 11B Vision,,B,128k,,,,,,,
 nim,nv-mistralai/mistral-nemo-12b-instruct,Mistral Nemo 12B,,B,128k,,,,,,,
-nim,mistralai/mistral-small-24b-instruct,Mistral Small 24B,,B,32k,,,,,,,
-openrouter,nvidia/nemotron-nano-12b-v2-vl:free,Nemotron Nano 12B VL,,B,128k,,,,,,,
 nim,nvidia/nemotron-nano-12b-v2-vl,Nemotron Nano 12B VL,,B,128k,,,,,,,
 openrouter,nvidia/nemotron-nano-9b-v2:free,Nemotron Nano 9B,,B,128k,,,,,,,
-nim,nvidia/nvidia-nemotron-nano-9b-v2,Nemotron Nano 9B v2,,B,128k,,,,,,,
-nim,microsoft/phi-3-medium-128k-instruct,Phi 3 Medium 128K,,B,128k,,,,,,,
-nim,microsoft/phi-3-medium-4k-instruct,Phi 3 Medium 4K,,B,4k,,,,,,,
+nim,nvidia/nvidia-nemotron-nano-9b-v2,Nemotron Nano 9B v2,,B+,128k,13.2,152.726,0.05,0.195,,nvidia-nemotron-nano-9b-v2,https://artificialanalysis.ai/models/nvidia-nemotron-nano-9b-v2
 nim,microsoft/phi-3-vision-128k-instruct,Phi 3 Vision,,B,128k,,,,,,,
 nim,microsoft/phi-3.5-moe-instruct,Phi 3.5 MoE,,B,128k,,,,,,,
-nim,microsoft/phi-3.5-vision-instruct,Phi 3.5 Vision,,B,128k,,,,,,,
-nim,microsoft/phi-4-mini-flash-reasoning,Phi 4 Mini Flash,,B,128k,,,,,,,
-nim,microsoft/phi-4-multimodal-instruct,Phi 4 Multimodal,,B,128k,,,,,,,
-openrouter,qwen/qwen3-4b:free,Qwen3 4B,,B,41k,,,,,,,
-nim,deepseek-ai/deepseek-r1-distill-qwen-7b,R1 Distill 7B,22.6%,B,32k,,,,,,,
-nim,deepseek-ai/deepseek-r1-distill-llama-8b,R1 Distill 8B,28.2%,B,32k,,,,,,,
-openrouter,arcee-ai/trinity-large-preview:free,Trinity Large Preview,,B,131k,,,,,,,
-openrouter,mistralai/mistral-small-3.1-24b-instruct:free,Mistral Small 3.1 24B,,C,128k,14,113.7,0.1,0.3,128k,mistral-small-3-1,https://artificialanalysis.ai/models/mistral-small-3-1
-nim,ai21labs/jamba-1.5-large-instruct,Jamba 1.5 Large,,C,256k,11,,,,,jamba-1-5-large,
-nim,microsoft/phi-4-mini-instruct,Phi 4 Mini,14.0%,C,128k,11,44,0,0,128k,phi-4-mini,https://artificialanalysis.ai/models/phi-4-mini
-openrouter,google/gemma-3-27b-it:free,Gemma 3 27B,,C,128k,10,38.2,0,0,128k,gemma-3-27b,https://artificialanalysis.ai/models/gemma-3-27b
-nim,microsoft/phi-3.5-mini-instruct,Phi 3.5 Mini,12.0%,C,128k,10,,0.13,0.52,4k,phi-3-mini,https://artificialanalysis.ai/models/phi-3-mini
-openrouter,google/gemma-3-12b-it:free,Gemma 3 12B,,C,128k,9,36.2,0,0,128k,gemma-3-12b,https://artificialanalysis.ai/models/gemma-3-12b
-nim,databricks/dbrx-instruct,DBRX Instruct,,C,33k,8,,,,,dbrx-instruct,
+nim,microsoft/phi-4-multimodal-instruct,Phi 4 Multimodal,,B,128k,10,16.862,0,0,,phi-4-multimodal,https://artificialanalysis.ai/models/phi-4-multimodal
+nim,ai21labs/jamba-1.5-large-instruct,Jamba 1.5 Large,,B,256k,10.7,0,2,8,,jamba-1-5-large,https://artificialanalysis.ai/models/jamba-1-5-large
+nim,microsoft/phi-4-mini-instruct,Phi 4 Mini,14.0%,C,128k,8.4,44.477,0,0,128k,phi-4-mini,https://artificialanalysis.ai/models/phi-4-mini
+nim,databricks/dbrx-instruct,DBRX Instruct,,B,33k,8.3,0,0,0,,dbrx,https://artificialanalysis.ai/models/dbrx
 nim,mistralai/mixtral-8x7b-instruct-v0.1,Mixtral 8x7B,,C,33k,8,,,,,mixtral-8x7b-instruct,
-openrouter,google/gemma-3-4b-it:free,Gemma 3 4B,,C,128k,6,34.9,0,0,128k,gemma-3-4b,https://artificialanalysis.ai/models/gemma-3-4b
-nim,baichuan-inc/baichuan2-13b-chat,Baichuan2 13B,,C,4k,,,,,,,
-nim,speakleash/bielik-11b-v2.3-instruct,Bielik 11B v2.3,,C,8k,,,,,,,
-nim,speakleash/bielik-11b-v2.6-instruct,Bielik 11B v2.6,,C,8k,,,,,,,
-nim,mediatek/breeze-7b-instruct,Breeze 7B,,C,32k,,,,,,,
-nim,thudm/chatglm3-6b,ChatGLM3 6B,,C,8k,,,,,,,
-nim,nvidia/llama3-chatqa-1.5-8b,ChatQA 1.5 8B,,C,8k,,,,,,,
 nim,google/codegemma-1.1-7b,CodeGemma 7B,,C,8k,,,,,,,
 nim,deepseek-ai/deepseek-coder-6.7b-instruct,DeepSeek Coder 6.7B,,C,16k,,,,,,,
-nim,utter-project/eurollm-9b-instruct,EuroLLM 9B,,C,8k,,,,,,,
-nim,tiiuae/falcon3-7b-instruct,Falcon3 7B,,C,8k,,,,,,,
 nim,google/gemma-2-2b-it,Gemma 2 2B,,C,8k,,,,,,,
-nim,google/gemma-2-9b-it,Gemma 2 9B,18.0%,C,8k,,,,,,,
-nim,google/gemma-3-1b-it,Gemma 3 1B,,C,32k,,,,,,,
-openrouter,google/gemma-3n-e2b-it:free,Gemma 3n 2B,,C,8k,,,,,,,
-nim,google/gemma-3n-e2b-it,Gemma 3n 2B,,C,8k,,,,,,,
-nim,google/gemma-3n-e4b-it,Gemma 3n 4B,,C,8k,,,,,,,
+nim,google/gemma-3n-e2b-it,Gemma 3n 2B,,C,8k,4.8,60.913,0,0,,gemma-3n-e2b,https://artificialanalysis.ai/models/gemma-3n-e2b
+nim,google/gemma-3n-e4b-it,Gemma 3n 4B,,C,8k,6.4,14.287,0.02,0.04,,gemma-3n-e4b,https://artificialanalysis.ai/models/gemma-3n-e4b
 nim,ibm/granite-3.0-3b-a800m-instruct,Granite 3.0 3B,,C,128k,,,,,,,
 nim,ibm/granite-3.0-8b-instruct,Granite 3.0 8B,,C,128k,,,,,,,
 nim,ibm/granite-8b-code-instruct,Granite 8B Code,,C,8k,,,,,,,
-nim,igenius/italia_10b_instruct_16k,Italia 10B,,C,16k,,,,,,,
-nim,ai21labs/jamba-1.5-mini-instruct,Jamba 1.5 Mini,,C,256k,,,,,,,
-openrouter,liquid/lfm-2.5-1.2b-instruct:free,LFM2.5 1.2B Instruct,,C,33k,,,,,,,
-openrouter,liquid/lfm-2.5-1.2b-thinking:free,LFM2.5 1.2B Thinking,,C,33k,,,,,,,
-nim,meta/llama3-8b-instruct,Llama 3 8B,,C,8k,,,,,,,
 nim,meta/llama-3.2-1b-instruct,Llama 3.2 1B,,C,128k,,,,,,,
-openrouter,meta-llama/llama-3.2-3b-instruct:free,Llama 3.2 3B,,C,131k,,,,,,,
 nim,meta/llama-3.2-3b-instruct,Llama 3.2 3B,,C,128k,,,,,,,
-nim,mistralai/mamba-codestral-7b-v0.1,Mamba Codestral 7B,,C,256k,,,,,,,
-nim,marin/marin-8b-instruct,Marin 8B,,C,128k,,,,,,,
-nim,mistralai/mathstral-7b-v0.1,Mathstral 7B,,C,32k,,,,,,,
 nim,nvidia/mistral-nemo-minitron-8b-8k-instruct,Minitron 8B,,C,8k,,,,,,,
-nim,mistralai/mistral-7b-instruct-v0.2,Mistral 7B v0.2,,C,32k,,,,,,,
 nim,mistralai/mistral-7b-instruct-v0.3,Mistral 7B v0.3,,C,32k,,,,,,,
-nim,nvidia/nemotron-4-mini-hindi-4b-instruct,Nemotron Hindi 4B,,C,4k,,,,,,,
 nim,nvidia/nemotron-mini-4b-instruct,Nemotron Mini 4B,,C,4k,,,,,,,
-nim,nvidia/llama-3.1-nemotron-nano-4b-v1.1,Nemotron Nano 4B,,C,128k,,,,,,,
 nim,nvidia/llama-3.1-nemotron-nano-8b-v1,Nemotron Nano 8B,,C,128k,,,,,,,
-nim,microsoft/phi-3-mini-128k-instruct,Phi 3 Mini 128K,,C,128k,,,,,,,
-nim,microsoft/phi-3-mini-4k-instruct,Phi 3 Mini 4K,,C,4k,,,,,,,
-nim,microsoft/phi-3-small-128k-instruct,Phi 3 Small 128K,,C,128k,,,,,,,
-nim,microsoft/phi-3-small-8k-instruct,Phi 3 Small 8K,,C,8k,,,,,,,
-nim,qwen/qwen2-7b-instruct,Qwen2 7B,,C,128k,,,,,,,
-nim,qwen/qwen2.5-7b-instruct,Qwen2.5 7B,,C,128k,,,,,,,
-nim,qwen/qwen2.5-coder-7b-instruct,Qwen2.5 Coder 7B,,C,32k,,,,,,,
-nim,rakuten/rakutenai-7b-instruct,RakutenAI 7B,,C,4k,,,,,,,
-nim,rakuten/rakutenai-7b-chat,RakutenAI 7B Chat,,C,4k,,,,,,,
-nim,gotocompany/gemma-2-9b-cpt-sahabatai-instruct,Sahabat-AI 9B,,C,8k,,,,,,,
 nim,sarvamai/sarvam-m,Sarvam M,,C,8k,,,,,,,
 nim,aisingapore/sea-lion-7b-instruct,SEA-LION 7B,,C,4k,,,,,,,
 nim,upstage/solar-10.7b-instruct,Solar 10.7B,,C,4k,,,,,,,
-nim,institute-of-science-tokyo/llama-3.1-swallow-8b-instruct-v0.1,Swallow 8B,,C,128k,,,,,,,
-nim,opengpt-x/teuken-7b-instruct-commercial-v0.4,Teuken 7B,,C,8k,,,,,,,
-openrouter,arcee-ai/trinity-mini:free,Trinity Mini,,C,131k,,,,,,,
 nim,zyphra/zamba2-7b-instruct,Zamba2 7B,,C,8k,,,,,,,
+nim,nvidia/llama-3.1-nemotron-nano-vl-8b-v1,Nemotron Nano VL 8B,,C,128k,,,,,,,
+nim,google/gemma-3-12b-it,Gemma 3 12B,,B,33k,8.8,24.964,0,0,33k,gemma-3-12b,https://artificialanalysis.ai/models/gemma-3-12b
+nim,google/gemma-3-4b-it,Gemma 3 4B,,C,33k,6.3,26.071,0,0,33k,gemma-3-4b,https://artificialanalysis.ai/models/gemma-3-4b
+nim,minimaxai/minimax-m2.5,MiniMax M2.5,,S,205k,41.9,92.802,0.3,1.2,205k,minimax-m2-5,https://artificialanalysis.ai/models/minimax-m2-5
+nim,nvidia/gliner-pii,GLiNER PII,,C,33k,,,,,,,
+nim,nvidia/nemotron-3-super-120b-a12b,Nemotron 3 Super 120B,60.5%,S,262k,,449.5,,,262k,nvidia-nemotron-3-super-120b-a12b,https://artificialanalysis.ai/models/nvidia-nemotron-3-super-120b-a12b
+nim,qwen/qwen3.5-122b-a10b,Qwen3.5 122B,,S,131k,41.6,156.229,0.4,3.2,131k,qwen3-5-122b-a10b,https://artificialanalysis.ai/models/qwen3-5-122b-a10b
+openrouter,nvidia/nemotron-3-super-120b-a12b:free,NVIDIA: Nemotron 3 Super (free),60.5%,S,262k,36,449.5,,,262k,nvidia-nemotron-3-super-120b-a12b,https://artificialanalysis.ai/models/nvidia-nemotron-3-super-120b-a12b
+nim,deepseek-ai/deepseek-v4-flash,Deepseek V4 Flash,,S+,33k,46.5,79.265,0.14,0.28,,deepseek-v4-flash,https://artificialanalysis.ai/models/deepseek-v4-flash
+nim,deepseek-ai/deepseek-v4-pro,Deepseek V4 Pro,,S+,33k,51.5,35.71,1.74,3.48,,deepseek-v4-pro,https://artificialanalysis.ai/models/deepseek-v4-pro
+nim,google/gemma-3-27b-it,Gemma 3 27b It,,B,33k,10.3,25.945,0,0,,gemma-3-27b,https://artificialanalysis.ai/models/gemma-3-27b
+nim,google/gemma-4-31b-it,Gemma 4 31b It,,S,33k,39.2,35.459,0,0,,gemma-4-31b,https://artificialanalysis.ai/models/gemma-4-31b
+nim,minimaxai/minimax-m2.7,Minimax M2.7,,S+,33k,49.6,45.51,0.3,1.2,,minimax-m2-7,https://artificialanalysis.ai/models/minimax-m2-7
+nim,mistralai/mistral-small-4-119b-2603,Mistral Small 4 119b 2603,,?,33k,,,,,,,
+nim,nvidia/ising-calibration-1-35b-a3b,Ising Calibration 1 35b A3b,,?,33k,,,,,,,
+nim,nvidia/nemotron-3-nano-omni-30b-a3b-reasoning,Nemotron 3 Nano Omni 30b A3b Reasoning,,?,33k,,,,,,,
+nim,z-ai/glm-5.1,Glm 5.1,,S+,33k,51.4,50.505,1.4,4.4,,glm-5-1,https://artificialanalysis.ai/models/glm-5-1
+openrouter,inclusionai/ling-2.6-1t:free,inclusionAI: Ling-2.6-1T (free),,A+,262k,33.6,0,0.3,2.5,,ling-2-6-1t,https://artificialanalysis.ai/models/ling-2-6-1t
+openrouter,inclusionai/ling-2.6-flash:free,inclusionAI: Ling-2.6-flash (free),,A,262k,26.2,206.634,0.1,0.3,,ling-2-6-flash,https://artificialanalysis.ai/models/ling-2-6-flash
+openrouter,minimax/minimax-m2.5:free,MiniMax: MiniMax M2.5 (free),,S,197k,41.9,92.802,0.3,1.2,,minimax-m2-5,https://artificialanalysis.ai/models/minimax-m2-5
+openrouter,poolside/laguna-m.1:free,Poolside: Laguna M.1 (free),,?,131k,,,,,,,
+openrouter,poolside/laguna-xs.2:free,Poolside: Laguna XS.2 (free),,?,131k,,,,,,,
+openrouter,tencent/hy3-preview:free,Tencent: Hy3 preview (free),,S,262k,41.9,84.514,0,0,,hy3,https://artificialanalysis.ai/models/hy3
+openrouter,cognitivecomputations/dolphin-mistral-24b-venice-edition:free,Venice: Uncensored (free),,?,33k,,,,,,,
+openrouter,google/gemma-3-12b-it:free,Google: Gemma 3 12B (free),,B,33k,8.8,24.964,0,0,33k,gemma-3-12b,https://artificialanalysis.ai/models/gemma-3-12b
+openrouter,google/gemma-3-27b-it:free,Google: Gemma 3 27B (free),,B,131k,10.3,25.945,0,0,,gemma-3-27b,https://artificialanalysis.ai/models/gemma-3-27b
+openrouter,google/gemma-3-4b-it:free,Google: Gemma 3 4B (free),,C,33k,6.3,26.071,0,0,33k,gemma-3-4b,https://artificialanalysis.ai/models/gemma-3-4b
+openrouter,google/gemma-3n-e2b-it:free,Google: Gemma 3n 2B (free),,C,8k,4.8,60.913,0,0,,gemma-3n-e2b,https://artificialanalysis.ai/models/gemma-3n-e2b
+openrouter,liquid/lfm-2.5-1.2b-instruct:free,LiquidAI: LFM2.5-1.2B-Instruct (free),,B,33k,8,0,0,0,33k,lfm2-5-1-2b-instruct,https://artificialanalysis.ai/models/lfm2-5-1-2b-instruct
+openrouter,liquid/lfm-2.5-1.2b-thinking:free,LiquidAI: LFM2.5-1.2B-Thinking (free),,B,33k,8.1,0,0,0,33k,lfm2-5-1-2b-thinking,https://artificialanalysis.ai/models/lfm2-5-1-2b-thinking
+openrouter,meta-llama/llama-3.2-3b-instruct:free,Meta: Llama 3.2 3B Instruct (free),,B,131k,9.7,51.831,0,0,131k,llama-3-2-instruct-3b,https://artificialanalysis.ai/models/llama-3-2-instruct-3b
+openrouter,nousresearch/hermes-3-llama-3.1-405b:free,Nous: Hermes 3 405B Instruct (free),,A,131k,18.6,34.227,0,0,131k,hermes-4-llama-3-1-405b-reasoning,https://artificialanalysis.ai/models/hermes-4-llama-3-1-405b-reasoning

@@ -161,7 +161,6 @@ let sortCol = "priority";
 let sortAsc = true;
 let searchMode = false;
 let searchQuery = "";
-let searchTabScrolled = false;
 let tierFilter = "All";
 let pingMs = 2000;
 let screen = "main"; // 'main' | 'settings' | 'help' | 'ink-subapp'
@@ -664,19 +663,16 @@ function renderMain() {
     return;
   }
   {
-    const showSearchPixelTitle =
-      searchMode &&
-      !searchTabScrolled &&
-      scrollOff === 0 &&
-      tr > STARTUP_PIXEL_TITLE.length;
-    const titleLines = showSearchPixelTitle ? startupPixelTitleLines() : [];
-    for (const line of titleLines) {
-      out += fullWidthLine(line) + "\n";
-    }
-
-    const rowsAvailable = Math.max(0, tr - titleLines.length);
+    const rowsAvailable = tr;
     const slice = filtered.slice(scrollOff, scrollOff + rowsAvailable);
     for (let i = 0; i < rowsAvailable; i++) {
+      if (filtered.length === 0) {
+        out +=
+          (i === 0 ? centeredWidthLine(`${D}not found${R}`) : fullWidthLine("")) +
+          "\n";
+        continue;
+      }
+
       const m = slice[i];
       if (!m) {
         out += fullWidthLine("") + "\n";
@@ -915,7 +911,6 @@ function isAutoSortPaused() {
 function resetSearchState() {
   searchMode = false;
   searchQuery = "";
-  searchTabScrolled = false;
   cursor = 0;
   scrollOff = 0;
 }
@@ -1203,10 +1198,8 @@ function handleMain(ch: string) {
       searchQuery = searchQuery.slice(0, -1);
       needsRefilter = true;
     } else if (ch === UP) {
-      searchTabScrolled = true;
       navigate(cursor - 1);
     } else if (ch === DOWN) {
-      searchTabScrolled = true;
       navigate(cursor + 1);
     } else if (ch.length === 1 && ch >= " ") {
       searchQuery += ch;

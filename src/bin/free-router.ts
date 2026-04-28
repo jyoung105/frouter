@@ -77,11 +77,15 @@ const PKG_VERSION: string = createRequire(import.meta.url)(
 const w = (s: string) => process.stdout.write(String(s));
 const CLEAR = "\x1b[2J\x1b[H";
 const CURSOR_HOME = "\x1b[H";
+const CLEAR_TO_EOL = "\x1b[K";
 const HIDEC = "\x1b[?25l";
 const SHOWC = "\x1b[?25h";
 const INVERT = "\x1b[7m";
 const BG_HDR = "\x1b[48;5;17m";
 const BG_SEARCH = "\x1b[48;5;235m";
+const BG_TABLE_HDR = "\x1b[48;5;236m";
+const BG_TABLE_ROW = "\x1b[48;5;232m";
+const BG_TABLE_ROW_ALT = "\x1b[48;5;233m";
 const BG_OK = "\x1b[48;5;22m";
 const BG_WARN = "\x1b[48;5;58m";
 const BG_BAD = "\x1b[48;5;52m";
@@ -276,6 +280,37 @@ function colHdr(
   return rightAlign ? text.padStart(width) : text.padEnd(width);
 }
 
+type TableColumn = {
+  key:
+    | "rank"
+    | "tier"
+    | "provider"
+    | "model"
+    | "context"
+    | "intel"
+    | "avg"
+    | "latest"
+    | "uptime"
+    | "verdict";
+  label: string;
+  sortCol?: string;
+  width: number;
+  right?: boolean;
+};
+
+const TABLE_COLUMNS: TableColumn[] = [
+  { key: "rank", label: "#", width: 5, right: true },
+  { key: "tier", label: "Tier", sortCol: "tier", width: 6 },
+  { key: "provider", label: "Provider", sortCol: "provider", width: 13 },
+  { key: "model", label: "Model", sortCol: "model", width: 34 },
+  { key: "context", label: "Ctx", sortCol: "context", width: 7, right: true },
+  { key: "intel", label: "AA", sortCol: "intel", width: 5, right: true },
+  { key: "avg", label: "Avg", sortCol: "avg", width: 8, right: true },
+  { key: "latest", label: "Lat", sortCol: "latest", width: 8, right: true },
+  { key: "uptime", label: "Up%", sortCol: "uptime", width: 6, right: true },
+  { key: "verdict", label: "Verdict", sortCol: "verdict", width: 16 },
+];
+
 // ─── Render helpers ────────────────────────────────────────────────────────────
 function fmtCtx(n: number) {
   if (!n) return "  —  ";
@@ -307,7 +342,7 @@ function fullWidthLine(content: string, lastLine = false) {
   const guard = lastLine ? Math.max(1, WRAP_GUARD_COLS) : WRAP_GUARD_COLS;
   const maxW = Math.max(0, c - guard);
   const truncated = truncAnsi(content, maxW);
-  return `${truncated}${" ".repeat(Math.max(0, maxW - visLen(truncated)))}`;
+  return `${truncated}${" ".repeat(Math.max(0, maxW - visLen(truncated)))}${R}${CLEAR_TO_EOL}`;
 }
 
 function rightWidthLine(content: string, lastLine = false) {
@@ -315,7 +350,7 @@ function rightWidthLine(content: string, lastLine = false) {
   const guard = lastLine ? Math.max(1, WRAP_GUARD_COLS) : WRAP_GUARD_COLS;
   const maxW = Math.max(0, c - guard);
   const truncated = truncAnsi(content, maxW);
-  return `${" ".repeat(Math.max(0, maxW - visLen(truncated)))}${truncated}`;
+  return `${" ".repeat(Math.max(0, maxW - visLen(truncated)))}${truncated}${R}${CLEAR_TO_EOL}`;
 }
 
 function blockWidthLines(
@@ -337,8 +372,51 @@ function blockWidthLines(
   const middle = `${borderStyle}│${R}${leftPart}${" ".repeat(gapW)}${rightPart}${borderStyle}│${R}`;
   const bottom = `${borderStyle}╰${"─".repeat(Math.max(0, innerW))}╯${R}`;
   return [top, middle, bottom].map((line) =>
-    `${line}${" ".repeat(Math.max(0, maxW - visLen(line)))}`,
+    `${line}${" ".repeat(Math.max(0, maxW - visLen(line)))}${R}${CLEAR_TO_EOL}`,
   );
+}
+
+function tableCell(
+  content: string,
+  width: number,
+  style: string,
+  rightAlign = false,
+): string {
+  const truncated = truncAnsi(content, width);
+  const padWidth = Math.max(0, width - visLen(truncated));
+  const leftPad = rightAlign ? " ".repeat(padWidth) : "";
+  const rightPad = rightAlign ? "" : " ".repeat(padWidth);
+  return `${style}${leftPad}${truncated}${style}${rightPad}${R}`;
+}
+
+function tableLine(cells: string[], style: string): string {
+  return fullWidthLine(`${style}${cells.join(`${R} ${style}`)}${R}`);
+}
+
+function tableHeaderLine(): string {
+  const cells = TABLE_COLUMNS.map((col) =>
+    tableCell(
+      col.sortCol ? colHdr(col.label, col.sortCol, col.width, col.right) : col.label,
+      col.width,
+      `${BG_TABLE_HDR}${WHITE}${B}`,
+      col.right,
+    ),
+  );
+  return tableLine(cells, `${BG_TABLE_ROW}${WHITE}`);
+}
+
+function tableRowLine(
+  values: Record<TableColumn["key"], string>,
+  selected: boolean,
+  odd: boolean,
+): string {
+  const rowStyle = selected
+    ? `${BG_SEL}${WHITE}${B}`
+    : `${odd ? BG_TABLE_ROW_ALT : BG_TABLE_ROW}${WHITE}`;
+  const cells = TABLE_COLUMNS.map((col) =>
+    tableCell(values[col.key], col.width, rowStyle, col.right),
+  );
+  return tableLine(cells, rowStyle);
 }
 
 // Truncate a string with ANSI codes to at most `maxVis` visible columns.
@@ -484,7 +562,7 @@ function renderMain() {
     return;
   }
 
-  let out = (FORCE_FRAME_CLEAR ? CLEAR : CURSOR_HOME) + HIDEC;
+  let out = (FORCE_FRAME_CLEAR ? CLEAR : CURSOR_HOME) + HIDEC + "\x1b[J";
 
   if (topAlert) out += fullWidthLine(topAlert) + "\n";
   out += renderProviderTagLine() + "\n";
@@ -493,8 +571,7 @@ function renderMain() {
   for (const line of renderSearchLines(stats, tierBar)) out += line + "\n";
 
   // Column headers with sort indicators
-  const hdr = `  ${"#".padStart(3)}  ${colHdr("Tier", "tier", 4)}  ${colHdr("Provider", "provider", 11)}  ${colHdr("Model", "model", 32)}  ${colHdr("Ctx", "context", 5, true)}  ${colHdr("AA", "intel", 3, true)}  ${colHdr("Avg", "avg", 6, true)}  ${colHdr("Lat", "latest", 6, true)}  ${colHdr("Up%", "uptime", 4, true)}  ${colHdr("Verdict", "verdict", 7)}`;
-  out += fullWidthBar(hdr) + "\n";
+  out += tableHeaderLine() + "\n";
 
   // Model rows (skip if terminal too small)
   if (tr === 0) {
@@ -526,10 +603,10 @@ function renderMain() {
       const idx = scrollOff + i;
       const isSel = idx === cursor;
       const rankText = String(idx + 1).padStart(3);
-      const rank = isSel ? `${YELLOW}${B}${rankText}${R}${BG_SEL}${B}` : rankText;
-      const tier = pad(tierColor(m.tier) + (m.tier || "?") + R, 4);
-      const prov = pad(m.providerKey === "nvidia" ? "NIM" : "OpenRouter", 11);
-      const name = pad(m.displayName || m.id, 32);
+      const rank = isSel ? `${YELLOW}${B}${rankText}${R}` : rankText;
+      const tier = tierColor(m.tier) + (m.tier || "?") + R;
+      const prov = m.providerKey === "nvidia" ? "NIM" : "OpenRouter";
+      const name = m.displayName || m.id;
       const ctx = fmtCtx(m.context);
       const avg = getAvg(m);
       const avgStr = fmtLatency(avg !== Infinity ? avg : null);
@@ -539,17 +616,29 @@ function renderMain() {
       const up = getUptime(m);
       const upStr = uptimeColor(up) + fmtUp(up, m.pings.length > 0) + R;
       const dot = statusDot(m);
-      const verdict = `${D}${getVerdict(m)}${R}`;
+      const verdict = `${dot} ${getVerdict(m)}`;
       const aaStr =
         m.aaIntelligence != null
           ? String(Math.round(m.aaIntelligence)).padStart(3)
-          : `${D}  —${R}`;
+          : `${GRAY}  —${R}`;
 
-      const row = fullWidthLine(
-        `  ${rank}  ${tier}  ${prov}  ${name}  ${ctx}  ${aaStr}  ${avgStr}  ${latStr}  ${upStr}  ${dot} ${verdict}`,
-      );
-      if (isSel) out += `${BG_SEL}${B}${row}${R}\n`;
-      else out += `${row}${R}\n`;
+      out +=
+        tableRowLine(
+          {
+            rank,
+            tier,
+            provider: prov,
+            model: name,
+            context: ctx,
+            intel: aaStr,
+            avg: avgStr,
+            latest: latStr,
+            uptime: upStr,
+            verdict,
+          },
+          isSel,
+          idx % 2 === 1,
+        ) + "\n";
     }
   } // end if (!isLoading)
 

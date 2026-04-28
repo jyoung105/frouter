@@ -610,6 +610,17 @@ function renderFooterLines(): string[] {
   ];
 }
 
+function modeTagLine(label: string): string {
+  return rightWidthLine(`${BG_OFF}${WHITE} ${label} ${R}`);
+}
+
+function modalFooterLine(items: Array<[string, string]>, lastLine = true): string {
+  return fullWidthLine(
+    ` ${items.map(([key, label]) => footerKey(key, label)).join("  ")} `,
+    lastLine,
+  );
+}
+
 // ─── Main TUI ──────────────────────────────────────────────────────────────────
 function renderMain() {
   const { c, r } = viewport();
@@ -733,7 +744,7 @@ function renderHelp() {
   w(
     CLEAR +
       HIDEC +
-      fullWidthBar(" free-router — Keyboard Reference ", BG_TABLE_HDR) +
+      modeTagLine("HELP") +
       "\n\n" +
       `${B}  Navigation${R}\n` +
       `  ↑ / k       Move up\n` +
@@ -754,7 +765,7 @@ function renderHelp() {
       sortLines +
       "\n" +
       "\n" +
-      fullWidthBar(" Press any key to close ", BG_TABLE_HDR, true),
+      modalFooterLine([["Any key", "close"]]),
   );
 }
 
@@ -766,7 +777,7 @@ function maskKey(key: string) {
 
 function renderSettings() {
   let out = CLEAR + HIDEC;
-  out += fullWidthBar(" free-router — API Keys ", BG_TABLE_HDR) + "\n\n";
+  out += modeTagLine("API KEY") + "\n\n";
 
   const pks = Object.keys(PROVIDERS_META);
   for (let i = 0; i < pks.length; i++) {
@@ -793,9 +804,15 @@ function renderSettings() {
 
   out +=
     "\n" +
-    fullWidthBar(
-      " ↑↓:navigate  Enter:edit key  Space:toggle  T:test  D:delete key  ESC:back ",
-      BG_TABLE_HDR,
+    modalFooterLine(
+      [
+        ["↑↓", "navigate"],
+        ["Enter", "edit key"],
+        ["Space", "toggle"],
+        ["T", "test"],
+        ["D", "delete key"],
+        ["ESC", "back"],
+      ],
       !sEditing && !sNotice,
     );
   if (sEditing) out += `\n${D} Type key  •  Enter:save  •  ESC:cancel${R}\n`;

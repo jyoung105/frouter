@@ -29,12 +29,20 @@ CLAUDE.md
 # free-router runtime config (defense in depth — normally lives in $HOME)
 .frouter.json
 .free-router.json
+opencode.json
 
 # Vercel CLI local cache (may contain auth tokens)
 .vercel
 
 # Dependencies
 node_modules/
+
+# Package manager / build caches
+.bun/
+.vite/
+.turbo/
+.eslintcache
+.rollup.cache/
 
 # Test artifacts
 coverage/
@@ -46,6 +54,10 @@ test-results/
 # OS/editor noise
 .DS_Store
 *.log
+.idea/
+.vscode/
+.cursor/
+.roo/
 
 # Test code
 /tests/

@@ -193,7 +193,7 @@ function buildFaviconMarkup(prefix = '/') {
     `<link id="favicon-32" rel="icon" type="image/png" sizes="32x32" href="${iconPath('light', 'favicon-32x32.png')}" />`,
     `<link id="favicon-16" rel="icon" type="image/png" sizes="16x16" href="${iconPath('light', 'favicon-16x16.png')}" />`,
     `<link id="apple-touch-icon" rel="apple-touch-icon" sizes="180x180" href="${iconPath('light', 'apple-touch-icon.png')}" />`,
-    `<link id="site-webmanifest" rel="manifest" href="${normalizedPrefix}logo/site.webmanifest" />`,
+    `<link id="site-webmanifest" rel="manifest" href="${normalizedPrefix}site.webmanifest" />`,
   ].join('\n    ');
 }
 
